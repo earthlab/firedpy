@@ -9,7 +9,7 @@ setuptools.setup(
     version="0.0.1",
     author="Travis Williams, Lise St. Denis",
     author_email="travis.williams@colorado.edu, lise.st.denis@colorado.edu",
-    description="A wildfire classification package",
+    description="A CLI for classifying fires using a MODIS Burnt Area Product",
     license="MIT License",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -21,4 +21,8 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
+    entry_points = {'console_scripts': ['firedpy = firedpy.__main__:main']},
+    install_requires = ['beautifulsoup4', 'dask', 'descartes', 'geopandas',
+                        'gdal', 'lxml', 'netcdf4', 'numpy', 'pandas', 'pyyaml',
+                        'scipy', 'toolz', 'tqdm', 'xarray']
 )
