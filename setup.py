@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
 import setuptools
-import subprocess as sp
+#import subprocess as sp
 
 # Issues with GDAL
-try:
-    gdal_version = sp.run(["gdalinfo",  "--version"],
-                          stdout=sp.PIPE)
-    gdal_version = gdal_version.stdout.decode("utf-8").replace("\n", "")
-    gdal_version = gdal_version[5:10]
-    pgvs = sp.run(["pip",  "install", "pygdal=="],
-                  stderr=sp.PIPE).stderr.decode("utf-8")
-    version_str = pgvs[pgvs.index("versions:") + 10: pgvs.index(")")]
-    versions = version_str.split(", ")
-    matching_vs = [v for v in versions if v[:5] == gdal_version]
-    pygdal_version = matching_vs[0]
-except ImportError:
-    print("Please install GDAL onto your system in order to use firedpy.")
+#try:
+#    gdal_version = sp.run(["gdalinfo",  "--version"],
+#                          stdout=sp.PIPE)
+#    gdal_version = gdal_version.stdout.decode("utf-8").replace("\n", "")
+#    gdal_version = gdal_version[5:10]
+#    pgvs = sp.run(["pip",  "install", "pygdal=="],
+#                  stderr=sp.PIPE).stderr.decode("utf-8")
+#    version_str = pgvs[pgvs.index("versions:") + 10: pgvs.index(")")]
+#    versions = version_str.split(", ")
+#    matching_vs = [v for v in versions if v[:5] == gdal_version]
+#    pygdal_version = matching_vs[0]
+#except ImportError:
+#    print("Please install GDAL onto your system in order to use firedpy.")
 
 # Description
 with open("README.md", "r") as fh:
@@ -38,8 +38,11 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     entry_points = {'console_scripts': ['firedpy = firedpy.__main__:main']},
-    install_requires = ['beautifulsoup4', 'dask', 'descartes', 'geopandas',
-                        'lxml', 'netcdf4', 'numpy', 'pandas',
-                        'pygdal==' + pygdal_version, 'pyyaml', 'rasterio',
-                        'scipy', 'toolz', 'tqdm', 'xarray']
+    packages=setuptools.find_packages(),
+#    install_requires = ['beautifulsoup4', 'dask', 'descartes', 'geopandas',
+#                        'lxml', 'netcdf4', 'numpy', 'pandas',
+##                        'pygdal==' + pygdal_version,
+##                        'pyyaml',
+#                        'rasterio',
+#                        'scipy', 'toolz', 'tqdm', 'xarray']
 )

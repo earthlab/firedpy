@@ -11,28 +11,28 @@ from netCDF4 import Dataset
 import numpy as np
 import os
 import pandas as pd
-import rasterio
-from rasterio.merge import merge
+#import rasterio
+#from rasterio.merge import merge
 from shapely.geometry import Point, Polygon, MultiPolygon
 import sys
 from tqdm import tqdm
 import urllib.request as urllib2
 import warnings
-import yaml
+#import yaml
 
 # The python gdal issue (matching system gdal version)
 try:
     from osgeo import gdal, ogr, osr
 except ImportError:
     raise ImportError(""" Unfortunately, you still need to install GDAL for
-                      Python. Try pip install `pygdal==version` where version
-                      is matches the first two digits of the output from the
-                      command `gdal-config --version`. To see available pygdal
+                      Python. Try pip install `pygdal==version` where the
+                      version matches the first three digits of the output from
+                      the command `gdalinfo --version`. To see available pygdal
                       versions run `pip install pygdal== '
                       """)
 
 # Supress depreciation warning for dask when importing xarray (annoying)
-yaml.warnings({"YAMLLoadWarning": False})
+#yaml.warnings({"YAMLLoadWarning": False})
 warnings.filterwarnings("ignore", category=FutureWarning)
 import xarray as xr
 pd.options.mode.chained_assignment = None  # default="warn"
@@ -690,24 +690,24 @@ class DataGetter:
             tile_files[tid] = files
 
         # Merge one year into a reference mosaic
-        if not os.path.exists(self.modis_template_path):
-            folders = glob(os.path.join(self.hdf_path, "*"))
-            file_groups = [glob(os.path.join(f, "*hdf")) for f in folders]
-            for f in file_groups:
-                f.sort()
-            files = [f[0] for f in file_groups]
-            dss = [rasterio.open(f).subdatasets[0] for f in files]
-            tiles = [rasterio.open(d) for d in dss]
-            mosaic, transform = merge(tiles)
-            crs = tiles[0].meta.copy()
-            template_path = os.path.join(self.modis_template_path,
-                                         self.modis_template_file_root)
-            crs.update({"driver": "GTIFF",
-                        "height": mosaic.shape[1],
-                        "width": mosaic.shape[2],
-                        "transform": transform})
-            with rasterio.open(template_path, "w", **crs) as dest:
-                dest.write(mosaic)
+#        if not os.path.exists(self.modis_template_path):
+#            folders = glob(os.path.join(self.hdf_path, "*"))
+#            file_groups = [glob(os.path.join(f, "*hdf")) for f in folders]
+#            for f in file_groups:
+#                f.sort()
+#            files = [f[0] for f in file_groups]
+#            dss = [rasterio.open(f).subdatasets[0] for f in files]
+#            tiles = [rasterio.open(d) for d in dss]
+#            mosaic, transform = merge(tiles)
+#            crs = tiles[0].meta.copy()
+#            template_path = os.path.join(self.modis_template_path,
+#                                         self.modis_template_file_root)
+#            crs.update({"driver": "GTIFF",
+#                        "height": mosaic.shape[1],
+#                        "width": mosaic.shape[2],
+#                        "transform": transform})
+#            with rasterio.open(template_path, "w", **crs) as dest:
+#                dest.write(mosaic)
 
         # Build one netcdf per tile
         for tid in tiles:
@@ -721,96 +721,96 @@ class DataGetter:
                     print("Removing " + file_name + " and moving on.")
                     os.remove(file_name)
 
-    def getLandcover(self):
-        """
-        A method to download and process landcover data from NASA"s Land
-        Processes Distributed Active Archive Center, which is an Earthdata
-        thing. You"ll need register for a username and password, but that"s
-        free. Fortunately, there is a tutorial on how to get this data:
-            
-        https://wiki.earthdata.nasa.gov/display/EL/How+To+Access+Data+With+
-        Python
-        
-        sample citation for later:
-            ASTER Mount Gariwang image from 2018 was retrieved from
-            https://lpdaac.usgs.gov, maintained by the NASA EOSDIS Land
-            Processes Distributed Active Archive Center (LP DAAC) at the USGS
-            Earth Resources Observation and Science (EROS) Center, Sioux Falls,
-            South Dakota. 2018, https://lpdaac.usgs.gov/resources/data-action/
-            aster-ultimate-2018-winter-olympics-observer/.
-        """
-        # Use specified tiles or...
-        if self.tiles[0].lower() != "all":
-            tiles = self.tiles
-
-        # ...download all tiles if the list is empty
-        else:
-            # Check in to the burn data site
-            ftp = ftplib.FTP("fuoco.geog.umd.edu")
-            ftp.login("fire", "burnt")
-            ftp.cwd("/MCD64A1/C6/")
-            tiles = ftp.nlst()
-            tiles = [t for t in tiles if "h" in t]
-
-        # We need years in strings  <------------------------------------------ Parameterize this
-        years = [str(y) for y in range(2001, 2017)]
-
-        # Access
-        print("Retrieving land cover rasters from NASA's Earthdata service...")
-        print("Register at the link below to obtain a username and password:")
-        print("https://urs.earthdata.nasa.gov/")
-        username = input("Enter NASA Earthdata User Name: ")
-        password = input("Enter NASA Earthdata Password: ")
-        pw_manager = urllib2.HTTPPasswordMgrWithDefaultRealm()
-        pw_manager.add_password(None, "https://urs.earthdata.nasa.gov",
-                                username, password)
-        cookiejar = CookieJar()
-        opener = urllib2.build_opener(urllib2.HTTPBasicAuthHandler(pw_manager),
-                                      urllib2.HTTPCookieProcessor(cookiejar))
-        urllib2.install_opener(opener)
-
-        # Land cover data from earthdata.nasa.gov
-        for year in years:
-            print("Retrieving landcover data for " + year)
-            url = ("https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.006/" + year +
-                   ".01.01/")
-            r = urllib2.urlopen(url)
-            soup = BeautifulSoup(r, features="lxml", 
-                                 from_encoding=r.info().get_param("charset")
-                                 )
-            names = [link["href"] for link in soup.find_all("a", href=True)]
-            names = [f for f in names if "hdf" in f and f[17:23] in tiles]
-            links = [url + l for l in names]
-            for i in tqdm(range(len(links)), position=0):
-                if not os.path.exists(os.path.join(self.landcover_path, year)):
-                    os.mkdir(os.path.join(self.landcover_path, year))
-                path = os.path.join(self.landcover_path, year, names[i])
-                if not os.path.exists(path):
-                    request = urllib2.Request(links[i])
-                    with open(path, "wb") as file:
-                        response = urllib2.urlopen(request).read()
-                        file.write(response)
-
-        # Now process these tiles into yearly geotiffs.
-        if not os.path.exists(self.landcover_mosaic_path):
-            os.mkdir(self.landcover_mosaic_path)
-            os.mkdir(os.path.join(self.landcover_mosaic_path, "wgs"))
-        for year in years:
-            print("Stitching together landcover tiles for year " + year)
-            lc_tiles = glob(os.path.join(self.landcover_path, year, "*hdf"))
-            dss = [rasterio.open(f).subdatasets[0] for f in lc_tiles]           
-            tiles = [rasterio.open(d) for d in dss]
-            mosaic, transform = merge(tiles)
-            crs = tiles[0].meta.copy()
-            crs.update({"driver": "GTIFF",
-                        "height": mosaic.shape[1],
-                        "width": mosaic.shape[2],
-                        "transform": transform})
-            file = self.landcover_file_root + year + ".tif"
-            path = os.path.join(self.landcover_mosaic_path, file)
-            with rasterio.open(path, "w", **crs) as dest:
-                dest.write(mosaic)
-
+#    def getLandcover(self):
+#        """
+#        A method to download and process landcover data from NASA"s Land
+#        Processes Distributed Active Archive Center, which is an Earthdata
+#        thing. You"ll need register for a username and password, but that"s
+#        free. Fortunately, there is a tutorial on how to get this data:
+#            
+#        https://wiki.earthdata.nasa.gov/display/EL/How+To+Access+Data+With+
+#        Python
+#        
+#        sample citation for later:
+#            ASTER Mount Gariwang image from 2018 was retrieved from
+#            https://lpdaac.usgs.gov, maintained by the NASA EOSDIS Land
+#            Processes Distributed Active Archive Center (LP DAAC) at the USGS
+#            Earth Resources Observation and Science (EROS) Center, Sioux Falls,
+#            South Dakota. 2018, https://lpdaac.usgs.gov/resources/data-action/
+#            aster-ultimate-2018-winter-olympics-observer/.
+#        """
+#        # Use specified tiles or...
+#        if self.tiles[0].lower() != "all":
+#            tiles = self.tiles
+#
+#        # ...download all tiles if the list is empty
+#        else:
+#            # Check in to the burn data site
+#            ftp = ftplib.FTP("fuoco.geog.umd.edu")
+#            ftp.login("fire", "burnt")
+#            ftp.cwd("/MCD64A1/C6/")
+#            tiles = ftp.nlst()
+#            tiles = [t for t in tiles if "h" in t]
+#
+#        # We need years in strings  <------------------------------------------ Parameterize this
+#        years = [str(y) for y in range(2001, 2017)]
+#
+#        # Access
+#        print("Retrieving land cover rasters from NASA's Earthdata service...")
+#        print("Register at the link below to obtain a username and password:")
+#        print("https://urs.earthdata.nasa.gov/")
+#        username = input("Enter NASA Earthdata User Name: ")
+#        password = input("Enter NASA Earthdata Password: ")
+#        pw_manager = urllib2.HTTPPasswordMgrWithDefaultRealm()
+#        pw_manager.add_password(None, "https://urs.earthdata.nasa.gov",
+#                                username, password)
+#        cookiejar = CookieJar()
+#        opener = urllib2.build_opener(urllib2.HTTPBasicAuthHandler(pw_manager),
+#                                      urllib2.HTTPCookieProcessor(cookiejar))
+#        urllib2.install_opener(opener)
+#
+#        # Land cover data from earthdata.nasa.gov
+#        for year in years:
+#            print("Retrieving landcover data for " + year)
+#            url = ("https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.006/" + year +
+#                   ".01.01/")
+#            r = urllib2.urlopen(url)
+#            soup = BeautifulSoup(r, features="lxml", 
+#                                 from_encoding=r.info().get_param("charset")
+#                                 )
+#            names = [link["href"] for link in soup.find_all("a", href=True)]
+#            names = [f for f in names if "hdf" in f and f[17:23] in tiles]
+#            links = [url + l for l in names]
+#            for i in tqdm(range(len(links)), position=0):
+#                if not os.path.exists(os.path.join(self.landcover_path, year)):
+#                    os.mkdir(os.path.join(self.landcover_path, year))
+#                path = os.path.join(self.landcover_path, year, names[i])
+#                if not os.path.exists(path):
+#                    request = urllib2.Request(links[i])
+#                    with open(path, "wb") as file:
+#                        response = urllib2.urlopen(request).read()
+#                        file.write(response)
+#
+#        # Now process these tiles into yearly geotiffs.
+#        if not os.path.exists(self.landcover_mosaic_path):
+#            os.mkdir(self.landcover_mosaic_path)
+#            os.mkdir(os.path.join(self.landcover_mosaic_path, "wgs"))
+#        for year in years:
+#            print("Stitching together landcover tiles for year " + year)
+#            lc_tiles = glob(os.path.join(self.landcover_path, year, "*hdf"))
+#            dss = [rasterio.open(f).subdatasets[0] for f in lc_tiles]           
+#            tiles = [rasterio.open(d) for d in dss]
+#            mosaic, transform = merge(tiles)
+#            crs = tiles[0].meta.copy()
+#            crs.update({"driver": "GTIFF",
+#                        "height": mosaic.shape[1],
+#                        "width": mosaic.shape[2],
+#                        "transform": transform})
+#            file = self.landcover_file_root + year + ".tif"
+#            path = os.path.join(self.landcover_mosaic_path, file)
+#            with rasterio.open(path, "w", **crs) as dest:
+#                dest.write(mosaic)
+#
 
     def getShapes(self):
         """
@@ -1113,65 +1113,6 @@ class DataGetter:
     
             # Done
             nco.close()
-
-    def buildTiffs(self):
-        """
-        This will take the original HDF4 files retrieved from get Burns,
-        convert the data (in julien days) to days since 1970 and save them as
-        individual tiffs in "data/rasters/burn_area/geotiffs"
-        """
-        # Let"s start with one tile
-        tiles = self.tiles
-        tile_files = glob(os.path.join(self.hdf_path, "*"))
-        tile_files.sort()
-
-        # Loop through everything, convert dates, and save to tiff
-        for t in tile_files:
-            files = glob(os.path.join(t, "*hdf"))
-            files.sort()
-            for f in tqdm(files, position=0):
-                if not os.path.exists(f):
-                    # Get data and attributes
-                    year = int(f[44:48])
-                    day = f[48:51]
-                    ds = gdal.Open(f).GetSubDatasets()[0][0]
-                    hdf = gdal.Open(ds)
-                    geometry = hdf.GetGeoTransform()
-                    proj = hdf.GetProjection()
-                    data = hdf.GetRasterBand(1)
-                    array = data.ReadAsArray()
-
-                    # Convert dates in array
-                    array = convertDates(array, year)
-
-                    # Save as a geotiff...see if we get the same output
-                    tile = os.path.basename(t)
-                    tfolder = os.path.join(self.data_dir, 
-                                           "rasters/burn_area/geotiffs/",
-                                           tile)
-                    if not os.path.exists(tfolder):
-                        os.mkdir(tfolder)
-                    tfile = tile + "_" + str(year) + day + ".tif"
-                    trgt = os.path.join(tfolder, tfile)
-                    toRaster(array, trgt, geometry, proj)
-
-        # Merge one year into a reference mosaic
-        if not os.path.exists(self.modis_template_path):
-            folder = os.path.join(self.data_dir, "rasters/burn_area/geotiffs")
-            folders = glob(os.path.join(folder, "*"))
-            file_groups = [glob(os.path.join( f, "*tif")) for f in folders]
-            for f in file_groups:
-                f.sort()
-            files = [f[0] for f in file_groups]
-            tiles = [rasterio.open(f) for f in files]
-            mosaic, transform = merge(tiles)
-            crs = tiles[0].meta.copy()
-            crs.update({"driver": "GTIFF",
-                        "height": mosaic.shape[1],
-                        "width": mosaic.shape[2],
-                        "transform": transform})
-            with rasterio.open(self.modis_template_path, "w", **crs) as dest:
-                dest.write(mosaic)      
 
 
 class EventPerimeter:
