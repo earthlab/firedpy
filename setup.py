@@ -4,9 +4,10 @@ import subprocess as sp
 
 # Issues with GDAL
 try:
-    gdal_version = sp.run(["gdal-config",  "--version"],
+    gdal_version = sp.run(["gdalinfo",  "--version"],
                           stdout=sp.PIPE)
     gdal_version = gdal_version.stdout.decode("utf-8").replace("\n", "")
+    gdal_version = gdal_version[5:10]
     pgvs = sp.run(["pip",  "install", "pygdal=="],
                   stderr=sp.PIPE).stderr.decode("utf-8")
     version_str = pgvs[pgvs.index("versions:") + 10: pgvs.index(")\nERROR")]
