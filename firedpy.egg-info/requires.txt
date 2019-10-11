@@ -1,0 +1,14 @@
+beautifulsoup4
+dask
+descartes
+geopandas
+lxml
+netcdf4
+numpy
+pandas
+pyyaml
+rasterio
+scipy
+toolz
+tqdm
+xarray

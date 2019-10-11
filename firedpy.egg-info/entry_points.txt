@@ -1,0 +1,3 @@
+[console_scripts]
+firedpy = firedpy.__main__:main
+

@@ -25,10 +25,7 @@ try:
     from osgeo import gdal, ogr, osr
 except ImportError:
     raise ImportError(""" Unfortunately, you still need to install GDAL for
-                      python. Try pip install `pygdal==version` where version
-                      is matches the first two digits if the output from the
-                      command `gdal-config --version`. To see available pygdal
-                      versions run `pip install pygdal== '
+                      python. Sorry.
                       """)
 
 # Supress depreciation warning for dask when importing xarray (annoying)

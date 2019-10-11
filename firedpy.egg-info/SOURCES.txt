@@ -1,0 +1,11 @@
+README.md
+setup.py
+firedpy/__init__.py
+firedpy/__main__.py
+firedpy/functions.py
+firedpy.egg-info/PKG-INFO
+firedpy.egg-info/SOURCES.txt
+firedpy.egg-info/dependency_links.txt
+firedpy.egg-info/entry_points.txt
+firedpy.egg-info/requires.txt
+firedpy.egg-info/top_level.txt

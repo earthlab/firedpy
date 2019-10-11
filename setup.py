@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import setuptools
 
+# Description
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
@@ -23,6 +24,6 @@ setuptools.setup(
     ],
     entry_points = {'console_scripts': ['firedpy = firedpy.__main__:main']},
     install_requires = ['beautifulsoup4', 'dask', 'descartes', 'geopandas',
-                        'gdal', 'lxml', 'netcdf4', 'numpy', 'pandas', 'pyyaml',
-                        'scipy', 'toolz', 'tqdm', 'xarray']
+                        'lxml', 'netcdf4', 'numpy', 'pandas', 'pyyaml',
+                        'rasterio', 'scipy', 'toolz', 'tqdm', 'xarray']
 )
