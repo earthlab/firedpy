@@ -10,7 +10,7 @@ try:
     gdal_version = gdal_version[5:10]
     pgvs = sp.run(["pip",  "install", "pygdal=="],
                   stderr=sp.PIPE).stderr.decode("utf-8")
-    version_str = pgvs[pgvs.index("versions:") + 10: pgvs.index(")\nERROR")]
+    version_str = pgvs[pgvs.index("versions:") + 10: pgvs.index(")")]
     versions = version_str.split(", ")
     matching_vs = [v for v in versions if v[:5] == gdal_version]
     pygdal_version = matching_vs[0]
@@ -31,7 +31,6 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/earthlab/firedpy",
-    packages=setuptools.find_packages(),
     platform=['any'],
     classifiers=[
         "Programming Language :: Python :: 3",
