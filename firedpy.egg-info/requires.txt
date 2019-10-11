@@ -6,6 +6,7 @@ lxml
 netcdf4
 numpy
 pandas
+pygdal==2.4.0.4
 pyyaml
 rasterio
 scipy

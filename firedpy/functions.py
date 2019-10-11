@@ -20,13 +20,13 @@ import urllib.request as urllib2
 import warnings
 import yaml
 
-# The python gdal issue
+# The python gdal issue (matching system gdal version)
 try:
     from osgeo import gdal, ogr, osr
 except ImportError:
     raise ImportError(""" Unfortunately, you still need to install GDAL for
-                      python. Try pip install `pygdal==version` where version
-                      is matches the first two digits if the output from the
+                      Python. Try pip install `pygdal==version` where version
+                      is matches the first two digits of the output from the
                       command `gdal-config --version`. To see available pygdal
                       versions run `pip install pygdal== '
                       """)
