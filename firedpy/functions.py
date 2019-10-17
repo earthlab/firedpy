@@ -18,7 +18,6 @@ import sys
 from tqdm import tqdm
 import urllib.request as urllib2
 import warnings
-#import yaml
 
 # The python gdal issue (matching system gdal version)
 try:
@@ -31,11 +30,9 @@ except ImportError:
                       versions run `pip install pygdal== '
                       """)
 
-# Supress depreciation warning for dask when importing xarray (annoying)
-#yaml.warnings({"YAMLLoadWarning": False})
 warnings.filterwarnings("ignore", category=FutureWarning)
 import xarray as xr
-pd.options.mode.chained_assignment = None  # default="warn"
+pd.options.mode.chained_assignment = None
 
 
 # Functions
@@ -53,7 +50,7 @@ def buildEvents(dest, data_dir, tiles, spatial_param=5, temporal_param=11):
         path = os.path.join(data_dir, "rasters/burn_area/netcdfs/" + t + ".nc")
         files.append(path)
     tile_list = []
-    columns = ["id", "date", "x", "y", "duration", "edge", "tile"]
+    columns = ["id", "date", "x", "y", "edge", "tile"]
     df = pd.DataFrame(columns=columns)
     base = dt.datetime(1970, 1, 1)
     files.sort()
@@ -81,8 +78,10 @@ def buildEvents(dest, data_dir, tiles, spatial_param=5, temporal_param=11):
             print("\n" + tile_id)
 
             # Create a new event object
-            builder = EventGrid(nc_path=file, data_dir=data_dir,
-                                spatial_param=5, temporal_param=11)
+            builder = EventGrid(nc_path=file,
+                                data_dir=data_dir,
+                                spatial_param=spatial_param,
+                                temporal_param=temporal_param)
 
             # Classify event perimeters
             perims = builder.get_event_perimeters_3d()
@@ -110,7 +109,6 @@ def buildEvents(dest, data_dir, tiles, spatial_param=5, temporal_param=11):
             ys = []
             xs = []
             dates = []
-            durations = []
             for p in plist:
                 coord = [list(c) for c in p[1]]
                 edge = [edgeCheck(yedges, xedges, c, sp_buf) for c in coord]
@@ -120,15 +118,12 @@ def buildEvents(dest, data_dir, tiles, spatial_param=5, temporal_param=11):
                 y = [c[0] for c in coord]
                 x = [c[1] for c in coord]
                 date = [base + dt.timedelta(c[2]) for c in coord]
-                duration = (max(date) - min(date)).days + 1
-                duration = list(np.repeat(duration, len(coord)))
                 events.append(event)
                 coords.append(coord)
                 edges.append(edge)
                 ys.append(y)
                 xs.append(x)
                 dates.append(date)
-                durations.append(duration)
 
             # Flatten each list of lists
             events = flttn(events)
@@ -137,11 +132,9 @@ def buildEvents(dest, data_dir, tiles, spatial_param=5, temporal_param=11):
             ys = flttn(ys)
             xs = flttn(xs)
             dates = flttn(dates)
-            durations = flttn(durations)
             edf = pd.DataFrame(OrderedDict({"id": events, "date": dates, 
-                                            "x": xs, "y": ys,
-                                            "duration": durations,
-                                            "edge": edges, "tile": tile_id}))
+                                            "x": xs, "y": ys, "edge": edges,
+                                            "tile": tile_id}))
             if not os.path.exists(os.path.join(data_dir, "tables/events")):
                 os.mkdir(os.path.join(data_dir, "tables/events"))
             edf.to_csv(
@@ -194,7 +187,7 @@ def buildEvents(dest, data_dir, tiles, spatial_param=5, temporal_param=11):
             pass
 
         # If there aren"t events close enough in time the list will be empty
-        edf2 = edf2[(abs(edf2["days"] - d1) < 11) | (abs(edf2["days"] - d2) < 11)]
+        edf2 = edf2[(abs(edf2["days"] - d1) < temporal_param) | (abs(edf2["days"] - d2) < temporal_param)]
         eids2 = list(edf2["id"].unique())
 
         # If there are event close in time, are they close in space?
@@ -227,17 +220,8 @@ def buildEvents(dest, data_dir, tiles, spatial_param=5, temporal_param=11):
     df["id"] = df["id"].map(idmap)
     df = df.sort_values("id")
 
-    # Let"s add a duration and detections field - might not be necessary
-    detections = df.groupby("id").size().to_frame("count").reset_index()
-    detsmap = dict(zip(detections["id"], detections["count"]))
-    df["detections"] = df["id"].map(detsmap)
-    durations = df.groupby("id").days.apply(
-                                        lambda x: max(x) - min(x)+1).to_frame()
-    durmap = dict(zip(durations.index, durations["days"]))
-    df["duration"] = df["id"].map(durmap)
-
     # put these in order
-    df = df[["id", "tile", "date", "x", "y", "duration", "detections"]]
+    df = df[["id", "tile", "date", "x", "y"]]
 
     # Finally save
     print("Saving merged event table to " + dest)
@@ -290,7 +274,6 @@ def buildPolygons(src, daily_shp_path, event_shp_path, data_dir):
     gdfd = gdf.dissolve(by="did", as_index=False)
     gdfd["year"] = gdfd["start_date"].apply(lambda x: x[:4])
     gdfd["month"] = gdfd["start_date"].apply(lambda x: x[5:7])
-    #gdfd = gdfd[gdfd["month"].isin(["06", "07", "08", "09"])]
 
     # Save the daily before dissolving into event level
     print("Saving daily file to " + daily_shp_path + "...")

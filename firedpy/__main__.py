@@ -75,6 +75,10 @@ def main():
     tiles = args.tiles
     shapefile = args.shapefile
 
+    # Make sure the project directory exists
+    if not os.path.exists(proj_dir):
+        os.makedirs(proj_dir)
+
     # Create data object
     data = DataGetter(proj_dir)
 
