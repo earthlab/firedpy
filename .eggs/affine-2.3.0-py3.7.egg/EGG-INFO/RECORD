@@ -1,0 +1,12 @@
+affine/__init__.py,sha256=65hDpF_J6doZO7UXqO9srpAULT9cT54fjm-XNpLEtFw,19943
+affine/tests/__init__.py,sha256=6EO8EXNeyLHqEBQ3dU43rg4_SJmwz6dICHtl_uuPE7I,27
+affine/tests/test_pickle.py,sha256=m8sf2s7rvoJRKA7SujlOascP-9MO-_FYadx-ZBK4i3M,744
+affine/tests/test_rotation.py,sha256=qZLQsc9V5AHRBjtd_rbzOQcBjMdvg9Eo6UgLvAGTNe4,1321
+affine/tests/test_transform.py,sha256=U32ov7RZoSnzSnAMveux1n_xM0eGztMVhsNw2mednvs,18817
+affine-2.3.0.dist-info/AUTHORS.txt,sha256=Q6Mu8h4HFNqai6dD4d_mk-g8-Ol49b_hbg9WCS5l45A,264
+affine-2.3.0.dist-info/LICENSE.txt,sha256=_DY2tU_0Byz0sBPtmJPBce0l-I2uKzJyIFBJnBh4zW4,1517
+affine-2.3.0.dist-info/METADATA,sha256=R2jA5ab_9n2tfEFcuZlU650nFX68_JQnLXVB9sIsm28,3489
+affine-2.3.0.dist-info/WHEEL,sha256=8zNYZbwQSXoB9IfXOjPfeNwvAsALAjffgk27FqvCWbo,110
+affine-2.3.0.dist-info/top_level.txt,sha256=iQzy0aeBb-rrq5QvrICb3iCkyyxyhP5DWyYEicmmNDQ,7
+affine-2.3.0.dist-info/zip-safe,sha256=AbpHGcgLb-kRsJGnwFEktk7uzpZOCcBY74-YBdrKVGs,1
+affine-2.3.0.dist-info/RECORD,,

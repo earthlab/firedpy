@@ -69,11 +69,15 @@ def main():
     # Parse argument responses
     args = parser.parse_args()
     proj_dir = args.proj_dir
-    dest = os.path.join(proj_dir, "output", "tables", args.dest)
+    dest = os.path.join(proj_dir, "outputs", "tables", args.dest)
     spatial_param = args.spatial_param
     temporal_param = args.temporal_param
     tiles = args.tiles
     shapefile = args.shapefile
+
+    # Make sure the project directory exists
+    if not os.path.exists(proj_dir):
+        os.makedirs(proj_dir)
 
     # Create data object
     data = DataGetter(proj_dir)
@@ -90,7 +94,7 @@ def main():
     # Get all of the MODIS burn area hdfs (this needs to be parallelized)
     data.getBurns()
 
-    # Now go ahead and create the events (Memory"s a bit tight for parallel)
+    # Now go ahead and create the events (Memory's a bit tight for parallel)
     buildEvents(dest=dest, data_dir=proj_dir, tiles=tiles,
                 spatial_param=spatial_param, temporal_param=temporal_param)
 

@@ -1,0 +1,6 @@
+numpy
+pyparsing>=2.1.6
+
+[test]
+hypothesis
+pytest

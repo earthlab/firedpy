@@ -7,6 +7,8 @@ import gc
 import geopandas as gpd
 from glob import glob
 from http.cookiejar import CookieJar
+from multiprocessing import Pool
+import multiprocessing.pool as mpp
 from netCDF4 import Dataset
 import numpy as np
 import os
@@ -18,7 +20,6 @@ import sys
 from tqdm import tqdm
 import urllib.request as urllib2
 import warnings
-#import yaml
 
 # The python gdal issue (matching system gdal version)
 try:
@@ -31,11 +32,9 @@ except ImportError:
                       versions run `pip install pygdal== '
                       """)
 
-# Supress depreciation warning for dask when importing xarray (annoying)
-#yaml.warnings({"YAMLLoadWarning": False})
 warnings.filterwarnings("ignore", category=FutureWarning)
 import xarray as xr
-pd.options.mode.chained_assignment = None  # default="warn"
+pd.options.mode.chained_assignment = None
 
 
 # Functions
@@ -53,7 +52,7 @@ def buildEvents(dest, data_dir, tiles, spatial_param=5, temporal_param=11):
         path = os.path.join(data_dir, "rasters/burn_area/netcdfs/" + t + ".nc")
         files.append(path)
     tile_list = []
-    columns = ["id", "date", "x", "y", "duration", "edge", "tile"]
+    columns = ["id", "date", "x", "y", "edge", "tile"]
     df = pd.DataFrame(columns=columns)
     base = dt.datetime(1970, 1, 1)
     files.sort()
@@ -70,8 +69,8 @@ def buildEvents(dest, data_dir, tiles, spatial_param=5, temporal_param=11):
     # Loop through each netcdf file and build individual tile events
     for file in files:
         tile_id = file[-9:-3]
-        if os.path.exists(os.path.join(data_dir, "tables/events/" + tile_id +
-                                       ".csv")):
+        if os.path.exists(
+                os.path.join(data_dir, "tables/events/" + tile_id + ".csv")):
             print(tile_id  + " event table exists, skipping...")
         elif not os.path.exists(
                 os.path.join(data_dir, "rasters/burn_area/netcdfs/" + tile_id +
@@ -81,11 +80,13 @@ def buildEvents(dest, data_dir, tiles, spatial_param=5, temporal_param=11):
             print("\n" + tile_id)
 
             # Create a new event object
-            builder = EventGrid(nc_path=file, data_dir=data_dir,
-                                spatial_param=5, temporal_param=11)
+            builder = EventGrid(nc_path=file,
+                                data_dir=data_dir,
+                                spatial_param=spatial_param,
+                                temporal_param=temporal_param)
 
             # Classify event perimeters
-            perims = builder.get_event_perimeters_3d()
+            perims = builder.get_event_perimeters()
 
             # Remove empty perimeters
             perims = [p for p in perims if type(p.coords[0]) is not str]
@@ -110,7 +111,6 @@ def buildEvents(dest, data_dir, tiles, spatial_param=5, temporal_param=11):
             ys = []
             xs = []
             dates = []
-            durations = []
             for p in plist:
                 coord = [list(c) for c in p[1]]
                 edge = [edgeCheck(yedges, xedges, c, sp_buf) for c in coord]
@@ -120,15 +120,12 @@ def buildEvents(dest, data_dir, tiles, spatial_param=5, temporal_param=11):
                 y = [c[0] for c in coord]
                 x = [c[1] for c in coord]
                 date = [base + dt.timedelta(c[2]) for c in coord]
-                duration = (max(date) - min(date)).days + 1
-                duration = list(np.repeat(duration, len(coord)))
                 events.append(event)
                 coords.append(coord)
                 edges.append(edge)
                 ys.append(y)
                 xs.append(x)
                 dates.append(date)
-                durations.append(duration)
 
             # Flatten each list of lists
             events = flttn(events)
@@ -137,11 +134,9 @@ def buildEvents(dest, data_dir, tiles, spatial_param=5, temporal_param=11):
             ys = flttn(ys)
             xs = flttn(xs)
             dates = flttn(dates)
-            durations = flttn(durations)
             edf = pd.DataFrame(OrderedDict({"id": events, "date": dates, 
-                                            "x": xs, "y": ys,
-                                            "duration": durations,
-                                            "edge": edges, "tile": tile_id}))
+                                            "x": xs, "y": ys, "edge": edges,
+                                            "tile": tile_id}))
             if not os.path.exists(os.path.join(data_dir, "tables/events")):
                 os.mkdir(os.path.join(data_dir, "tables/events"))
             edf.to_csv(
@@ -194,7 +189,8 @@ def buildEvents(dest, data_dir, tiles, spatial_param=5, temporal_param=11):
             pass
 
         # If there aren"t events close enough in time the list will be empty
-        edf2 = edf2[(abs(edf2["days"] - d1) < 11) | (abs(edf2["days"] - d2) < 11)]
+        edf2 = edf2[(abs(edf2["days"] - d1) < temporal_param) | 
+                    (abs(edf2["days"] - d2) < temporal_param)]
         eids2 = list(edf2["id"].unique())
 
         # If there are event close in time, are they close in space?
@@ -227,17 +223,8 @@ def buildEvents(dest, data_dir, tiles, spatial_param=5, temporal_param=11):
     df["id"] = df["id"].map(idmap)
     df = df.sort_values("id")
 
-    # Let"s add a duration and detections field - might not be necessary
-    detections = df.groupby("id").size().to_frame("count").reset_index()
-    detsmap = dict(zip(detections["id"], detections["count"]))
-    df["detections"] = df["id"].map(detsmap)
-    durations = df.groupby("id").days.apply(
-                                        lambda x: max(x) - min(x)+1).to_frame()
-    durmap = dict(zip(durations.index, durations["days"]))
-    df["duration"] = df["id"].map(durmap)
-
     # put these in order
-    df = df[["id", "tile", "date", "x", "y", "duration", "detections"]]
+    df = df[["id", "tile", "date", "x", "y"]]
 
     # Finally save
     print("Saving merged event table to " + dest)
@@ -290,7 +277,6 @@ def buildPolygons(src, daily_shp_path, event_shp_path, data_dir):
     gdfd = gdf.dissolve(by="did", as_index=False)
     gdfd["year"] = gdfd["start_date"].apply(lambda x: x[:4])
     gdfd["month"] = gdfd["start_date"].apply(lambda x: x[5:7])
-    #gdfd = gdfd[gdfd["month"].isin(["06", "07", "08", "09"])]
 
     # Save the daily before dissolving into event level
     print("Saving daily file to " + daily_shp_path + "...")
@@ -310,9 +296,9 @@ def buildPolygons(src, daily_shp_path, event_shp_path, data_dir):
 
     # Calculate perimeter length
     print("Calculating perimeter lengths...")
-    gdf["final_perimeter"] = gdf["geometry"].length  # <----------------------- Check accuracy of this, QGIS is slightly different (also check adams)
+    gdf["final_perimeter"] = gdf["geometry"].length
 
-    # Now save as a geopackage  # <-------------------------------------------- Should we also make a shapefile for ESRI users? Make it optional.
+    # Now save as a geopackage
     print("Saving event-level file to " + event_shp_path + "...")
     gdf.to_file(event_shp_path, driver="GPKG")
 
@@ -386,18 +372,6 @@ def maxGrowthDate(x):
     else:
         d = d[0]
     return d
-
-
-def toAcres(p, res):
-    return (p*res**2) * 0.000247105
-
-
-def toHa(p, res):
-    return (p*res**2) * 0.0001
-
-
-def toKms(p, res):
-    return (p*res**2)/1000000
 
 
 def mergeChecker(new_coords, full_list, temporal_param, radius):
@@ -509,6 +483,9 @@ def spCheck(diffs, sp_buf):
         check = False
     return check
 
+def toAcres(p, res):
+    return (p*res**2) * 0.000247105
+
 
 def toDays(date, base):
     """
@@ -521,33 +498,77 @@ def toDays(date, base):
     return days
 
 
-def toRaster(array, trgt, geometry, proj, navalue=-9999):
-    """
-    Writes a single array to a raster with coordinate system and
-    geometric information.
+def toHa(p, res):
+    return (p*res**2) * 0.0001
 
-    trgt = target path
-    proj = spatial reference system
-    geom = geographic transformation
+
+def toKms(p, res):
+    return (p*res**2)/1000000
+
+# FTP Download functions
+def istarmap(self, func, iterable, chunksize=1):
     """
-    ypixels = array.shape[0]
-    xpixels = array.shape[1]
-    trgt = trgt.encode("utf-8")
-    image = gdal.GetDriverByName("GTiff").Create(trgt, xpixels, ypixels, 1,
-                                                 gdal.GDT_Float32)
-    image.SetGeoTransform(geometry)
-    image.SetProjection(proj)
-    image.GetRasterBand(1).WriteArray(array)
-    image.GetRasterBand(1).SetNoDataValue(navalue)
+    starmap progress bar patch from darkonaut:
+    
+    https://stackoverflow.com/users/9059420/darkonaut
+    https://stackoverflow.com/questions/57354700/starmap-combined-with-tqdm/
+    """
+    if self._state != mpp.RUN:
+        raise ValueError("Pool not running")
+
+    if chunksize < 1:
+        raise ValueError(
+            "Chunksize must be 1+, not {0:n}".format(
+                chunksize))
+
+    task_batches = mpp.Pool._get_tasks(func, iterable, chunksize)
+    result = mpp.IMapIterator(self._cache)
+    self._taskqueue.put(
+        (
+            self._guarded_task_generation(result._job,
+                                          mpp.starmapstar,
+                                          task_batches),
+            result._set_length
+        ))
+    return (item for chunk in result for item in chunk)
+
+mpp.Pool.istarmap = istarmap
+
+
+def downloadBA(hdf, hdf_path):
+    # Use file name to get the tile id
+    tile = hdf[17:23]
+
+    # Infer the target file path
+    folder = os.path.join(hdf_path, tile)
+    trgt = os.path.join(folder, hdf)
+
+    # If this file doesn't exists locally, download
+    if not os.path.exists(trgt):
+
+        # Check worker into site
+        ftp = ftplib.FTP("fuoco.geog.umd.edu", user="fire", passwd="burnt")
+    
+        # Infer and move into the remote folder
+        ftp_folder =  "/MCD64A1/C6/" + tile
+        ftp.cwd(ftp_folder)
+
+        # Attempt to download
+        try:
+            with open(trgt, "wb") as dst:
+                ftp.retrbinary("RETR %s" % hdf, dst.write, 102400)
+        except ftplib.all_errors as e:
+            print("FTP Transfer Error: ", e)
+
+        # Close connection
+        ftp.close()
 
 
 # Classes
 class DataGetter:
     """
     Things to do/remember:
-        - authorization issues, add user inputs
-        - use shapefile to determine appropriate tiles
-        - create a pool for parallel downloads
+        - parallel downloads
     """
     def __init__(self, data_dir):
         self.data_dir = data_dir
@@ -568,30 +589,14 @@ class DataGetter:
         print("Project Folder: " + data_dir)
 
     def createPaths(self):
-        sub_folders = ["rasters", "shapefiles", "shapefiles/ecoregion",
-                       "tables", "rasters/burn_area", "rasters/burn_area/hdfs",
-                       "rasters/landcover", "rasters/landcover/mosaics/",
-                       "rasters/ecoregion"]
+        sub_folders = ["rasters/burn_area", "rasters/burn_area/hdfs",
+                       "rasters/ecoregion", "rasters/landcover",
+                       "rasters/landcover/mosaics/", "shapefiles/ecoregion",
+                       "tables"]
         folders = [os.path.join(self.data_dir, sf) for sf in sub_folders]
         for f in folders:
             if not os.path.exists(f):
-                os.mkdir(f)
-
-    def downloadBA(self, file, ftp):
-        missing = []
-        tile = file[17:23]
-        folder = os.path.join(self.hdf_path, tile)
-        if not os.path.exists(folder):
-            os.mkdir(folder)
-        trgt = os.path.join(folder, file)
-        if not os.path.exists(trgt):
-            try:
-                with open(trgt, "wb") as dst:
-                    ftp.retrbinary("RETR %s" % file, dst.write, 102400)
-            except ftplib.all_errors as e:
-                missing.append(file)
-                print("FTP Transfer Error: ", e)
-        return missing
+                os.makedirs(f)
 
     def getBurns(self):
         """
@@ -617,71 +622,89 @@ class DataGetter:
             tiles = [t for t in tiles if "h" in t]       
 
         # Download the available files and catch failed downloads
-        missings = []
         for tile in tiles:
-            if not os.path.exists(
-                     os.path.join(self.data_dir, "rasters/burn_area/netcdfs/" + 
-                                  tile + ".nc")):
+            # Find remote folder
+            ftp_folder =  "/MCD64A1/C6/" + tile
+            ftp.cwd(ftp_folder)
+            hdfs = ftp.nlst()
+            hdfs = [h for h in hdfs if ".hdf" in h]
+    
+            # Make sure local target folder exists
+            folder = os.path.join(self.hdf_path, tile)
+            if not os.path.exists(folder):
+                os.mkdir(folder)
+
+            # Skip this if the final product exists
+            nc_file = os.path.join(
+                    self.data_dir, "rasters/burn_area/netcdfs/" + tile + ".nc")
+            if not os.path.exists(nc_file):
                 print("Downloading/Checking hdf files for " + tile)
-                ftp_folder =  "/MCD64A1/C6/" + tile
-                try:
-                    ftp.cwd(ftp_folder)
-                    hdfs = ftp.nlst()
-                    hdfs = [h for h in hdfs if ".hdf" in h]
-                    for h in tqdm(hdfs, position=0):
-                        trgt = os.path.join(self.hdf_path, tile, h)
-    
-                        # Check if the file already exists and works
-                        if os.path.exists(trgt):
-                            missing = []
-                        else:
-                            missing = self.downloadBA(h, ftp)
-    
-                        # If the download failed, add to missing
-                        if len(missing) > 0:
-                            missings = missings + missing
-    
-                        # Even if it didn"t fail, make sure it works
-                        try:
-                            gdal.Open(trgt).GetSubDatasets()[0][0]
-                        except:
-                            print("Bad file, removing and trying again...")
-                            missings = missings + [h]
-                            os.remove(trgt)
-                except:
+
+                # Create pool
+                pool = Pool(5)
+                
+                # Zip arguments together
+                args = zip(hdfs, np.repeat(self.hdf_path, len(hdfs)))
+
+                # Try to dl in parallel using istarmap patch for progress bar
+                for _ in tqdm(pool.istarmap(downloadBA, args), 
+                              total=len(hdfs), position=0):
                     pass
 
-        # Now try again for the missed files
-        if len(missings) > 0:
-            print("Missed Files: \n" + str(missings))
-            print("trying again...")
-            for file in missings:
-                tile = file[17:23]
-                ftp_folder =  "/MCD64A1/C6/" + tile
-                ftp.cwd(ftp_folder)
-                trgt = os.path.join(self.hdf_path, tile, h)
-                try:
-                    with open(trgt, "wb") as dst:
-                        ftp.retrbinary("RETR %s" % file, dst.write, 102400)
-                except ftplib.all_errors as e:
-                    missing.append(file)
-                    print("FTP Transfer Error: ", e)
+            # Check Downloads
+            missings = []
+            for hdf in hdfs:
+                trgt = os.path.join(folder, hdf)
+                remote = os.path.join(ftp_folder, hdf)
+                if not os.path.exists(trgt):
+                    missings.append(remote)
+                else:
+                    try:
+                        gdal.Open(trgt).GetSubDatasets()[0][0]
+                    except:
+                        print("Bad file detected, removing to try again...")
+                        missings.append(remote)
+                        os.remove(trgt)
 
-                try:
-                    gdal.Open(trgt).GetSubDatasets()[0][0]
-                    missings.remove(file)
-                except Exception as e:
-                    print(e)
+            # Now try again for the missed files
+            if len(missings) > 0:
+                print("Missed Files: \n" + str(missings))
+                print("trying again...")
 
-        # If that doesn"t get them all, give up and let the user handle it.
-        if len(missings) > 0:
-            print("There are still " + str(len(missings)) + " missed files.")
-            print("Try downloading these files manually: ")
-            for m in missings:
-                print(m)
+                # Check into FTP server again
+                ftp = ftplib.FTP("fuoco.geog.umd.edu", user="fire",
+                                 passwd="burnt")
+                for remote in missings:
+                    tile = remote.split("/")[-2]
+                    ftp_folder =  "/MCD64A1/C6/" + tile
+                    ftp.cwd(ftp_folder)
+                    file = os.path.basename(remote)
+                    trgt = os.path.join(self.hdf_path, tile, file)
 
-        # And quit the ftp service
-        ftp.quit()
+                    # Try to redownload
+                    try:
+                        with open(trgt, "wb") as dst:
+                            ftp.retrbinary("RETR %s" % file, dst.write, 102400)
+                    except ftplib.all_errors as e:
+                        print("FTP Transfer Error: ", e)
+
+                    # Check download
+                    try:
+                        gdal.Open(trgt).GetSubDatasets()[0][0]
+                        missings.remove(file)
+                    except Exception as e:
+                        print(e)
+
+                # Close new ftp connection
+                ftp.close()
+
+                # If that doesn"t get them all, give up.
+                if len(missings) > 0:
+                    print("There are still " + str(len(missings)) +
+                          " missed files.")
+                    print("Try downloading these files manually: ")
+                    for m in missings:
+                        print(m)
 
         # Build the netcdfs here
         tile_files = {}
@@ -752,7 +775,7 @@ class DataGetter:
             tiles = ftp.nlst()
             tiles = [t for t in tiles if "h" in t]
 
-        # We need years in strings  <------------------------------------------ Parameterize this
+        # We need years in strings
         years = [str(y) for y in range(2001, 2017)]
 
         # Access
@@ -933,7 +956,7 @@ class DataGetter:
                 geom = ds.GetGeoTransform()
                 ulx, xres, xskew, uly, yskew, yres = geom
                 lrx = ulx + (ds.RasterXSize * xres)
-                lry = uly + (ds.RasterYSize * yres) + yres  # <---------------- Off by one cell
+                lry = uly + (ds.RasterYSize * yres) + yres
                 exts.append([ulx, lry, lrx, uly])
 
             extent = [exts[0][0], exts[1][1], exts[2][2], exts[3][3]]
@@ -1231,6 +1254,7 @@ class EventGrid:
             ox = x - self.spatial_param
         center = [ycenter, xcenter]
         origin = [oy, ox]
+
         return top, bottom, left, right, center, origin
 
     def get_availables(self):
@@ -1240,23 +1264,23 @@ class EventGrid:
         less than or equal to zero there were no values and it will not be
         checked in the event classification step.
         """
-        # Low memory - Somehow leads to slow loop in get_event_perimeters_3d
+        # Low memory - Somehow leads to slow loop in get_event_perimeters
         # We want to get the mask without pulling the whole thing into memory
-        burns = xr.open_dataset(self.nc_path, chunks={"x": 500, "y": 500})
-
-        # Pull in only the single max value array
-        mask = burns.max(dim="time").compute()
-
-        # Get the y, x positions where one or more burns were detected
-        locs = np.where(mask.value.values > 0)
-
-        # Now pair these
-        available_pairs = []
-        for i in range(len(locs[0])):
-            available_pairs.append([locs[0][i], locs[1][i]])
-
-        # Leaving the data set open causes problems
-        burns.close()
+#        burns = xr.open_dataset(self.nc_path, chunks={"x": 500, "y": 500})
+#
+#        # Pull in only the single max value array
+#        mask = burns.max(dim="time").compute()
+#
+#        # Get the y, x positions where one or more burns were detected
+#        locs = np.where(mask.value.values > 0)
+#
+#        # Now pair these
+#        available_pairs = []
+#        for i in range(len(locs[0])):
+#            available_pairs.append([locs[0][i], locs[1][i]])
+#
+#        # Leaving the data set open causes problems
+#        burns.close()
 
         # Using memory - can handle large tiles, but gets pretty high
         mask = self.input_array.max(dim="time")
@@ -1269,12 +1293,10 @@ class EventGrid:
         # Done.
         return available_pairs
 
-    def get_event_perimeters_3d(self):
+    def get_event_perimeters(self):
         """
         Iterate through each cell in the 3D MODIS Burn Date tile and group it
         into fire events using the space-time window.
-
-        self = EventGrid("/home/travis/github/firedpy/data/rasters/burn_area/netcdfs/h21v08.nc")
         """
         print("Filtering out cells with no events...")
         available_pairs = self.get_availables()

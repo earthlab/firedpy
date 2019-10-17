@@ -1,0 +1,4 @@
+click<8,>=4.0
+
+[test]
+pytest-cov

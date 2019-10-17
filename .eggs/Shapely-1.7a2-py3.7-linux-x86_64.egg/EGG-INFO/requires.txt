@@ -1,0 +1,12 @@
+
+[all]
+numpy
+pytest
+pytest-cov
+
+[test]
+pytest
+pytest-cov
+
+[vectorized]
+numpy

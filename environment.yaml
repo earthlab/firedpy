@@ -1,0 +1,21 @@
+name: firedpy
+channels:
+  - conda-forge
+dependencies:
+  - beautifulsoup4
+  - dask
+  - descartes
+  - gdal
+  - geopandas
+  - lxml
+  - matplotlib
+  - netcdf4
+  - numpy
+  - pandas
+  - pyyaml
+  - rasterio
+  - scipy
+  - tabula-py
+  - toolz
+  - tqdm
+  - xarray==0.11.3

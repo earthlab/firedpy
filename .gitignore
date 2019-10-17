@@ -1,6 +1,8 @@
+/env
 /build
 /dist
 /firedpy.egg-info
 /data
 /firedpy/data
 /firedpy/__pycache__
+/setup2.py
