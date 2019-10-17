@@ -21,6 +21,7 @@ import setuptools
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
+print('find packages ', setuptools.find_packages())
 setuptools.setup(
     name="firedpy",
     version="0.0.1",
@@ -39,10 +40,10 @@ setuptools.setup(
     ],
     entry_points = {'console_scripts': ['firedpy = firedpy.__main__:main']},
     packages=setuptools.find_packages(),
-#    install_requires = ['beautifulsoup4', 'dask', 'descartes', 'geopandas',
-#                        'lxml', 'netcdf4', 'numpy', 'pandas',
-##                        'pygdal==' + pygdal_version,
-##                        'pyyaml',
-#                        'rasterio',
-#                        'scipy', 'toolz', 'tqdm', 'xarray']
+   install_requires = ['beautifulsoup4', 'bs4', 'dask', 'descartes', 'geopandas',
+                       'lxml', 'netcdf4', 'numpy', 'pandas',
+                       # 'pygdal==' + pygdal_version,
+                       # 'pyyaml',
+                       'scipy', 'toolz', 'tqdm', 'xarray',
+                       'rasterio']
 )
