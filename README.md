@@ -8,7 +8,7 @@ This function will use a space-time window to classify individual burn detection
 
 Note for windows users: create Anaconda environment from the provided environment file and ensure you can import gdal. The install firedpy from same directory. For example, assuming gdal is installed correctly:
 
-To Install:
+## To Install:
 
   - Clone this repository into a local directory:
   
@@ -25,7 +25,7 @@ To Install:
     `python setup.py install`
 
 
-To Use:
+## To Use:
 
   - Run firedpy with no options to download required data and a write data table of classified fire events to a temporary directory. This uses a CONUS as the default area of interest with a spatial parameter of 5 pixels (~2,316.6 km) and 11 days:
  
