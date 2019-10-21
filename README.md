@@ -5,6 +5,6 @@ A Python CLI for classifying fire events from the Collection 6 MODIS Burned Area
 
 Note for windows users: create Anaconda environment from the provided environment file and ensure you can import gdal. The install firedpy from same directory. For example, assuming gdal is installed correctly:
 
-`conda env create -f environment.yml`
-`conda activate firedpy`
-`python setup.py install`
+`conda env create -f environment.yml`  
+`conda activate firedpy`  
+`python setup.py install`  
