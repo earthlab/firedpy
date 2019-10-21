@@ -28,21 +28,21 @@ This function will use a space-time window to classify individual burn detection
 ### To Use:
 
    - In your terminal use this command to print out the available options and descriptions:
-  
+
     `firedpy --help`
-    
+
    - Run firedpy with no options to download required data and write a data table of classified fire events to a temporary directory. This uses CONUS as the default area of interest with a spatial parameter of 5 pixels (~2,316.6 km) and 11 days:
- 
+
     `firedpy`
-  
+
   - Change the spatial and temporal parameters of the model run:
-  
+
     `firedpy -spatial_param 6 -temporal_param 10`
-   
+ 
   - Specify specific tiles and a local project_directory for required data and model outputs:
-  
+
     `firedpy -spatial_param 6 -temporal_param 10 -tiles h11v09 h12v09 -proj_dir /home/user/fired_project`
-    
+  
   - Write event- and daily-level shapefiles as outputs in addition to a data table:
   
     `firedpy -spatial_param 6 -temporal_param 10 -tiles h11v09 h12v09 -proj_dir /home/<user>/fired_project --shapefile`
