@@ -28,6 +28,7 @@ To Use:
   
     `firedpy --help`
   
-  - Run firedpy with no options will download required data and model outputs for CONUS to a temporary directory:
+  - Run firedpy with no options will download required data and a data table of classified fire events for CONUS to a temporary directory:
+ 
     `firedpy`
   
