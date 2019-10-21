@@ -8,7 +8,6 @@ import geopandas as gpd
 from glob import glob
 from http.cookiejar import CookieJar
 from multiprocessing import Pool
-import multiprocessing.pool as mpp
 from netCDF4 import Dataset
 import numpy as np
 import os
@@ -17,7 +16,9 @@ import rasterio
 from rasterio.merge import merge
 from shapely.geometry import Point, Polygon, MultiPolygon
 import sys
+from threading import Thread
 from tqdm import tqdm
+import requests
 import urllib.request as urllib2
 import warnings
 
@@ -505,37 +506,11 @@ def toHa(p, res):
 def toKms(p, res):
     return (p*res**2)/1000000
 
-# FTP Download functions
-def istarmap(self, func, iterable, chunksize=1):
-    """
-    starmap progress bar patch from darkonaut:
 
-    https://stackoverflow.com/users/9059420/darkonaut
-    https://stackoverflow.com/questions/57354700/starmap-combined-with-tqdm/
-    """
-    if self._state != mpp.RUN:
-        raise ValueError("Pool not running")
-
-    if chunksize < 1:
-        raise ValueError(
-            "Chunksize must be 1+, not {0:n}".format(
-                chunksize))
-
-    task_batches = mpp.Pool._get_tasks(func, iterable, chunksize)
-    result = mpp.IMapIterator(self._cache)
-    self._taskqueue.put(
-        (
-            self._guarded_task_generation(result._job,
-                                          mpp.starmapstar,
-                                          task_batches),
-            result._set_length
-        ))
-    return (item for chunk in result for item in chunk)
-
-mpp.Pool.istarmap = istarmap
-
-
-def downloadBA(hdf, hdf_path):
+def downloadBA(query):
+    # Get file and target path
+    hdf, hdf_path = query
+    
     # Use file name to get the tile id
     tile = hdf[17:23]
 
@@ -644,11 +619,11 @@ class DataGetter:
                 pool = Pool(5)
 
                 # Zip arguments together
-                args = zip(hdfs, np.repeat(self.hdf_path, len(hdfs)))
+                queries = list(zip(hdfs, np.repeat(self.hdf_path, len(hdfs))))
 
-                # Try to dl in parallel using istarmap patch for progress bar
-                for _ in tqdm(pool.istarmap(downloadBA, args),
-                              total=len(hdfs), position=0):
+                # Try to dl in parallel with progress bar
+                for _ in tqdm(pool.imap(downloadBA, queries), total=len(hdfs),
+                              position=0):
                     pass
 
             # Check Downloads
@@ -793,24 +768,36 @@ class DataGetter:
         urllib2.install_opener(opener)
 
         # Land cover data from earthdata.nasa.gov
-        for year in years:
-            print("Retrieving landcover data for " + year)
-            url = ("https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.006/" + year +
+        lp = self.landcover_path
+        for y in years:
+            if not os.path.exists(os.path.join(self.landcover_path, y)):
+                    os.mkdir(os.path.join(self.landcover_path, y))
+            print("Retrieving landcover data for " + y)
+            url = ("https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.006/" + y +
                   ".01.01/")
-            r = urllib2.urlopen(url)
-            soup = BeautifulSoup(r, features="lxml",
-                                from_encoding=r.info().get_param("charset")
-                                )
+            r = requests.get(url)
+            soup = BeautifulSoup(r.text, 'html.parser')
             names = [link["href"] for link in soup.find_all("a", href=True)]
-            names = [f for f in names if "hdf" in f and f[17:23] in tiles]
+            names = [n for n in names if "hdf" in n and "xml" not in n]
+            names = [n for n in names if n.split('.')[2] in tiles]
             links = [url + l for l in names]
-            for i in tqdm(range(len(links)), position=0):
-                if not os.path.exists(os.path.join(self.landcover_path, year)):
-                    os.mkdir(os.path.join(self.landcover_path, year))
-                path = os.path.join(self.landcover_path, year, names[i])
-                if not os.path.exists(path):
-                    request = urllib2.Request(links[i])
-                    with open(path, "wb") as file:
+            dsts = [os.path.join(lp, y, names[i]) for i in range(len(links))]
+            queries = [(links[i], dsts[i]) for i in range(len(links))]
+
+            # Parallelize individual files, in case user only wants one.
+            def download(link, dst):
+                r = requests.get(url, stream=True)
+                with open(dst, "wb") as file:
+                    for chunk in r:
+                        file.write(chunk)
+
+            # One file at a time
+            for i in tqdm(range(len(queries)), position=0):
+                link = queries[i][0]
+                dst = queries[i][1]
+                if not os.path.exists(dst):
+                    request = urllib2.Request(link)
+                    with open(dst, "wb") as file:
                         response = urllib2.urlopen(request).read()
                         file.write(response)
 

@@ -91,7 +91,7 @@ def main():
     else:
         data.tiles = tiles
 
-    # Get all of the MODIS burn area hdfs (this needs to be parallelized)
+    # Get all of the MODIS burn area hdfs and landcover and ecoregion data
     data.getBurns()
 
     # Now go ahead and create the events (Memory's a bit tight for parallel)
