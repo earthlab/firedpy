@@ -31,7 +31,7 @@ This function will use a space-time window to classify individual burn detection
 
     `firedpy --help`
 
-  - Run firedpy with no options to download required data and write a data table of classified fire events to a temporary directory. This uses CONUS as the default area of interest with a spatial parameter of 5 pixels (~2,316.6 km) and 11 days:
+  - Run firedpy with no options to download required data and write a data table of classified fire events to a temporary directory. This uses CONUS as the default area of interest with a spatial parameter of 5 pixels (~2.3 km) and 11 days:
 
     `firedpy`
 
