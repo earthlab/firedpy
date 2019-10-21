@@ -134,7 +134,7 @@ def buildEvents(dest, data_dir, tiles, spatial_param=5, temporal_param=11):
             ys = flttn(ys)
             xs = flttn(xs)
             dates = flttn(dates)
-            edf = pd.DataFrame(OrderedDict({"id": events, "date": dates, 
+            edf = pd.DataFrame(OrderedDict({"id": events, "date": dates,
                                             "x": xs, "y": ys, "edge": edges,
                                             "tile": tile_id}))
             if not os.path.exists(os.path.join(data_dir, "tables/events")):
@@ -189,7 +189,7 @@ def buildEvents(dest, data_dir, tiles, spatial_param=5, temporal_param=11):
             pass
 
         # If there aren"t events close enough in time the list will be empty
-        edf2 = edf2[(abs(edf2["days"] - d1) < temporal_param) | 
+        edf2 = edf2[(abs(edf2["days"] - d1) < temporal_param) |
                     (abs(edf2["days"] - d2) < temporal_param)]
         eids2 = list(edf2["id"].unique())
 
@@ -273,7 +273,7 @@ def buildPolygons(src, daily_shp_path, event_shp_path, data_dir):
 
     # Now add the first date of each event and merge daily event detections
     print("Dissolving polygons...")
-    gdf["start_date"] = gdf.groupby("id")["date"].transform("min")  
+    gdf["start_date"] = gdf.groupby("id")["date"].transform("min")
     gdfd = gdf.dissolve(by="did", as_index=False)
     gdfd["year"] = gdfd["start_date"].apply(lambda x: x[:4])
     gdfd["month"] = gdfd["start_date"].apply(lambda x: x[5:7])
@@ -509,7 +509,7 @@ def toKms(p, res):
 def istarmap(self, func, iterable, chunksize=1):
     """
     starmap progress bar patch from darkonaut:
-    
+
     https://stackoverflow.com/users/9059420/darkonaut
     https://stackoverflow.com/questions/57354700/starmap-combined-with-tqdm/
     """
@@ -548,7 +548,7 @@ def downloadBA(hdf, hdf_path):
 
         # Check worker into site
         ftp = ftplib.FTP("fuoco.geog.umd.edu", user="fire", passwd="burnt")
-    
+
         # Infer and move into the remote folder
         ftp_folder =  "/MCD64A1/C6/" + tile
         ftp.cwd(ftp_folder)
@@ -619,7 +619,7 @@ class DataGetter:
             tiles = self.tiles
         else:
             tiles = ftp.nlst()
-            tiles = [t for t in tiles if "h" in t]       
+            tiles = [t for t in tiles if "h" in t]
 
         # Download the available files and catch failed downloads
         for tile in tiles:
@@ -628,7 +628,7 @@ class DataGetter:
             ftp.cwd(ftp_folder)
             hdfs = ftp.nlst()
             hdfs = [h for h in hdfs if ".hdf" in h]
-    
+
             # Make sure local target folder exists
             folder = os.path.join(self.hdf_path, tile)
             if not os.path.exists(folder):
@@ -642,12 +642,12 @@ class DataGetter:
 
                 # Create pool
                 pool = Pool(5)
-                
+
                 # Zip arguments together
                 args = zip(hdfs, np.repeat(self.hdf_path, len(hdfs)))
 
                 # Try to dl in parallel using istarmap patch for progress bar
-                for _ in tqdm(pool.istarmap(downloadBA, args), 
+                for _ in tqdm(pool.istarmap(downloadBA, args),
                               total=len(hdfs), position=0):
                     pass
 
@@ -750,7 +750,7 @@ class DataGetter:
         Processes Distributed Active Archive Center, which is an Earthdata
         thing. You"ll need register for a username and password, but that"s
         free. Fortunately, there is a tutorial on how to get this data:
-           
+
         https://wiki.earthdata.nasa.gov/display/EL/How+To+Access+Data+With+
         Python
 
@@ -798,7 +798,7 @@ class DataGetter:
             url = ("https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.006/" + year +
                   ".01.01/")
             r = urllib2.urlopen(url)
-            soup = BeautifulSoup(r, features="lxml", 
+            soup = BeautifulSoup(r, features="lxml",
                                 from_encoding=r.info().get_param("charset")
                                 )
             names = [link["href"] for link in soup.find_all("a", href=True)]
@@ -821,7 +821,7 @@ class DataGetter:
         for year in years:
             print("Stitching together landcover tiles for year " + year)
             lc_tiles = glob(os.path.join(self.landcover_path, year, "*hdf"))
-            dss = [rasterio.open(f).subdatasets[0] for f in lc_tiles]           
+            dss = [rasterio.open(f).subdatasets[0] for f in lc_tiles]
             tiles = [rasterio.open(d) for d in dss]
             mosaic, transform = merge(tiles)
             crs = tiles[0].meta.copy()
@@ -875,13 +875,13 @@ class DataGetter:
             conus.to_file(os.path.join(self.data_dir, "shapefiles/conus.shp"))
 
         # Contiguous United States - MODIS Sinusoidal
-        if not os.path.exists(os.path.join(self.data_dir, 
+        if not os.path.exists(os.path.join(self.data_dir,
                                            "shapefiles/conus_modis.shp")):
             print("Reprojecting state shapefile to MODIS Sinusoidal...")
             conus = gpd.read_file(os.path.join(self.data_dir,
                                                "shapefiles/conus.shp"))
             modis_conus = conus.to_crs(modis_crs)
-            modis_conus.to_file(os.path.join(self.data_dir, 
+            modis_conus.to_file(os.path.join(self.data_dir,
                                              "shapefiles/conus_modis.shp"))
 
         # Level III Omernick Ecoregions - USGS North American Albers
@@ -892,7 +892,7 @@ class DataGetter:
             eco_l3 = gpd.read_file("ftp://ftp.epa.gov/wed/ecoregions/us/" +
                                    "us_eco_l3.zip")
             eco_l3.crs = {"init": "epsg:5070"}
-            eco_l3.to_file(os.path.join(self.data_dir, 
+            eco_l3.to_file(os.path.join(self.data_dir,
                                         "shapefiles/ecoregion/us_eco_l3.shp"))
             eco_l3 = eco_l3.to_crs(modis_crs)
             eco_l3.to_file(
@@ -924,7 +924,7 @@ class DataGetter:
                     self.data_dir, "shapefiles/modis_world_grid.shp")
 
             # Getting the extent regardless of existing files from other runs
-            template1 = gpd.read_file(extent_template_file)            
+            template1 = gpd.read_file(extent_template_file)
             template1["h"] = template1["h"].apply(lambda x: "{:02d}".format(x))
             template1["v"] = template1["v"].apply(lambda x: "{:02d}".format(x))
             template1["tile"] = "h" + template1["h"] + "v" +  template1["v"]
@@ -1034,11 +1034,11 @@ class DataGetter:
             proj = hdf.GetProjection()
             data = hdf.GetRasterBand(1)
             crs = osr.SpatialReference()
-    
+
             # Get the proj4 string usign the WKT
             crs.ImportFromWkt(proj)
             proj4 = crs.ExportToProj4()
-    
+
             # Use one tif (one array) for spatial attributes
             array = data.ReadAsArray()
             ny, nx = array.shape
@@ -1048,15 +1048,15 @@ class DataGetter:
             # Todays date for attributes
             todays_date = dt.datetime.today()
             today = np.datetime64(todays_date)
-    
+
             # Create Dataset
             nco = Dataset(file_name, mode="w", format="NETCDF4", clobber=True)
-    
+
             # Dimensions
             nco.createDimension("y", ny)
             nco.createDimension("x", nx)
             nco.createDimension("time", None)
-    
+
             # Variables
             y = nco.createVariable("y",  np.float64, ("y",))
             x = nco.createVariable("x",  np.float64, ("x",))
@@ -1066,8 +1066,8 @@ class DataGetter:
                                           fill_value=-9999, zlib=True)
             variable.standard_name = "day"
             variable.long_name = "Burn Days"
-    
-            # Appending the CRS information 
+
+            # Appending the CRS information
             # Check "https://cf-trac.llnl.gov/trac/ticket/77"
             crs = nco.createVariable("crs", "c")
             variable.setncattr("grid_mapping", "crs")
@@ -1089,7 +1089,7 @@ class DataGetter:
             y.standard_name = "projection_y_coordinate"
             y.long_name = "y coordinate of projection"
             y.units = "m"
-    
+
             # Other attributes
             nco.title = "Burn Days"
             nco.subtitle = "Burn Days Detection by MODIS since 1970."
@@ -1097,7 +1097,7 @@ class DataGetter:
             nco.date = pd.to_datetime(str(today)).strftime("%Y-%m-%d")
             nco.projection = "MODIS Sinusoidal"
             nco.Conventions = "CF-1.6"
-    
+
             # Variable Attrs
             times.units = "days since 1970-01-01"
             times.standard_name = "time"
@@ -1110,12 +1110,12 @@ class DataGetter:
                 dates.append(date)
             deltas = [d - dt.datetime(1970, 1, 1) for d in dates]
             days = np.array([d.days for d in deltas])
-    
+
             # Write dimension data
             x[:] = xs
             y[:] = ys
             times[:] = days
-    
+
             # One file a time, write the arrays
             tidx = 0
             for f in tqdm(files, position=0, file=sys.stdout):
@@ -1133,7 +1133,7 @@ class DataGetter:
                     blank = np.zeros((ny, nx))
                     variable[tidx, :, :] = blank
                 tidx += 1
-    
+
             # Done
             nco.close()
 
