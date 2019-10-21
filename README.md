@@ -13,11 +13,13 @@ Note for windows users: create Anaconda environment from the provided environmen
   - Clone this repository into a local directory:
   
     `git clone https://github.com/earthlab/firedpy.git`
+
     `cd firedpy`
 
   - Establish and activate a conda environment:
   
-    `conda env create -f environment.yaml`  
+    `conda env create -f environment.yaml`
+
     `conda activate firedpy`  
 
   - Install locally:
