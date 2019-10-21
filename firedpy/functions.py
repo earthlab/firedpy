@@ -16,7 +16,6 @@ import rasterio
 from rasterio.merge import merge
 from shapely.geometry import Point, Polygon, MultiPolygon
 import sys
-from threading import Thread
 from tqdm import tqdm
 import requests
 import urllib.request as urllib2
