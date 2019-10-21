@@ -7,18 +7,27 @@ Note for windows users: create Anaconda environment from the provided environmen
 
 To Install:
 
-  - Establish and activate a conda environment
+  - Clone this repository into a local directory:
+  
+    `git clone https://github.com/earthlab/firedpy.git`
+    `cd firedpy`
+
+  - Establish and activate a conda environment:
+  
     `conda env create -f environment.yaml`  
     `conda activate firedpy`  
 
-  - Install locally
+  - Install locally:
+  
     `python setup.py install`
 
 
 To Use:
 
-  - In your terminal use this command to print out the available options and descriptions
+  - In your terminal use this command to print out the available options and descriptions:
+  
     `firedpy --help`
   
-  - Specify a 
+  - Run firedpy with no options will download required data and model outputs for CONUS to a temporary directory:
+    `firedpy`
   
