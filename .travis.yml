@@ -15,7 +15,6 @@ install:
   - conda activate firedpy
   - python setup.py install
   
-  # Testing CLI help and single tile run with shapefiles
+# Testing CLI help printout
 script:
   - "firedpy --help"
-  - "firedpy -tiles h08v04 --shapefile"
