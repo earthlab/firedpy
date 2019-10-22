@@ -16,5 +16,6 @@ install:
   - python setup.py install
   
   # Testing CLI help and single tile run with shapefiles
-  firedpy --help
-  firedpy -tiles h08v04 --shapefile
+script:
+  - "firedpy --help"
+  - "firedpy -tiles h08v04 --shapefile"
