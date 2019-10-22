@@ -15,6 +15,7 @@ dependencies:
   - pandas
   - pyyaml
   - rasterio
+  - requests
   - toolz
   - tqdm
   - xarray
