@@ -1,7 +1,7 @@
 [![DOI](https://zenodo.org/badge/214283770.svg)](https://zenodo.org/badge/latestdoi/214283770)
 
 # firedpy
-A Python CLI for classifying fire events from the Collection 6 MODIS Burned Area Product.
+A Python Command Line Interface for classifying fire events from the Collection 6 MODIS Burned Area Product.
 
 This function will use a space-time window to classify individual burn detections from late 2001 to near-present into discrete events and output both a data table and shapefiles of these events. The user is able to specify the spatial and temporal parameters of the model, as well as the area of interest using either a shapefile or a list of MODIS Sinusoidal Projection tile IDs. Any area from the world may be selected, however, in the current version, memory constraints may limit the extent available for a single model run. This version is calibrated to handle the Conitiguous United States (CONUS) with a 16 GB machine, though work is underway to move more processing to disk for larger areas. Shapefiles include event and daily-level polygons, providing both final and expanding event perimeters.
 
