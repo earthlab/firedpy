@@ -1,6 +1,0 @@
-
-[test]
-coveralls
-pydocstyle
-pytest-cov
-pytest>=3.0

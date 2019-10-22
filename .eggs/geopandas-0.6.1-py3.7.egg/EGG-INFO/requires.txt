@@ -1,4 +1,0 @@
-fiona
-pandas>=0.23.0
-pyproj
-shapely
