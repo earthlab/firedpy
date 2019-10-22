@@ -1,12 +1,13 @@
 name: firedpy
 channels:
-  - conda-forge
+  - defaults
 dependencies:
   - beautifulsoup4
   - dask
   - descartes
   - gdal
   - geopandas
+  - fiona
   - lxml
   - matplotlib
   - netcdf4
@@ -14,8 +15,7 @@ dependencies:
   - pandas
   - pyyaml
   - rasterio
-  - scipy
-  - tabula-py
+  - requests
   - toolz
   - tqdm
-  - xarray==0.11.3
+  - xarray
