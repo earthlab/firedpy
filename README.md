@@ -42,9 +42,9 @@ This function will use a space-time window to classify individual burn detection
  
   - Specify specific tiles and a local project_directory for required data and model outputs:
 
-    `firedpy -spatial_param 6 -temporal_param 10 -tiles h11v09 h12v09 -proj_dir /home/user/fired_project`
+    `firedpy -spatial_param 6 -temporal_param 10 -tiles h11v09 h12v09 -proj_dir /home/<user>/fired_project`
   
-  - Write event- and daily-level shapefiles as outputs in addition to a data table:
+  - Write event- and daily-level shapefiles as outputs in addition to the data table:
   
     `firedpy -spatial_param 6 -temporal_param 10 -tiles h11v09 h12v09 -proj_dir /home/<user>/fired_project --shapefile`
 
