@@ -540,7 +540,10 @@ class DataGetter:
 
         # Check that gdal/rasterio will open the files, if not drop
         for year in local_files.keys():
-            files = [f for f in local_files[year] if fileCheck(lp, year, f)]
+            files = [f if fileCheck(lp, year, f) else
+                     os.remove(os.path.join(lp, year, f))
+                     for f in local_files[year]]
+            files = [f for f in files if f]
             local_files[year] = files
 
         # Now, for each local year, get the tiles needed
@@ -581,7 +584,9 @@ class DataGetter:
             # Get all the remote and local file paths
             queries = []
             print("Retrieving needed landcover file paths...")
-            for yr in tqdm(needed_tiles.keys(), position=0, file=sys.stdout):
+            needed_years = [y for y in needed_tiles.keys() if
+                            len(needed_tiles[y]) > 0]
+            for yr in tqdm(needed_years, position=0, file=sys.stdout):
                 # Make sure destination folder exists
                 if not os.path.exists(os.path.join(lp, yr)):
                         os.mkdir(os.path.join(lp, yr))
