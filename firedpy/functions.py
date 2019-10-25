@@ -1468,6 +1468,7 @@ class ModelBuilder:
             print("Run BuildEvents first.")
             return
 
+
         # We'll need to specify which type of landcover
         lc_types = {1: "IGBP global vegetation classification scheme",
                     2: "University of Maryland (UMD) scheme",
@@ -1484,7 +1485,7 @@ class ModelBuilder:
         # Then group by id for event-level attributes
         group = df.groupby('id')
         max_rate_dates = group[['date', 'pixels']].apply(maxGrowthDate)
-        df['total_pixels'] = group['pixels'].transform('sum')
+        df['total_pixels'] = group['id'].transform('count')
         df['date'] = df['date'].apply(
                 lambda x: dt.datetime.strptime(x, '%Y-%m-%d')
                 )
@@ -1497,6 +1498,7 @@ class ModelBuilder:
         df['last_date'] = group['date'].transform('max')
         df['duration'] = df['last_date'] - df['ignition_date']
         df['duration'] = df['duration'].apply(lambda x: x.days + 1)
+
         df['total_area_km2'] = df['total_pixels'].apply(toKms, res=res)
         df['total_area_acres'] = df['total_pixels'].apply(toAcres, res=res)
         df['total_area_ha'] = df['total_pixels'].apply(toHa, res=res)
