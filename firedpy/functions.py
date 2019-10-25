@@ -5,6 +5,7 @@ import datetime as dt
 import ftplib
 import gc
 import geopandas as gpd
+from getpass import getpass
 from glob import glob
 from http.cookiejar import CookieJar
 from multiprocessing import cpu_count, Pool
@@ -13,6 +14,7 @@ import numpy as np
 import os
 import pandas as pd
 import rasterio
+from rasterio import logging
 from rasterio.merge import merge
 from shapely.geometry import Point, Polygon, MultiPolygon
 import sys
@@ -32,424 +34,14 @@ except ImportError:
                       versions run `pip install pygdal== '
                       """)
 
+# Suppress rasterio errors for now
+log = logging.getLogger()
+log.addFilter(rasterio.errors.NotGeoreferencedWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
 import xarray as xr
 pd.options.mode.chained_assignment = None
 
-
 # Functions
-class ModelBuilder:
-    def __init__(self, dest, proj_dir, tiles, spatial_param=5,
-                 temporal_param=11, landcover=None, ecoregion=None):
-        self.dest = dest
-        self.proj_dir = proj_dir
-        self.tiles = tiles
-        self.spatial_param = spatial_param
-        self.temporal_param = temporal_param
-        self.landcover = landcover
-        self.ecoregion = ecoregion
-        self.getFiles()
-        self.setGeometry()
-
-    def getFiles(self):
-        # Get the requested files names
-        files = []
-        for t in self.tiles:
-            path = os.path.join(
-                    self.proj_dir, "rasters/burn_area/netcdfs/" + t + ".nc")
-            files.append(path)
-        files.sort()
-        self.files = files
-
-    def setGeometry(self):
-        # Use the first file to extract some more parameters for later
-        builder = EventGrid(nc_path=self.files[0],
-                            proj_dir=self.proj_dir,
-                            spatial_param=self.spatial_param,
-                            temporal_param=self.temporal_param)
-        self.crs = builder.data_set.crs
-        self.geom = self.crs.geo_transform
-        self.res = self.geom[1]
-        self.sp_buf = builder.spatial_param * self.res
-
-    def buildEvents(self):
-        """
-        Use the EventGrid class to classify events tile by tile and then merge
-        them all together for a seamless set of wildfire events.
-        """
-        # Make sure the desstination folder exists
-        if not(os.path.exists(os.path.dirname(self.dest))):
-            os.makedirs(os.path.dirname(self.dest))
-
-        # Create an empty list and data frame for the 
-        tile_list = []
-        columns = ["id", "date", "x", "y", "edge", "tile"]
-        df = pd.DataFrame(columns=columns)
-        base = dt.datetime(1970, 1, 1)
-    
-        # Loop through each netcdf file and build individual tile events
-        for file in self.files:
-            tile_id = file[-9:-3]
-            if os.path.exists(
-                    os.path.join(
-                        self.proj_dir, "tables/events/" + tile_id + ".csv")
-                    ):
-                print(tile_id  + " event table exists, skipping...")
-            elif not os.path.exists(
-                    os.path.join(
-                        self.proj_dir, "rasters/burn_area/netcdfs/" + tile_id +
-                                       ".nc")
-                    ):
-                pass
-            else:
-                print("\n" + tile_id)
-    
-                # Create a new event object
-                builder = EventGrid(nc_path=file,
-                                    proj_dir=self.proj_dir,
-                                    spatial_param=self.spatial_param,
-                                    temporal_param=self.temporal_param)
-    
-                # Classify event perimeters
-                perims = builder.get_event_perimeters()
-    
-                # Remove empty perimeters
-                perims = [p for p in perims if type(p.coords[0]) is not str]
-                tile_list.append(perims)
-    
-                # Extract just the event ID, days, and x,y MODIS coordinates
-                plist = [(p.get_event_id(), p.coords) for p in perims]
-    
-                # Identify edge cases, so either x or y is within 5 cells
-                maxys = builder.data_set["y"].data[:builder.spatial_param]
-                minys = builder.data_set["y"].data[-builder.spatial_param:]
-                maxxs = builder.data_set["x"].data[-builder.spatial_param:]
-                minxs = builder.data_set["x"].data[:builder.spatial_param]
-                yedges = list(maxys) + list(minys)
-                xedges = list(maxxs) + list(minxs)
-    
-                # Create an empty data frame
-                print("Building data frame...")
-                events = []
-                coords = []
-                edges = []
-                ys = []
-                xs = []
-                dates = []
-                for p in plist:
-                    coord = [list(c) for c in p[1]]
-                    edge = [edgeCheck(yedges, xedges, c, self.sp_buf) for
-                            c in coord]
-                    if any(edge):
-                        edge = [True for e in edge]
-                    event = list(np.repeat(p[0], len(coord)))
-                    y = [c[0] for c in coord]
-                    x = [c[1] for c in coord]
-                    date = [base + dt.timedelta(c[2]) for c in coord]
-                    events.append(event)
-                    coords.append(coord)
-                    edges.append(edge)
-                    ys.append(y)
-                    xs.append(x)
-                    dates.append(date)
-    
-                # Flatten each list of lists
-                events = flttn(events)
-                coords = flttn(coords)
-                edges = flttn(edges)
-                ys = flttn(ys)
-                xs = flttn(xs)
-                dates = flttn(dates)
-                edf = pd.DataFrame(
-                        OrderedDict({"id": events, "date": dates, "x": xs,
-                                     "y": ys, "edge": edges, "tile": tile_id})
-                        )
-                if not os.path.exists(
-                        os.path.join(self.proj_dir, "tables/events")
-                        ):
-                    os.mkdir(os.path.join(self.proj_dir, "tables/events")
-                    )
-                edf.to_csv(
-                    os.path.join(
-                        self.proj_dir, "tables/events/" + tile_id + ".csv"),
-                    index=False)
-    
-        # Clear memory
-        gc.collect()
-    
-        # Now read in the event data frames (use dask, instead, save memory)
-        print("Reading saved event tables back into memory...")
-        efiles = glob(os.path.join(self.proj_dir, "tables/events/*csv"))
-        efiles = [e for e in efiles if e[-10:-4] in  self.tiles]
-        edfs = [pd.read_csv(e) for e in efiles]
-    
-        # Merge with existing records
-        print("Concatenating event tables...")
-        df = pd.concat(edfs)
-        def toDays(date, base):
-            date = dt.datetime.strptime(date, "%Y-%m-%d")
-            delta = (date - base)
-            days = delta.days
-            return days
-    
-        print("Creating unique ids...")
-        df["id"] = df["tile"] + "_" + df["id"].astype(str)
-    
-        print("Converting days since 1970 to dates...")
-        df["days"] = df["date"].apply(toDays, base=base)
-    
-        # Cut the edge events out into a separate df
-        print("Separating tile edge events from center events...")
-        edges = df[df["edge"] == True]
-        not_edges = df[df["edge"] == False]
-    
-        # Merge where needed
-        print("Merging edge-case tile events...")
-        eids = list(edges["id"].unique())
-        for iden in tqdm(eids, position=0):
-            # Split, one vs all
-            edf = edges[edges["id"] == iden]
-            edf2 = edges[edges["id"] != iden]
-            days = edf["days"]
-    
-            # Sometimes these are empty
-            try:
-                d1 = min(days)
-                d2 = max(days)
-            except:
-                pass
-    
-            # If events aren't close enough in time the list will be empty
-            edf2 = edf2[(abs(edf2["days"] - d1) < self.temporal_param) |
-                        (abs(edf2["days"] - d2) < self.temporal_param)]
-            eids2 = list(edf2["id"].unique())
-    
-            # If there are event close in time, are they close in space?
-            for iden2 in eids2:
-                edf2 = edges[edges["id"] == iden2]
-                ydiffs = [y - edf2["y"].values for y in edf["y"].values]
-                xdiffs = [x - edf2["x"].values for x in edf["x"].values]
-                ychecks = [spCheck(yds, self.sp_buf) for yds in ydiffs]
-                xchecks = [spCheck(xds, self.sp_buf) for xds in xdiffs]
-                checks = [ychecks[i] * xchecks[i] for i in range(len(ychecks))]
-                if any(checks):
-                    # Merge events! Merge into the earliest event
-                    d12 = edf2["days"].min()
-                    if d1 < d12:
-                        edges["id"][edges["id"] == iden2] = iden
-                    else:
-                        edges["id"][edges["id"] == iden] = iden2
-    
-        # Concatenate edge df back into main df
-        print("Recombining edge and center cases...")
-        df = pd.concat([not_edges, edges])
-    
-        # Reset id values in chronological order
-        print("Resetting ids in chronological order..")
-        df["first"] = df.groupby("id").days.transform("min")
-        firsts = df[["id", "first"]].drop_duplicates()
-        firsts = firsts.sort_values("first")
-        firsts["new_id"] = range(1, firsts.shape[0] + 1)
-        idmap = dict(zip(firsts["id"], firsts["new_id"]))
-        df["id"] = df["id"].map(idmap)
-        df = df.sort_values("id")
-    
-        # put these in order
-        df = df[["id", "tile", "date", "x", "y"]]
-    
-        # Finally save
-        print("Saving merged event table to " + self.dest)
-        df.to_csv(self.dest, index=False)
-    
-    
-    def buildAttributes(self, lc_dir, eco_dir):
-        '''
-        Take the data table, add in attributes, and overwrite file.
-        '''
-        # There has to be an event table first
-        if os.path.exists(self.dest):
-            df = pd.read_csv(self.dest)
-        else:
-            print("Run EventBuilder first.")
-            return
-
-        # Space is tight and we need the spatial resolution
-        res = self.res
-
-        # Group by date first for pixel count
-        df['pixels'] = df.groupby(['id', 'date'])['id'].transform('count')
-
-        # Then group by id for event-level attributes
-        group = df.groupby('id')
-        max_rate_dates = group[['date', 'pixels']].apply(maxGrowthDate)
-        df['total_pixels'] = group['pixels'].transform('sum')
-        df['date'] = df['date'].apply(
-                lambda x: dt.datetime.strptime(x, '%Y-%m-%d')
-                )
-        df['ignition_date'] = group['date'].transform('min')
-        df['ignition_day'] = df['ignition_date'].apply(
-                lambda x: dt.datetime.strftime(x, '%j')
-                )
-        df['ignition_month'] = df['ignition_date'].apply(lambda x: x.month)
-        df['ignition_year'] = df['ignition_date'].apply(lambda x: x.year)
-        df['last_date'] = group['date'].transform('max')
-        df['duration'] = df['last_date'] - df['ignition_date']
-        df['duration'] = df['duration'].apply(lambda x: x.days + 1)
-        df['total_area_km2'] = df['total_pixels'].apply(toKms, res=res)
-        df['total_area_acres'] = df['total_pixels'].apply(toAcres, res=res)
-        df['total_area_ha'] = df['total_pixels'].apply(toHa, res=res)
-        df['fsr_pixels_per_day'] = df['total_pixels'] / df['duration']
-        df['fsr_km2_per_day'] = df['total_pixels'] / df['duration']
-        df['fsr_acres_per_day'] = df['total_pixels'] / df['duration']
-        df['fsr_ha_per_day'] = df['total_pixels'] / df['duration']
-        df['max_growth_pixels'] = group['pixels'].transform('max')
-        df['min_growth_pixels'] = group['pixels'].transform('min')
-        df['mean_growth_pixels'] = group['pixels'].transform('mean')
-        df['fsr_km2_per_day'] = df['fsr_km2_per_day'].apply(toKms, res=res)
-        df['fsr_acres_per_day'] = df['fsr_acres_per_day'].apply(toAcres,
-                                                                res=res)
-        df['fsr_ha_per_day'] = df['fsr_ha_per_day'].apply(toHa, res=res)
-        df['max_growth_km2'] = df['max_growth_pixels'].apply(toKms, res=res)
-        df['max_growth_acres'] = df['max_growth_pixels'].apply(toAcres,
-                                                               res=res)
-        df['max_growth_ha'] = df['max_growth_pixels'].apply(toHa, res=res)
-        df['min_growth_km2'] = df['min_growth_pixels'].apply(toKms, res=res)
-        df['min_growth_acres'] = df['min_growth_pixels'].apply(toAcres,
-                                                               res=res)
-        df['min_growth_ha'] = df['min_growth_pixels'].apply(toHa, res=res)
-        df['mean_growth_km2'] = df['mean_growth_pixels'].apply(toKms, res=res)
-        df['mean_growth_acres'] = df['mean_growth_pixels'].apply(toAcres,
-                                                                 res=res)
-        df['mean_growth_ha'] = df['mean_growth_pixels'].apply(toHa, res=res)
-        df['date'] = df['date'].apply(lambda x: x.strftime('%Y-%m-%d'))
-        df = df[['id', 'x', 'y', 'total_pixels', 'date', 'ignition_date',
-                 'ignition_day', 'ignition_month', 'ignition_year',
-                 'last_date', 'duration', 'total_area_km2', 'total_area_acres',
-                 'total_area_ha', 'fsr_pixels_per_day', 'fsr_km2_per_day',
-                 'fsr_acres_per_day', 'fsr_ha_per_day', 'max_growth_pixels',
-                 'min_growth_pixels', 'mean_growth_pixels', 'max_growth_km2',
-                 'max_growth_acres', 'max_growth_ha', 'min_growth_km2',
-                 'min_growth_acres', 'min_growth_ha', 'mean_growth_km2',
-                 'mean_growth_acres', 'mean_growth_ha']]
-        df = df.drop_duplicates()
-        df.index = df['id']
-        df['max_growth_rates'] = max_rate_dates
-
-        # Attach names to landcover and ecoregion codes if requested
-        if self.landcover:
-            print('Adding landcover attributes...')
-
-            # Get mosaicked landcover geotiffs
-            lc_files = glob(os.path.join(lc_dir, "*tif"))
-            lc_files.sort()
-            lc_years = [f[-8:-4] for f in lc_files]
-            lc_files = {lc_years[i]: lc_files[i] for i in range(len(lc_files))}
-
-            # We have a different landcover file for each year (almost)
-            df['year'] = df['date'].apply(lambda x: x[:4])
-
-            # Rasterio point querier
-            def pointQuery(row):
-                x = row['x']
-                y = row['y']
-                val = int([val for val in lc.sample([(x, y)])][0])
-                return val
-
-            # This works faster if split by year
-            sdfs = []
-            for year in tqdm(df['year'].unique(), position=0):
-                sdf = df[df['year'] == year]
-                if year > max(lc_years):
-                    year = max(lc_years)
-                lc = rasterio.open(lc_files[year])
-                sdf['landcover'] = sdf.apply(pointQuery, axis=1)
-                sdfs.append(sdf)
-            df = pd.concat(sdfs)
-
-        if self.ecoregion:
-            pass
-            # ...
-
-        # Save event level attributes
-        print("Saving data frame to 'event_attributes.csv'...")
-        df.to_csv('data/tables/event_attributes.csv', index=False)
-
-    def buildPoints(self):
-       # Read in the event table
-        print("Reading classified fire event table...")
-        df = pd.read_csv(self.dest)
-    
-        # Go ahead and create daily id (did) for later
-        df["did"] = df["id"].astype(str) + "-" + df["date"]
-    
-        # Get geometries
-        crs = self.crs
-        geom = self.geom
-        proj4 = crs.proj4
-        resolutions = [geom[1], geom[-1]]
-    
-        # Filter columns, center pixel coordinates, and remove repeating pixels
-        df = df[["id", "did", "date", "x", "y"]]
-        df["x"] = df["x"] + (resolutions[0]/2)
-        df["y"] = df["y"] + (resolutions[1]/2)
-    
-        # Each entry gets a point object from the x and y coordinates.
-        print("Converting data frame to spatial object...")
-        df["geometry"] = df[["x", "y"]].apply(lambda x: Point(tuple(x)),
-                                              axis=1)
-        gdf = df[["id", "did", "date", "geometry"]]
-        gdf = gpd.GeoDataFrame(gdf, crs=proj4, geometry=gdf["geometry"])
-
-        return gdf
-
-    def buildPolygons(self, daily_shp_path, event_shp_path):
-        # Make sure we have the target folders
-        if not(os.path.exists(os.path.dirname(event_shp_path))):
-            os.makedirs(os.path.dirname(event_shp_path))
-    
-        # Create a spatial points object
-        gdf = self.buildPoints()
-        
-        # Create a circle buffer
-        print("Creating buffer...")
-        geometry = gdf.buffer(1 + (self.res/2))
-        gdf["geometry"] = geometry
-    
-        # Then create a square envelope around the circle
-        gdf["geometry"] = gdf.envelope
-    
-        # Now add the first date of each event and merge daily event detections
-        print("Dissolving polygons...")
-        gdf["start_date"] = gdf.groupby("id")["date"].transform("min")
-        gdfd = gdf.dissolve(by="did", as_index=False)
-        gdfd["year"] = gdfd["start_date"].apply(lambda x: x[:4])
-        gdfd["month"] = gdfd["start_date"].apply(lambda x: x[5:7])
-    
-        # Save the daily before dissolving into event level
-        print("Saving daily file to " + daily_shp_path + "...")
-        gdfd.to_file(daily_shp_path, driver="GPKG")
-    
-        # Now merge into event level polygons
-        gdf = gdf[["id", "start_date", "geometry"]]
-        gdf = gdf.dissolve(by="id", as_index=False)
-    
-        # For each geometry, if it is a single polygon, cast as a multipolygon
-        print("Converting polygons to multipolygons...")
-        def asMultiPolygon(polygon):
-            if type(polygon) == Polygon:
-                polygon = MultiPolygon([polygon])
-            return polygon
-        gdf["geometry"] = gdf["geometry"].apply(asMultiPolygon)
-    
-        # Calculate perimeter length
-        print("Calculating perimeter lengths...")
-        gdf["final_perimeter"] = gdf["geometry"].length
-    
-        # Now save as a geopackage
-        print("Saving event-level file to " + event_shp_path + "...")
-        gdf.to_file(event_shp_path, driver="GPKG")
-    
-
 def convertDates(array, year):
     """
     Convert everyday in an array to days since Jan 1 1970
@@ -656,7 +248,7 @@ def toKms(p, res):
 def downloadBA(query):
     # Get file and target path
     hdf, hdf_path = query
-    
+
     # Use file name to get the tile id
     tile = hdf[17:23]
 
@@ -779,16 +371,18 @@ class DataGetter:
                 # Try to dl in parallel with progress bar
                 try:
                     for _ in tqdm(pool.imap(downloadBA, queries),
-                                  total=len(hdfs),  position=0):
+                                  total=len(hdfs), position=0,
+                                  file=sys.stdout):
                         pass
                 except ftplib.error_temp:
                     print("Too many connections from this IP attempted. Try " +
                           "again later.")
                 except:
                     try:
-                        _ = [downloadBA(q) for q in tqdm(queries, position=0)]
+                        _ = [downloadBA(q) for q in tqdm(queries, position=0,
+                                                         file=sys.stdout)]
                     except Exception as e:
-                        template = "\nDownload failed: error type {0}:\n{1!r}"
+                        template = "Download failed: error type {0}:\n{1!r}"
                         message = template.format(type(e).__name__, e.args)
                         print(message)
 
@@ -809,7 +403,7 @@ class DataGetter:
 
             # Now try again for the missed files
             if len(missings) > 0:
-                print("Missed Files: \n" + str(missings))
+                print("Missed Files: " + str(missings))
                 print("trying again...")
 
                 # Check into FTP server again
@@ -886,7 +480,7 @@ class DataGetter:
                     print("Removing " + file_name + " and moving on.")
                     os.remove(file_name)
 
-    def getLandcover(self, landcover=1):
+    def getLandcover(self, landcover_type=1):
         """
         A method to download and process landcover data from NASA"s Land
         Processes Distributed Active Archive Center, which is an Earthdata
@@ -918,21 +512,9 @@ class DataGetter:
             tiles = [t for t in tiles if "h" in t]
 
         # Get the full string for land cover type
-        lc_type = "type" + str(landcover)
+        lp = self.landcover_path
+        lc_type = "type" + str(landcover_type)
 
-        # Access
-        print("Retrieving land cover rasters from NASA's Earthdata service...")
-        print("Register at the link below to obtain a username and password:")
-        print("https://urs.earthdata.nasa.gov/")
-        username = input("Enter NASA Earthdata User Name: ")
-        password = input("Enter NASA Earthdata Password: ")
-        pw_manager = urllib2.HTTPPasswordMgrWithDefaultRealm()
-        pw_manager.add_password(None, "https://urs.earthdata.nasa.gov",
-                               username, password)
-        cookiejar = CookieJar()
-        opener = urllib2.build_opener(urllib2.HTTPBasicAuthHandler(pw_manager),
-                                     urllib2.HTTPCookieProcessor(cookiejar))
-        urllib2.install_opener(opener)
 
         # Get available years
         url = "https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.006/"
@@ -941,53 +523,118 @@ class DataGetter:
         links = [link["href"] for link in soup.find_all("a", href=True)]
         years = [l.split(".")[0] for l in links if "01.01" in l]
 
-        # Land cover data from earthdata.nasa.gov
-        lp = self.landcover_path
-        for y in years:
-            print("\nRetrieving landcover data for " + y )
+        # To skip downloaded tiles start by finding local files <-------------- Not sure how best to handle this. The yearly mosaics needed for the attributes could include any number of tiles and to include them all could require quite long file names. Also, these will be updated yearly. 
+        local_files = {os.path.split(fldr)[-1]: files for
+                       fldr, _, files in os.walk(self.landcover_path)}
+        local_files = {k: v for k, v in local_files.items() if
+                       k not in ["landcover", "mosaics"]}
 
-            # Make sure destination folder exists            
-            if not os.path.exists(os.path.join(lp, y)):
-                    os.mkdir(os.path.join(lp, y))
-
-            # Retrieve list of links to hdf files
-            url = ("https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.006/" + y +
-                  ".01.01/")
-            r = requests.get(url)
-            soup = BeautifulSoup(r.text, 'html.parser')
-            names = [link["href"] for link in soup.find_all("a", href=True)]
-            names = [n for n in names if "hdf" in n and "xml" not in n]
-            names = [n for n in names if n.split('.')[2] in tiles]
-            links = [url + l for l in names]
-
-            # Build list of target local file paths and check if they're needed
-            dsts = [os.path.join(lp, y, names[i]) for i in range(len(links))]
-            dsts = [dst for dst in dsts if not(os.path.exists(dst))]
-
-            # Group links and local paths for parallel downloads  # <---------- Attempt to skip when files are present breaks here
-            queries = [(links[i], dsts[i]) for i in range(len(links))]
-
-            # Use the number of physical cores
-            ncores = cpu_count()
-            pool = Pool(int(ncores /2))
+        # Let's check that each file is good, defining function here
+        def fileCheck(landcover_path, year, file):
+            path = os.path.join(landcover_path, year, file)
             try:
-                for _ in tqdm(pool.imap(downloadLC, queries),
-                              total=len(queries), position=0):
-                    pass
-            except:
-                print("\nError, attempting serial download...")
-                try:
-                    _ = [downloadLC(q) for q in tqdm(queries, position=0)]
-                except Exception as e:
-                    template = "\nDownload failed: error type {0}:\n{1!r}"
-                    message = template.format(type(e).__name__, e.args)
-                    print(message)
+                rasterio.open(path)
+                return True
+            except Exception:
+                return False
 
-        # Now process these tiles into yearly geotiffs.
+        # Check that gdal/rasterio will open the files, if not drop
+        for year in local_files.keys():
+            files = [f for f in local_files[year] if fileCheck(lp, year, f)]
+            local_files[year] = files
+
+        # Now, for each local year, get the tiles needed
+        needed_tiles = {}
+        for year, files in local_files.items():
+            local_tiles = [f.split(".")[2] for f in files]
+            missing_tiles = [t for t in tiles if t not in local_tiles]
+            needed_tiles[year] = missing_tiles
+
+        # Now (this may be empty) fill in all tiles for totally missing years
+        for year in years:
+            if year not in needed_tiles.keys():
+                needed_tiles[year] = tiles
+
+        # Now, count all of the needed files for each key (year)
+        file_count = sum([len(v) for k, v in needed_tiles.items()])
+
+        # If we need anything at all we'll have to do gain access
+        if file_count > 0:
+            print("Retrieving land cover rasters from NASA's Earthdata " +
+                  "service...")
+            print("Register at the link below to obtain a username and " +
+                  "password:")
+            print("https://urs.earthdata.nasa.gov/")
+            username = input("Enter NASA Earthdata User Name: ")
+            password = getpass("Enter NASA Earthdata Password: ")
+            pw_manager = urllib2.HTTPPasswordMgrWithDefaultRealm()
+            pw_manager.add_password(None, "https://urs.earthdata.nasa.gov",
+                                   username, password)
+            cookiejar = CookieJar()
+            opener = urllib2.build_opener(
+                        urllib2.HTTPBasicAuthHandler(pw_manager),
+                        urllib2.HTTPCookieProcessor(cookiejar)
+                        )
+            urllib2.install_opener(opener)
+
+
+            # Get all the remote and local file paths
+            queries = []
+            print("Retrieving needed landcover file paths...")
+            for yr in tqdm(needed_tiles.keys(), position=0, file=sys.stdout):
+                # Make sure destination folder exists
+                if not os.path.exists(os.path.join(lp, yr)):
+                        os.mkdir(os.path.join(lp, yr))
+    
+                # Get needed tiles for this year
+                year_tiles = needed_tiles[yr]
+    
+                # Retrieve list of links to hdf files
+                url = ("https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.006/" + yr +
+                      ".01.01/")
+                r = requests.get(url)
+                soup = BeautifulSoup(r.text, 'html.parser')
+                names = [link["href"] for link in soup.find_all("a",
+                                                                href=True)]
+                names = [n for n in names if "hdf" in n and "xml" not in n]
+                names = [n for n in names if n.split('.')[2] in year_tiles]
+                links = [url + l for l in names]
+    
+                # Build list of local file paths and check if they're needed
+                dsts = [os.path.join(lp, yr, names[i]) for
+                        i in range(len(links))]
+    
+                # Group links and local paths for parallel downloads
+                query = [(links[i], dsts[i]) for i in range(len(links))
+                         if not os.path.exists(dsts[i])]
+                queries = queries + query
+    
+            # Now get land cover data from earthdata.nasa.gov
+            if len(queries) > 0:
+                print("Retrieving landcover data...")
+                ncores = cpu_count()
+                pool = Pool(int(ncores /2))
+                try:
+                    for _ in tqdm(pool.imap(downloadLC, queries),
+                                  total=len(queries), position=0,
+                                  file=sys.stdout):
+                        pass
+                except:
+                    print("Error, attempting serial download...")
+                    try:
+                        _ = [downloadLC(q) for q in tqdm(queries, position=0,
+                                                         file=sys.stdout)]
+                    except Exception as e:
+                        template = "Download failed: error type {0}:\n{1!r}"
+                        message = template.format(type(e).__name__, e.args)
+                        print(message)
+
+        # Now process these tiles into yearly geotiffs. Do this everytime.
         if not os.path.exists(self.landcover_mosaic_path):
             os.mkdir(self.landcover_mosaic_path)
-        for y in years:
-            print("\nMosaicking landcover tiles for year " + y)
+
+        print("Mosaicking/remosaicking landcover tiles...")
+        for y in tqdm(years, position=0, file=sys.stdout):
 
             # Filter available files for the requested tiles
             lc_files = glob(os.path.join(self.landcover_path, y, "*hdf"))
@@ -1020,7 +667,7 @@ class DataGetter:
                 dest.write(mosaic)
 
         # Print location
-        print("\nLandcover data saved to " + self.landcover_mosaic_path)
+        print("Landcover data saved to " + self.landcover_mosaic_path)
 
 
     def getShapes(self):
@@ -1499,7 +1146,7 @@ class EventGrid:
 
         # traverse spatially, processing each burn day
         print("Building event perimeters...")
-        for pair in tqdm(available_pairs, position=0):
+        for pair in tqdm(available_pairs, position=0, file=sys.stdout):
             # Separate coordinates
             y, x = pair
 
@@ -1577,3 +1224,438 @@ class EventGrid:
                                                        curr_event_ids[1])
 
         return perimeters
+
+
+class ModelBuilder:
+    def __init__(self, dest, proj_dir, tiles, spatial_param=5,
+                 temporal_param=11, landcover_type=None, ecoregion=None):
+        self.dest = dest
+        self.proj_dir = proj_dir
+        self.tiles = tiles
+        self.spatial_param = spatial_param
+        self.temporal_param = temporal_param
+        self.landcover_type = landcover_type
+        self.ecoregion = ecoregion
+        self.getFiles()
+        self.setGeometry()
+
+    def getFiles(self):
+        # Get the requested files names
+        files = []
+        for t in self.tiles:
+            path = os.path.join(
+                    self.proj_dir, "rasters/burn_area/netcdfs/" + t + ".nc")
+            files.append(path)
+        files.sort()
+        self.files = files
+
+    def setGeometry(self):
+        # Use the first file to extract some more parameters for later
+        builder = EventGrid(nc_path=self.files[0],
+                            proj_dir=self.proj_dir,
+                            spatial_param=self.spatial_param,
+                            temporal_param=self.temporal_param)
+        self.crs = builder.data_set.crs
+        self.geom = self.crs.geo_transform
+        self.res = self.geom[1]
+        self.sp_buf = builder.spatial_param * self.res
+
+    def buildEvents(self):
+        """
+        Use the EventGrid class to classify events tile by tile and then merge
+        them all together for a seamless set of wildfire events.
+        """
+        # Make sure the desstination folder exists
+        if not(os.path.exists(os.path.dirname(self.dest))):
+            os.makedirs(os.path.dirname(self.dest))
+
+        # Create an empty list and data frame for the
+        tile_list = []
+        columns = ["id", "date", "x", "y", "edge", "tile"]
+        df = pd.DataFrame(columns=columns)
+        base = dt.datetime(1970, 1, 1)
+
+        # Loop through each netcdf file and build individual tile events
+        for file in self.files:
+            tile_id = file[-9:-3]
+            if os.path.exists(
+                    os.path.join(
+                        self.proj_dir, "tables/events/" + tile_id + ".csv")
+                    ):
+                print(tile_id  + " event table exists, skipping...")
+            elif not os.path.exists(
+                    os.path.join(
+                        self.proj_dir, "rasters/burn_area/netcdfs/" + tile_id +
+                                       ".nc")
+                    ):
+                pass
+            else:
+                print("\n" + tile_id)
+
+                # Create a new event object
+                builder = EventGrid(nc_path=file,
+                                    proj_dir=self.proj_dir,
+                                    spatial_param=self.spatial_param,
+                                    temporal_param=self.temporal_param)
+
+                # Classify event perimeters
+                perims = builder.get_event_perimeters()
+
+                # Remove empty perimeters
+                perims = [p for p in perims if type(p.coords[0]) is not str]
+                tile_list.append(perims)
+
+                # Extract just the event ID, days, and x,y MODIS coordinates
+                plist = [(p.get_event_id(), p.coords) for p in perims]
+
+                # Identify edge cases, so either x or y is within 5 cells
+                maxys = builder.data_set["y"].data[:builder.spatial_param]
+                minys = builder.data_set["y"].data[-builder.spatial_param:]
+                maxxs = builder.data_set["x"].data[-builder.spatial_param:]
+                minxs = builder.data_set["x"].data[:builder.spatial_param]
+                yedges = list(maxys) + list(minys)
+                xedges = list(maxxs) + list(minxs)
+
+                # Create an empty data frame
+                print("Building data frame...")
+                events = []
+                coords = []
+                edges = []
+                ys = []
+                xs = []
+                dates = []
+                for p in plist:
+                    coord = [list(c) for c in p[1]]
+                    edge = [edgeCheck(yedges, xedges, c, self.sp_buf) for
+                            c in coord]
+                    if any(edge):
+                        edge = [True for e in edge]
+                    event = list(np.repeat(p[0], len(coord)))
+                    y = [c[0] for c in coord]
+                    x = [c[1] for c in coord]
+                    date = [base + dt.timedelta(c[2]) for c in coord]
+                    events.append(event)
+                    coords.append(coord)
+                    edges.append(edge)
+                    ys.append(y)
+                    xs.append(x)
+                    dates.append(date)
+
+                # Flatten each list of lists
+                events = flttn(events)
+                coords = flttn(coords)
+                edges = flttn(edges)
+                ys = flttn(ys)
+                xs = flttn(xs)
+                dates = flttn(dates)
+                edf = pd.DataFrame(
+                        OrderedDict({"id": events, "date": dates, "x": xs,
+                                     "y": ys, "edge": edges, "tile": tile_id})
+                        )
+                if not os.path.exists(
+                        os.path.join(self.proj_dir, "tables/events")
+                        ):
+                    os.mkdir(os.path.join(self.proj_dir, "tables/events")
+                    )
+                edf.to_csv(
+                    os.path.join(
+                        self.proj_dir, "tables/events/" + tile_id + ".csv"),
+                    index=False)
+
+        # Clear memory
+        gc.collect()
+
+        # Now read in the event data frames (use dask, instead, save memory)
+        print("Reading saved event tables back into memory...")
+        efiles = glob(os.path.join(self.proj_dir, "tables/events/*csv"))
+        efiles = [e for e in efiles if e[-10:-4] in  self.tiles]
+        edfs = [pd.read_csv(e) for e in efiles]
+
+        # Merge with existing records
+        print("Concatenating event tables...")
+        df = pd.concat(edfs)
+        def toDays(date, base):
+            date = dt.datetime.strptime(date, "%Y-%m-%d")
+            delta = (date - base)
+            days = delta.days
+            return days
+
+        print("Creating unique ids...")
+        df["id"] = df["tile"] + "_" + df["id"].astype(str)
+
+        print("Converting days since 1970 to dates...")
+        df["days"] = df["date"].apply(toDays, base=base)
+
+        # Cut the edge events out into a separate df
+        print("Separating tile edge events from center events...")
+        edges = df[df["edge"] == True]
+        not_edges = df[df["edge"] == False]
+
+        # Merge where needed
+        print("Merging edge-case tile events...")
+        eids = list(edges["id"].unique())
+        for iden in tqdm(eids, position=0, file=sys.stdout):
+            # Split, one vs all
+            edf = edges[edges["id"] == iden]
+            edf2 = edges[edges["id"] != iden]
+            days = edf["days"]
+
+            # Sometimes these are empty
+            try:
+                d1 = min(days)
+                d2 = max(days)
+            except:
+                pass
+
+            # If events aren't close enough in time the list will be empty
+            edf2 = edf2[(abs(edf2["days"] - d1) < self.temporal_param) |
+                        (abs(edf2["days"] - d2) < self.temporal_param)]
+            eids2 = list(edf2["id"].unique())
+
+            # If there are event close in time, are they close in space?
+            for iden2 in eids2:
+                edf2 = edges[edges["id"] == iden2]
+                ydiffs = [y - edf2["y"].values for y in edf["y"].values]
+                xdiffs = [x - edf2["x"].values for x in edf["x"].values]
+                ychecks = [spCheck(yds, self.sp_buf) for yds in ydiffs]
+                xchecks = [spCheck(xds, self.sp_buf) for xds in xdiffs]
+                checks = [ychecks[i] * xchecks[i] for i in range(len(ychecks))]
+                if any(checks):
+                    # Merge events! Merge into the earliest event
+                    d12 = edf2["days"].min()
+                    if d1 < d12:
+                        edges["id"][edges["id"] == iden2] = iden
+                    else:
+                        edges["id"][edges["id"] == iden] = iden2
+
+        # Concatenate edge df back into main df
+        print("Recombining edge and center cases...")
+        df = pd.concat([not_edges, edges])
+
+        # Reset id values in chronological order
+        print("Resetting ids in chronological order..")
+        df["first"] = df.groupby("id").days.transform("min")
+        firsts = df[["id", "first"]].drop_duplicates()
+        firsts = firsts.sort_values("first")
+        firsts["new_id"] = range(1, firsts.shape[0] + 1)
+        idmap = dict(zip(firsts["id"], firsts["new_id"]))
+        df["id"] = df["id"].map(idmap)
+        df = df.sort_values("id")
+
+        # put these in order
+        df = df[["id", "tile", "date", "x", "y"]]
+
+        # Finally save
+        print("Saving merged event table to " + self.dest)
+        df.to_csv(self.dest, index=False)
+
+    def buildAttributes(self, lc_dir, eco_dir):
+        '''
+        Take the data table, add in attributes, and overwrite file.
+        '''
+        # Adding fire attributes
+        print("Adding Fire Attributes...")
+
+        # There has to be an event table first
+        if os.path.exists(self.dest):
+            df = pd.read_csv(self.dest)
+        else:
+            print("Run BuildEvents first.")
+            return
+
+        # We'll need to specify which type of landcover
+        lc_types = {1: "IGBP global vegetation classification scheme",
+                    2: "University of Maryland (UMD) scheme",
+                    3: "MODIS-derived LAI/fPAR scheme",
+                    4: "MODIS-derived Net Primary Production (NPP) scheme",
+                    5: "Plant Functional Type (PFT) scheme."}
+
+        # Space is tight and we need the spatial resolution
+        res = self.res
+
+        # Group by date first for pixel count
+        df['pixels'] = df.groupby(['id', 'date'])['id'].transform('count')
+
+        # Then group by id for event-level attributes
+        group = df.groupby('id')
+        max_rate_dates = group[['date', 'pixels']].apply(maxGrowthDate)
+        df['total_pixels'] = group['pixels'].transform('sum')
+        df['date'] = df['date'].apply(
+                lambda x: dt.datetime.strptime(x, '%Y-%m-%d')
+                )
+        df['ignition_date'] = group['date'].transform('min')
+        df['ignition_day'] = df['ignition_date'].apply(
+                lambda x: dt.datetime.strftime(x, '%j')
+                )
+        df['ignition_month'] = df['ignition_date'].apply(lambda x: x.month)
+        df['ignition_year'] = df['ignition_date'].apply(lambda x: x.year)
+        df['last_date'] = group['date'].transform('max')
+        df['duration'] = df['last_date'] - df['ignition_date']
+        df['duration'] = df['duration'].apply(lambda x: x.days + 1)
+        df['total_area_km2'] = df['total_pixels'].apply(toKms, res=res)
+        df['total_area_acres'] = df['total_pixels'].apply(toAcres, res=res)
+        df['total_area_ha'] = df['total_pixels'].apply(toHa, res=res)
+        df['fsr_pixels_per_day'] = df['total_pixels'] / df['duration']
+        df['fsr_km2_per_day'] = df['total_pixels'] / df['duration']
+        df['fsr_acres_per_day'] = df['total_pixels'] / df['duration']
+        df['fsr_ha_per_day'] = df['total_pixels'] / df['duration']
+        df['max_growth_pixels'] = group['pixels'].transform('max')
+        df['min_growth_pixels'] = group['pixels'].transform('min')
+        df['mean_growth_pixels'] = group['pixels'].transform('mean')
+        df['fsr_km2_per_day'] = df['fsr_km2_per_day'].apply(toKms, res=res)
+        df['fsr_acres_per_day'] = df['fsr_acres_per_day'].apply(toAcres,
+                                                                res=res)
+        df['fsr_ha_per_day'] = df['fsr_ha_per_day'].apply(toHa, res=res)
+        df['max_growth_km2'] = df['max_growth_pixels'].apply(toKms, res=res)
+        df['max_growth_acres'] = df['max_growth_pixels'].apply(toAcres,
+                                                               res=res)
+        df['max_growth_ha'] = df['max_growth_pixels'].apply(toHa, res=res)
+        df['min_growth_km2'] = df['min_growth_pixels'].apply(toKms, res=res)
+        df['min_growth_acres'] = df['min_growth_pixels'].apply(toAcres,
+                                                               res=res)
+        df['min_growth_ha'] = df['min_growth_pixels'].apply(toHa, res=res)
+        df['mean_growth_km2'] = df['mean_growth_pixels'].apply(toKms, res=res)
+        df['mean_growth_acres'] = df['mean_growth_pixels'].apply(toAcres,
+                                                                 res=res)
+        df['mean_growth_ha'] = df['mean_growth_pixels'].apply(toHa, res=res)
+        df['date'] = df['date'].apply(lambda x: x.strftime('%Y-%m-%d'))
+        df = df[['id', 'x', 'y', 'total_pixels', 'date', 'ignition_date',
+                 'ignition_day', 'ignition_month', 'ignition_year',
+                 'last_date', 'duration', 'total_area_km2', 'total_area_acres',
+                 'total_area_ha', 'fsr_pixels_per_day', 'fsr_km2_per_day',
+                 'fsr_acres_per_day', 'fsr_ha_per_day', 'max_growth_pixels',
+                 'min_growth_pixels', 'mean_growth_pixels', 'max_growth_km2',
+                 'max_growth_acres', 'max_growth_ha', 'min_growth_km2',
+                 'min_growth_acres', 'min_growth_ha', 'mean_growth_km2',
+                 'mean_growth_acres', 'mean_growth_ha']]
+        df = df.drop_duplicates()
+        df.index = df['id']
+        df['max_growth_rates'] = max_rate_dates
+
+        # Attach names to landcover and ecoregion codes if requested
+        if self.landcover_type:
+            print('Adding landcover attributes...')
+
+            # Get mosaicked landcover geotiffs
+            lc_files = glob(os.path.join(lc_dir, "*tif"))
+            lc_files.sort()
+            lc_years = [f[-8:-4] for f in lc_files]
+            lc_files = {lc_years[i]: lc_files[i] for i in range(len(lc_files))}
+
+            # We have a different landcover file for each year (almost)
+            df['year'] = df['date'].apply(lambda x: x[:4])
+
+            # Let's just add the file name to the dataframe for now
+            df['lc_file'] = df['year'].map(lc_files)
+            df['lc_file'][pd.isnull(df['lc_file'])] = lc_files[max(lc_years)]
+
+            # Rasterio point querier (will only work here)
+            def pointQuery(row):
+                x = row['x']
+                y = row['y']
+                try:
+                    val = int([val for val in lc.sample([(x, y)])][0])
+                except:
+                    val = np.nan
+                return val
+
+            # This works faster when split by year and the pointer is outside
+            sdfs = []
+            for year in tqdm(df['year'].unique(), position=0, file=sys.stdout):
+                sdf = df[df['year'] == year]
+                if year > max(lc_years):
+                    year = max(lc_years)
+                lc_file = lc_files[year]
+                lc = rasterio.open(lc_file)
+                sdf['landcover'] = sdf.apply(pointQuery, axis=1)
+                sdfs.append(sdf)
+            df = pd.concat(sdfs)
+
+            # Now let's attach what type of landcover this is referring to
+            df['landcover_type'] = lc_types[int(self.landcover_type)]
+
+        if self.ecoregion:
+            pass
+            # ...
+
+        # Save event level attributes
+        print("Overwriting data frame at " + self.dest + "...")
+        df.to_csv(self.dest, index=False)
+
+    def buildPoints(self):
+       # Read in the event table
+        print("Reading classified fire event table...")
+        df = pd.read_csv(self.dest)
+
+        # Go ahead and create daily id (did) for later
+        df["did"] = df["id"].astype(str) + "-" + df["date"]
+
+        # Get geometries
+        crs = self.crs
+        geom = self.geom
+        proj4 = crs.proj4
+        resolutions = [geom[1], geom[-1]]
+
+        # Filter columns, center pixel coordinates, and remove repeating pixels
+        df["x"] = df["x"] + (resolutions[0]/2)
+        df["y"] = df["y"] + (resolutions[1]/2)
+
+        # Each entry gets a point object from the x and y coordinates.
+        print("Converting data frame to spatial object...")
+        df["geometry"] = df[["x", "y"]].apply(lambda x: Point(tuple(x)),
+                                              axis=1)
+        gdf = gpd.GeoDataFrame(df, crs=proj4, geometry=df["geometry"])
+
+        return gdf
+
+    def buildPolygons(self, daily_shp_path, event_shp_path):
+        # Make sure we have the target folders
+        if not(os.path.exists(os.path.dirname(event_shp_path))):
+            os.makedirs(os.path.dirname(event_shp_path))
+
+        # We'll need this later
+        def asMultiPolygon(polygon):
+            if type(polygon) == Polygon:
+                polygon = MultiPolygon([polygon])
+            return polygon
+
+        # Create a spatial points object
+        gdf = self.buildPoints()
+
+        # Create a circle buffer
+        print("Creating buffer...")
+        geometry = gdf.buffer(1 + (self.res/2))
+        gdf["geometry"] = geometry
+
+        # Then create a square envelope around the circle
+        gdf["geometry"] = gdf.envelope
+
+        # Now add the first date of each event and merge daily event detections
+        print("Dissolving polygons...")
+        gdf["start_date"] = gdf.groupby("id")["date"].transform("min")
+        gdfd = gdf.dissolve(by="did", as_index=False)
+        gdfd["year"] = gdfd["start_date"].apply(lambda x: x[:4])
+        gdfd["month"] = gdfd["start_date"].apply(lambda x: x[5:7])
+
+        # For each geometry, if it is a single polygon, cast as a multipolygon
+        print("Converting polygons to multipolygons...")
+        gdfd["geometry"] = gdfd["geometry"].apply(asMultiPolygon)
+
+        # Save the daily before dissolving into event level
+        print("Saving daily file to " + daily_shp_path)
+        gdfd.to_file(daily_shp_path, driver="GPKG")
+
+        # Now merge into event level polygons
+        gdf = gdf.dissolve(by="id", as_index=False)
+
+        # Calculate perimeter length
+        print("Calculating perimeter lengths...")
+        gdf["final_perimeter"] = gdf["geometry"].length
+
+        # We still can't have multiple polygon types
+        print("Converting polygons to multipolygons...")
+        gdf["geometry"] = gdf["geometry"].apply(asMultiPolygon)
+
+        # Now save as a geopackage
+        print("Saving event-level file to " + event_shp_path )
+        gdf.to_file(event_shp_path, driver="GPKG")

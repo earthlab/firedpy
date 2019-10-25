@@ -27,12 +27,11 @@ def main():
         Provide this option to associate each event with an ecoregion. 
         """)
     lc_help = ("""
-        Provide this option if to associate each event with a land cover
-        category. If so, you will have to register at NASA's Earthdata service
+        To include land cover as an attribute, provide a number corresponding
+        with a MODIS/Terra+Aqua Land Cover (MCD12Q1) category. To do so you
+        will have to register at NASA's Earthdata service
         (https://urs.earthdata.nasa.gov/home) and enter your user name and
-        password when prompted. Land cover comes from the MODIS/Terra+Aqua Land
-        Cover Type data set (MCD12Q1). Enter a number for one of the following
-        land cover types:
+        password when prompted. Available land cover categories:
             1: IGBP global vegetation classification scheme,
             2: University of Maryland (UMD) scheme,
             3: MODIS-derived LAI/fPAR scheme,
@@ -74,7 +73,7 @@ def main():
                         help=dest_help)
     parser.add_argument("-ecoregion", dest="ecoregion", default=None,
                         help=lc_help)
-    parser.add_argument("-landcover", dest="landcover", default=None,
+    parser.add_argument("-landcover_type", dest="landcover_type", default=None,
                         help=lc_help)
     parser.add_argument("--shapefile", action='store_true', help=shp_help)
     parser.add_argument("-spatial_param", dest="spatial_param", default=5,
@@ -93,7 +92,7 @@ def main():
     args = parser.parse_args()
     proj_dir = args.proj_dir
     ecoregion = args.ecoregion
-    landcover = args.landcover
+    landcover_type = args.landcover_type
     dest = os.path.join(proj_dir, "outputs", "tables", args.dest)
     spatial_param = args.spatial_param
     temporal_param = args.temporal_param
@@ -127,8 +126,8 @@ def main():
         print(message)
 
     # Get land cover if requested
-    if landcover:
-        data.getLandcover(landcover)
+    if landcover_type:
+        data.getLandcover(landcover_type)
 
     # Get ecoregions if requested
     if ecoregion:
@@ -140,7 +139,7 @@ def main():
                           tiles=tiles,
                           spatial_param=spatial_param,
                           temporal_param=temporal_param,
-                          landcover=landcover,
+                          landcover_type=landcover_type,
                           ecoregion=ecoregion)
 
     # Now go ahead and create the events (Memory's a bit tight for parallel)
@@ -149,7 +148,7 @@ def main():
     # Now add attributes to this table
     lc_dir = data.landcover_mosaic_path
     eco_dir = None
-    models.appendAttributes(lc_dir=lc_dir, eco_dir=eco_dir)
+    models.buildAttributes(lc_dir=lc_dir, eco_dir=eco_dir)
 
     # And build the polygons
     if shapefile:

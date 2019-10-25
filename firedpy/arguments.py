@@ -9,7 +9,7 @@ Created on Tue Oct 22 08:37:01 2019
 """
 
 import argparse
-from functions import buildEvents, buildPolygons, DataGetter
+from functions import DataGetter, ModelBuilder
 import os
 import tempfile
 import time
@@ -79,9 +79,9 @@ parser.add_argument("-dest", dest="dest",
                     default="modis_events.csv",
                     help=dest_help)
 parser.add_argument("-ecoregion", dest="ecoregion", default=None,
-                        help=lc_help)
-parser.add_argument("-landcover", dest="landcover", default=1,
-                        help=lc_help)
+                    help=lc_help)
+parser.add_argument("-landcover_type", dest="landcover_type", default=1,
+                    help=lc_help)
 parser.add_argument("--shapefile", action='store_true', help=shp_help)
 parser.add_argument("-spatial_param", dest="spatial_param", default=5,
                     type=int, help=sp_help)
@@ -96,7 +96,7 @@ args = parser.parse_args()
 proj_dir = '/home/travis/fired' #args.proj_dir 
 dest = os.path.join(proj_dir, "outputs", "tables", args.dest)
 ecoregion = args.ecoregion
-landcover = args.landcover
+landcover_type = args.landcover_type
 spatial_param = args.spatial_param
 temporal_param = args.temporal_param
 tiles = args.tiles
@@ -117,3 +117,24 @@ if os.path.splitext(tiles[0])[1] in [".shp", ".gpkg"]:
     tiles = data.tiles
 else:
     data.tiles = tiles
+
+# Create Model Builder object
+models = ModelBuilder(dest=dest,
+                      proj_dir=proj_dir,
+                      tiles=tiles,
+                      spatial_param=spatial_param,
+                      temporal_param=temporal_param,
+                      landcover_type=landcover_type,
+                      ecoregion=ecoregion)
+
+# Now add attributes to this table
+lc_dir = data.landcover_mosaic_path
+eco_dir = None
+
+# Use arguments for shapefile source and destination file paths
+file_base = os.path.splitext(os.path.basename(dest))[0]
+daily_shp_file = "_".join([file_base, "daily"])
+daily_shp_path = os.path.join(proj_dir, "outputs", "shapefiles",
+                              daily_shp_file + ".gpkg")
+event_shp_path = os.path.join(proj_dir, "outputs", "shapefiles",
+                              file_base + ".gpkg")
