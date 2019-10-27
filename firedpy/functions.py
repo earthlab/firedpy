@@ -147,16 +147,20 @@ def mergeChecker(new_coords, full_list, temporal_param, radius):
             else:
                 return i, False
 
+#
+#def mode(lst):
+#    if len(np.unique(lst)) > 1:
+#        grouped_lst = [list(lst[lst == s]) for s in lst]
+#        counts = {len(a): a for a in grouped_lst}  # overwrites matches
+#        max_count = np.max(list(counts.keys()))
+#        mode = counts[max_count][0]
+#    else:
+#        mode = lst.unique()[0]
+#    return mode
+
 
 def mode(lst):
-    if len(np.unique(lst)) > 1:
-        grouped_lst = [list(lst[lst == s]) for s in lst]
-        counts = {len(a): a for a in grouped_lst}  # overwrites matches
-        max_count = np.max(list(counts.keys()))
-        mode = counts[max_count][0]
-    else:
-        mode = lst.unique()[0]
-    return mode
+    return max(set(list(lst)), key=list(lst).count)
 
 
 def pquery(p, lc, lc_array):
@@ -300,9 +304,9 @@ class DataGetter:
         self.modis_template_path = os.path.join(proj_dir, "rasters/")
         self.modis_template_file_root = "mosaic_template.tif"
         self.landcover_path = os.path.join(proj_dir, "rasters/landcover")
-        self.landcover_mosaic_path = os.path.join(proj_dir,
-                                                  "rasters/landcover/mosaics")
         self.landcover_file_root = "lc_mosaic_"
+        self.modis_crs = ("+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a=6371007.181 " +
+                          "+b=6371007.181 +units=m +no_defs")
         self.nc_path = os.path.join(proj_dir, "rasters/burn_area/netcdfs")
         self.hdf_path = os.path.join(proj_dir, "rasters/burn_area/hdfs")
         self.tiles = ["h08v04", "h09v04", "h10v04", "h11v04", "h12v04",
@@ -480,6 +484,101 @@ class DataGetter:
                     print("Removing " + file_name + " and moving on.")
                     os.remove(file_name)
 
+    def getEcoregion(self, ecoregion_level=1, rasterize=False):
+       # Omernick's Ecoregions - EPA North American Albers
+        if not os.path.exists(
+                os.path.join(self.proj_dir,
+                             "shapefiles/ecoregion/us_eco_l4.shp")):
+            print("Downloading/checking Ecoregions from the EPA...")
+            eco = gpd.read_file("ftp://newftp.epa.gov/EPADataCommons/ORD" +
+                                "/Ecoregions/us/us_eco_l4.zip")
+            eco.crs = {"init": "epsg:5070"}
+            eco.to_file(os.path.join(self.proj_dir,
+                                     "shapefiles/ecoregion/us_eco_l4.shp"))
+            eco = eco.to_crs(self.modis_crs)
+            eco.to_file(
+                    os.path.join(self.proj_dir,
+                                 "shapefiles/ecoregion/us_eco_l4_modis.shp"))
+            ref_cols = ['US_L4CODE', 'US_L4NAME', 'US_L3CODE', 'US_L3NAME',
+                        'NA_L3CODE', 'NA_L3NAME', 'NA_L2CODE', 'NA_L2NAME',
+                        'NA_L1CODE', 'NA_L1NAME', 'L4_KEY', 'L3_KEY', 'L2_KEY',
+                        'L1_KEY']
+            eco_ref = eco[ref_cols].drop_duplicates()
+
+            # Character cases are inconsistent between I,II and III,IV levels
+            def ecoCap(string):
+                strings = string.split()
+                strings = [s.lower() if s != "USA" else s for s in strings]
+                caps = [s.capitalize() if s not in ["USA", "and"] else
+                        s for s in strings]
+                for i in range(len(caps)):
+                    cp = caps[i]
+                    if "/" in cp:
+                        cp = "/".join([c.capitalize() for c in cp.split("/")])
+                    if "-" in cp:
+                        cp = "-".join([c.title() for c in cp.split("-")])
+                    caps[i] = cp
+                return " ".join(caps)
+
+            eco_ref = eco_ref.applymap(ecoCap)
+            eco_ref.to_csv(os.path.join(self.proj_dir, "tables/eco_ref.csv"),
+                           index=False)
+
+        # Rasterize Omernick Ecoregions
+        if rasterize and not os.path.exists(
+                os.path.join(self.proj_dir,
+                             "rasters/ecoregion/us_eco_l4_modis.tif")):
+
+            # We need something with the correct geometry
+            src = os.path.join(self.proj_dir,
+                               "shapefiles/ecoregion/us_eco_l4_modis.shp")
+            dst = os.path.join(self.proj_dir,
+                               "rasters/ecoregion/us_eco_l4_modis.tif")
+            extent_template_file = os.path.join(
+                    self.proj_dir, "shapefiles/modis_world_grid.shp")
+
+            # Getting the extent regardless of existing files from other runs
+            template1 = gpd.read_file(extent_template_file)
+            template1["h"] = template1["h"].apply(lambda x: "{:02d}".format(x))
+            template1["v"] = template1["v"].apply(lambda x: "{:02d}".format(x))
+            template1["tile"] = "h" + template1["h"] + "v" +  template1["v"]
+            template1 = template1[template1["tile"].isin(self.tiles)]
+
+            # We can use this to query which tiles are needed for coordinates
+            bounds = template1.geometry.bounds
+            minx = min(bounds["minx"])
+            miny = min(bounds["miny"])
+            maxx = max(bounds["maxx"])
+            maxy = max(bounds["maxy"])
+            minx_tile = template1["tile"][bounds["minx"] == minx].iloc[0]
+            miny_tile = template1["tile"][bounds["miny"] == miny].iloc[0]
+            maxx_tile = template1["tile"][bounds["maxx"] == maxx].iloc[0]
+            maxy_tile = template1["tile"][bounds["maxy"] == maxy].iloc[0]
+            extent_tiles = [minx_tile, miny_tile, maxx_tile, maxy_tile]
+
+            # If these aren"t present, I say just go ahead and download
+            exts = []
+            for et in extent_tiles:
+                folder = os.path.join(self.proj_dir, "rasters/burn_area/hdfs",
+                                      et)
+                if not os.path.exists(folder):
+                    self.getBurns()
+                file = glob(os.path.join(folder, "*hdf"))[0]
+                file_pointer = gdal.Open(file)
+                dataset_pointer = file_pointer.GetSubDatasets()[0][0]
+                ds = gdal.Open(dataset_pointer)
+                geom = ds.GetGeoTransform()
+                ulx, xres, xskew, uly, yskew, yres = geom
+                lrx = ulx + (ds.RasterXSize * xres)
+                lry = uly + (ds.RasterYSize * yres) + yres
+                exts.append([ulx, lry, lrx, uly])
+
+            extent = [exts[0][0], exts[1][1], exts[2][2], exts[3][3]]
+            wkt = ds.GetProjection()
+            attribute = "US_L3CODE"
+            rasterize(src, dst, attribute, xres, wkt, extent)
+
+
     def getLandcover(self, landcover_type=1):
         """
         A method to download and process landcover data from NASA"s Land
@@ -515,15 +614,10 @@ class DataGetter:
         lp = self.landcover_path
         lc_type = "type" + str(landcover_type)
 
+        # Get available years <------------------------------------------------ Find a quicker way to check the page itself for available years. requests can be slow on some networks, perhaps there is some configuration or other package that would be quicker
+        years = [str(y) for y in range(2001, 2019)]
 
-        # Get available years
-        url = "https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.006/"
-        r = requests.get(url)
-        soup = BeautifulSoup(r.text, 'html.parser')
-        links = [link["href"] for link in soup.find_all("a", href=True)]
-        years = [l.split(".")[0] for l in links if "01.01" in l]
-
-        # To skip downloaded tiles start by finding local files <-------------- Not sure how best to handle this. The yearly mosaics needed for the attributes could include any number of tiles and to include them all could require quite long file names. Also, these will be updated yearly. 
+        # To skip downloaded tiles start by finding local files
         local_files = {os.path.split(fldr)[-1]: files for
                        fldr, _, files in os.walk(self.landcover_path)}
         local_files = {k: v for k, v in local_files.items() if
@@ -580,7 +674,6 @@ class DataGetter:
                         )
             urllib2.install_opener(opener)
 
-
             # Get all the remote and local file paths
             queries = []
             print("Retrieving needed landcover file paths...")
@@ -635,8 +728,9 @@ class DataGetter:
                         print(message)
 
         # Now process these tiles into yearly geotiffs. Do this everytime.
-        if not os.path.exists(self.landcover_mosaic_path):
-            os.mkdir(self.landcover_mosaic_path)
+        if not os.path.exists(os.path.join(self.proj_dir,
+                                           "rasters/landcover/mosaics")):
+            os.mkdir(os.path.join(self.proj_dir, "rasters/landcover/mosaics"))
 
         print("Mosaicking/remosaicking landcover tiles...")
         for y in tqdm(years, position=0, file=sys.stdout):
@@ -667,15 +761,18 @@ class DataGetter:
 
             # Save mosaic file
             file = self.landcover_file_root + lc_type + "_" + y + ".tif"
-            path = os.path.join(self.landcover_mosaic_path, file)
+            path = os.path.join(self.proj_dir,
+                                "rasters/landcover/mosaics",
+                                file)
             with rasterio.open(path, "w", **crs) as dest:
                 dest.write(mosaic)
 
         # Print location
-        print("Landcover data saved to " + self.landcover_mosaic_path)
+        print("Landcover data saved to " +
+              os.path.join(self.proj_dir, "rasters/landcover/mosaics"))
 
 
-    def getShapes(self):
+    def getShapes(self, ecoregion_level=None):
         """
         Just to grab some basic shapefiles needed for calculating statistics.
         """
@@ -689,8 +786,7 @@ class DataGetter:
                         "SC", "OK", "TN", "WY", "ND", "KY", "VI", "ME", "NY",
                         "NV", "MI", "AR", "MS", "MO", "MT", "KS", "IN", "SD",
                         "MA", "VA", "DC", "IA", "AZ"]
-        modis_crs = ("+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a=6371007.181 " +
-                     "+b=6371007.181 +units=m +no_defs")
+        modis_crs = self.modis_crs
 
         # MODIS Sinusoial World Grid
         if not os.path.exists(
@@ -723,86 +819,6 @@ class DataGetter:
             modis_conus = conus.to_crs(modis_crs)
             modis_conus.to_file(os.path.join(self.proj_dir,
                                              "shapefiles/conus_modis.shp"))
-
-        # Level III Omernick Ecoregions - USGS North American Albers
-        if not os.path.exists(
-                os.path.join(self.proj_dir,
-                             "shapefiles/ecoregion/us_eco_l3.shp")):
-            print("Downloading Omernick Level III Ecoregions from the USGS...")
-            eco_l3 = gpd.read_file("ftp://ftp.epa.gov/wed/ecoregions/us/" +
-                                   "us_eco_l3.zip")
-            eco_l3.crs = {"init": "epsg:5070"}
-            eco_l3.to_file(os.path.join(self.proj_dir,
-                                        "shapefiles/ecoregion/us_eco_l3.shp"))
-            eco_l3 = eco_l3.to_crs(modis_crs)
-            eco_l3.to_file(
-                    os.path.join(self.proj_dir,
-                                 "shapefiles/ecoregion/us_eco_l3_modis.shp"))
-            eco_ref = eco_l3[["US_L3CODE", "NA_L3NAME", "NA_L2NAME",
-                              "NA_L1NAME"]].drop_duplicates()
-            def cap(string):
-                strings = string.split()
-                strings = [s.lower() if s != "USA" else s for s in strings]
-                caps = [s.capitalize()  if s != "USA" else s for s in strings]
-                return " ".join(caps)
-            eco_ref["NA_L2NAME"] = eco_ref["NA_L2NAME"].apply(cap)
-            eco_ref["NA_L1NAME"] = eco_ref["NA_L1NAME"].apply(cap)
-            eco_ref.to_csv(os.path.join(self.proj_dir, "tables/eco_refs.csv"),
-                           index=False)
-
-        # Rasterize Level Omernick Ecoregions - WGS 84
-        if not os.path.exists(
-                os.path.join(self.proj_dir,
-                             "rasters/ecoregion/us_eco_l3_modis.tif")):
-
-            # We need something with the correct geometry
-            src = os.path.join(self.proj_dir,
-                               "shapefiles/ecoregion/us_eco_l3_modis.shp")
-            dst = os.path.join(self.proj_dir,
-                               "rasters/ecoregion/us_eco_l3_modis.tif")
-            extent_template_file = os.path.join(
-                    self.proj_dir, "shapefiles/modis_world_grid.shp")
-
-            # Getting the extent regardless of existing files from other runs
-            template1 = gpd.read_file(extent_template_file)
-            template1["h"] = template1["h"].apply(lambda x: "{:02d}".format(x))
-            template1["v"] = template1["v"].apply(lambda x: "{:02d}".format(x))
-            template1["tile"] = "h" + template1["h"] + "v" +  template1["v"]
-            template1 = template1[template1["tile"].isin(self.tiles)]
-
-            # We can use this to query which tiles are needed for coordinates
-            bounds = template1.geometry.bounds
-            minx = min(bounds["minx"])
-            miny = min(bounds["miny"])
-            maxx = max(bounds["maxx"])
-            maxy = max(bounds["maxy"])
-            minx_tile = template1["tile"][bounds["minx"] == minx].iloc[0]
-            miny_tile = template1["tile"][bounds["miny"] == miny].iloc[0]
-            maxx_tile = template1["tile"][bounds["maxx"] == maxx].iloc[0]
-            maxy_tile = template1["tile"][bounds["maxy"] == maxy].iloc[0]
-            extent_tiles = [minx_tile, miny_tile, maxx_tile, maxy_tile]
-
-            # If these aren"t present, I say just go ahead and download
-            exts = []
-            for et in extent_tiles:
-                folder = os.path.join(self.proj_dir, "rasters/burn_area/hdfs",
-                                      et)
-                if not os.path.exists(folder):
-                    self.getBurns()
-                file = glob(os.path.join(folder, "*hdf"))[0]
-                file_pointer = gdal.Open(file)
-                dataset_pointer = file_pointer.GetSubDatasets()[0][0]
-                ds = gdal.Open(dataset_pointer)
-                geom = ds.GetGeoTransform()
-                ulx, xres, xskew, uly, yskew, yres = geom
-                lrx = ulx + (ds.RasterXSize * xres)
-                lry = uly + (ds.RasterYSize * yres) + yres
-                exts.append([ulx, lry, lrx, uly])
-
-            extent = [exts[0][0], exts[1][1], exts[2][2], exts[3][3]]
-            wkt = ds.GetProjection()
-            attribute = "US_L3CODE"
-            rasterize(src, dst, attribute, xres, wkt, extent)
 
     def shapeToTiles(self, shp_path):
         """
@@ -1233,14 +1249,14 @@ class EventGrid:
 
 class ModelBuilder:
     def __init__(self, dest, proj_dir, tiles, spatial_param=5,
-                 temporal_param=11, landcover_type=None, ecoregion=None):
+                 temporal_param=11, landcover_type=None, ecoregion_level=None):
         self.dest = dest
         self.proj_dir = proj_dir
         self.tiles = tiles
         self.spatial_param = spatial_param
         self.temporal_param = temporal_param
         self.landcover_type = landcover_type
-        self.ecoregion = ecoregion
+        self.ecoregion_level = ecoregion_level
         self.getFiles()
         self.setGeometry()
 
@@ -1454,107 +1470,98 @@ class ModelBuilder:
         print("Saving merged event table to " + self.dest)
         df.to_csv(self.dest, index=False)
 
-    def buildAttributes(self, lc_dir, eco_dir):
+    def buildAttributes(self):
         '''
         Take the data table, add in attributes, and overwrite file.
         '''
-        # Adding fire attributes
-        print("Adding Fire Attributes...")
-
-        # There has to be an event table first
+        # If there is an event table first, make a spatial object out of it
         if os.path.exists(self.dest):
-            df = pd.read_csv(self.dest)
+            gdf = self.buildPoints()
         else:
             print("Run BuildEvents first.")
             return
 
-
-        # We'll need to specify which type of landcover
-        lc_types = {1: "IGBP global vegetation classification scheme",
-                    2: "University of Maryland (UMD) scheme",
-                    3: "MODIS-derived LAI/fPAR scheme",
-                    4: "MODIS-derived Net Primary Production (NPP) scheme",
-                    5: "Plant Functional Type (PFT) scheme."}
-
         # Space is tight and we need the spatial resolution
         res = self.res
-
-        # Group by date first for pixel count
-        df['pixels'] = df.groupby(['id', 'date'])['id'].transform('count')
-
-        # Then group by id for event-level attributes
-        group = df.groupby('id')
-        max_rate_dates = group[['date', 'pixels']].apply(maxGrowthDate)
-        df['total_pixels'] = group['id'].transform('count')
-        df['date'] = df['date'].apply(
+        
+        # Adding fire attributes
+        print("Adding fire attributes...")
+        gdf['pixels'] = gdf.groupby(['id', 'date'])['id'].transform('count')
+        group = gdf.groupby('id')
+        gdf['max_rate_dates'] = group[['date', 'pixels']].apply(maxGrowthDate)
+        gdf['total_pixels'] = group['id'].transform('count')
+        gdf['date'] = gdf['date'].apply(
                 lambda x: dt.datetime.strptime(x, '%Y-%m-%d')
                 )
-        df['ignition_date'] = group['date'].transform('min')
-        df['ignition_day'] = df['ignition_date'].apply(
+        gdf['ignition_date'] = group['date'].transform('min')
+        gdf['ignition_day'] = gdf['ignition_date'].apply(
                 lambda x: dt.datetime.strftime(x, '%j')
                 )
-        df['ignition_month'] = df['ignition_date'].apply(lambda x: x.month)
-        df['ignition_year'] = df['ignition_date'].apply(lambda x: x.year)
-        df['last_date'] = group['date'].transform('max')
-        df['duration'] = df['last_date'] - df['ignition_date']
-        df['duration'] = df['duration'].apply(lambda x: x.days + 1)
-
-        df['total_area_km2'] = df['total_pixels'].apply(toKms, res=res)
-        df['total_area_acres'] = df['total_pixels'].apply(toAcres, res=res)
-        df['total_area_ha'] = df['total_pixels'].apply(toHa, res=res)
-        df['fsr_pixels_per_day'] = df['total_pixels'] / df['duration']
-        df['fsr_km2_per_day'] = df['total_pixels'] / df['duration']
-        df['fsr_acres_per_day'] = df['total_pixels'] / df['duration']
-        df['fsr_ha_per_day'] = df['total_pixels'] / df['duration']
-        df['max_growth_pixels'] = group['pixels'].transform('max')
-        df['min_growth_pixels'] = group['pixels'].transform('min')
-        df['mean_growth_pixels'] = group['pixels'].transform('mean')
-        df['fsr_km2_per_day'] = df['fsr_km2_per_day'].apply(toKms, res=res)
-        df['fsr_acres_per_day'] = df['fsr_acres_per_day'].apply(toAcres,
+        gdf['ignition_month'] = gdf['ignition_date'].apply(lambda x: x.month)
+        gdf['ignition_year'] = gdf['ignition_date'].apply(lambda x: x.year)
+        gdf['last_date'] = group['date'].transform('max')
+        gdf['duration'] = gdf['last_date'] - gdf['ignition_date']
+        gdf['duration'] = gdf['duration'].apply(lambda x: x.days + 1)
+        gdf['total_area_km2'] = gdf['total_pixels'].apply(toKms, res=res)
+        gdf['total_area_acres'] = gdf['total_pixels'].apply(toAcres, res=res)
+        gdf['total_area_ha'] = gdf['total_pixels'].apply(toHa, res=res)
+        gdf['fsr_pixels_per_day'] = gdf['total_pixels'] / gdf['duration']
+        gdf['fsr_km2_per_day'] = gdf['total_pixels'] / gdf['duration']
+        gdf['fsr_acres_per_day'] = gdf['total_pixels'] / gdf['duration']
+        gdf['fsr_ha_per_day'] = gdf['total_pixels'] / gdf['duration']
+        gdf['max_growth_pixels'] = group['pixels'].transform('max')
+        gdf['min_growth_pixels'] = group['pixels'].transform('min')
+        gdf['mean_growth_pixels'] = group['pixels'].transform('mean')
+        gdf['fsr_km2_per_day'] = gdf['fsr_km2_per_day'].apply(toKms, res=res)
+        gdf['fsr_acres_per_day'] = gdf['fsr_acres_per_day'].apply(toAcres,
                                                                 res=res)
-        df['fsr_ha_per_day'] = df['fsr_ha_per_day'].apply(toHa, res=res)
-        df['max_growth_km2'] = df['max_growth_pixels'].apply(toKms, res=res)
-        df['max_growth_acres'] = df['max_growth_pixels'].apply(toAcres,
+        gdf['fsr_ha_per_day'] = gdf['fsr_ha_per_day'].apply(toHa, res=res)
+        gdf['max_growth_km2'] = gdf['max_growth_pixels'].apply(toKms, res=res)
+        gdf['max_growth_acres'] = gdf['max_growth_pixels'].apply(toAcres,
                                                                res=res)
-        df['max_growth_ha'] = df['max_growth_pixels'].apply(toHa, res=res)
-        df['min_growth_km2'] = df['min_growth_pixels'].apply(toKms, res=res)
-        df['min_growth_acres'] = df['min_growth_pixels'].apply(toAcres,
+        gdf['max_growth_ha'] = gdf['max_growth_pixels'].apply(toHa, res=res)
+        gdf['min_growth_km2'] = gdf['min_growth_pixels'].apply(toKms, res=res)
+        gdf['min_growth_acres'] = gdf['min_growth_pixels'].apply(toAcres,
                                                                res=res)
-        df['min_growth_ha'] = df['min_growth_pixels'].apply(toHa, res=res)
-        df['mean_growth_km2'] = df['mean_growth_pixels'].apply(toKms, res=res)
-        df['mean_growth_acres'] = df['mean_growth_pixels'].apply(toAcres,
+        gdf['min_growth_ha'] = gdf['min_growth_pixels'].apply(toHa, res=res)
+        gdf['mean_growth_km2'] = gdf['mean_growth_pixels'].apply(toKms, res=res)
+        gdf['mean_growth_acres'] = gdf['mean_growth_pixels'].apply(toAcres,
                                                                  res=res)
-        df['mean_growth_ha'] = df['mean_growth_pixels'].apply(toHa, res=res)
-        df['date'] = df['date'].apply(lambda x: x.strftime('%Y-%m-%d'))
-        df = df[['id', 'x', 'y', 'total_pixels', 'date', 'ignition_date',
-                 'ignition_day', 'ignition_month', 'ignition_year',
-                 'last_date', 'duration', 'total_area_km2', 'total_area_acres',
-                 'total_area_ha', 'fsr_pixels_per_day', 'fsr_km2_per_day',
-                 'fsr_acres_per_day', 'fsr_ha_per_day', 'max_growth_pixels',
-                 'min_growth_pixels', 'mean_growth_pixels', 'max_growth_km2',
-                 'max_growth_acres', 'max_growth_ha', 'min_growth_km2',
-                 'min_growth_acres', 'min_growth_ha', 'mean_growth_km2',
-                 'mean_growth_acres', 'mean_growth_ha']]
-        df = df.drop_duplicates()
-        df.index = df['id']
-        df['max_growth_rates'] = max_rate_dates
+        gdf['mean_growth_ha'] = gdf['mean_growth_pixels'].apply(toHa, res=res)
+        gdf['date'] = gdf['date'].apply(lambda x: x.strftime('%Y-%m-%d'))
+        gdf = gdf[['id', 'x', 'y', 'pixels', 'total_pixels', 'date',
+                   'ignition_date', 'ignition_day', 'ignition_month',
+                   'ignition_year', 'last_date', 'duration', 'total_area_km2',
+                   'total_area_acres', 'total_area_ha', 'fsr_pixels_per_day',
+                   'fsr_km2_per_day', 'fsr_acres_per_day', 'fsr_ha_per_day',
+                   'max_growth_pixels', 'min_growth_pixels',
+                   'mean_growth_pixels', 'max_growth_km2', 'max_growth_acres',
+                   'max_growth_ha', 'min_growth_km2', 'min_growth_acres',
+                   'min_growth_ha', 'mean_growth_km2', 'mean_growth_acres',
+                   'mean_growth_ha', 'geometry']]
+        gdf = gdf.reset_index(drop=True)
 
         # Attach names to landcover and ecoregion codes if requested
         if self.landcover_type:
             print('Adding landcover attributes...')
 
+            # We'll need to specify which type of landcover
+            lc_types = {1: "IGBP global vegetation classification scheme",
+                        2: "University of Maryland (UMD) scheme",
+                        3: "MODIS-derived LAI/fPAR scheme",
+                        4: "MODIS-derived Net Primary Production (NPP) scheme",
+                        5: "Plant Functional Type (PFT) scheme."}
+
             # Get mosaicked landcover geotiffs
-            lc_files = glob(os.path.join(lc_dir, "*tif"))
+            lc_files = glob(os.path.join(self.proj_dir,
+                                         "rasters/landcover/mosaics",
+                                         "*tif"))
             lc_files.sort()
             lc_years = [f[-8:-4] for f in lc_files]
             lc_files = {lc_years[i]: lc_files[i] for i in range(len(lc_files))}
 
             # We have a different landcover file for each year (almost)
-            df['year'] = df['date'].apply(lambda x: x[:4])
-
-            # Let's just add the file name to the dataframe for now
-            df['lc_file'] = df['year'].map(lc_files)
-            df['lc_file'][pd.isnull(df['lc_file'])] = lc_files[max(lc_years)]
+            gdf['year'] = gdf['date'].apply(lambda x: x[:4])
 
             # Rasterio point querier (will only work here)
             def pointQuery(row):
@@ -1567,27 +1574,79 @@ class ModelBuilder:
                 return val
 
             # This works faster when split by year and the pointer is outside
-            sdfs = []
-            for year in tqdm(df['year'].unique(), position=0, file=sys.stdout):
-                sdf = df[df['year'] == year]
+            # This is also not the best way
+            sgdfs = []
+            for year in tqdm(gdf['year'].unique(), position=0,
+                             file=sys.stdout):
+                sgdf = gdf[gdf['year'] == year]
                 if year > max(lc_years):
                     year = max(lc_years)
                 lc_file = lc_files[year]
                 lc = rasterio.open(lc_file)
-                sdf['landcover'] = sdf.apply(pointQuery, axis=1)
-                sdfs.append(sdf)
-            df = pd.concat(sdfs)
+                sgdf['landcover'] = sgdf.apply(pointQuery, axis=1)
+                sgdfs.append(sgdf)
+            gdf = pd.concat(sgdfs)
+            gdf = gdf.reset_index(drop=True)
+            gdf['landcover_mode'] = gdf.groupby('id')['landcover'].transform(mode)
+            gdf = gdf.drop("landcover", axis=1)
+            gdf['landcover_type'] = lc_types[int(self.landcover_type)]
 
-            # Now let's attach what type of landcover this is referring to
-            df['landcover_type'] = lc_types[int(self.landcover_type)]
+        if self.ecoregion_level:
+            print("Adding ecoregion attributes...")
+            # Different levels have different sources
+            eco_types = {
+                'US_L4CODE': ('Level IV Ecoregions ' +
+                              '(US-Environmental Protection Agency)'),
+                'US_L3CODE': ('Level III Ecoregions ' +
+                              '(US-Environmental Protection Agency)'),
+                'NA_L3CODE': ('Level III Ecoregions ' +
+                              '(NA-Commission for Environmental Cooperation)'),
+                'NA_L2CODE': ('Level II Ecoregions ' +
+                              '(NA-Commission for Environmental Cooperation)'),
+                'NA_L1CODE': ('Level I Ecoregions ' +
+                              '(NA-Commission for Environmental Cooperation)')}
 
-        if self.ecoregion:
-            pass
-            # ...
+            # Read in the Level File (contains every level) and reference table
+            shp_path = os.path.join(self.proj_dir,
+                                    'shapefiles/ecoregion/us_eco_l4_modis.shp')
+            eco = gpd.read_file(shp_path)
+            eco.crs = gdf.crs
+
+            # Filter for selected level (level III defaults to US-EPA version)
+            eco_code = [c for c in eco.columns if str(self.ecoregion_level) in
+                        c and 'CODE' in c]
+            if len(eco_code) > 1:
+                eco_code = [c for c in eco_code if 'US' in c][0]
+            else:
+                eco_code = eco_code[0]
+            eco = eco[[eco_code, 'geometry']]
+
+            # Find modal eco region for each event id
+            gdf = gpd.sjoin(gdf, eco, how="left", op="within")
+            gdf = gdf.reset_index(drop=True)
+            gdf[eco_code] = gdf.groupby('id')[eco_code].transform(mode)
+            gdf[eco_code] = gdf[eco_code].apply(
+                    lambda x: int(x) if not pd.isna(x) else np.nan)
+
+            # Add in the type of ecoregion 
+            gdf['ecoregion_type'] = eco_types[eco_code]
+
+            # Add in the name of the modal ecoregion
+            eco_ref = pd.read_csv(os.path.join(self.proj_dir,
+                                               'tables/eco_refs.csv'))
+            eco_name = eco_code.replace('CODE', 'NAME')
+            eco_df = eco_ref[[eco_code, eco_name]].drop_duplicates()
+            eco_map = dict(zip(eco_df[eco_code], eco_df[eco_name]))
+            gdf['ecoregion_mode_name'] = gdf[eco_code].map(eco_map)
+
+            # Clean up column names
+            gdf = gdf.drop('index_right', axis=1)
+            gdf.rename({eco_code: 'ecoregion_mode'}, inplace=True,
+                       axis='columns')
 
         # Save event level attributes
         print("Overwriting data frame at " + self.dest + "...")
-        df.to_csv(self.dest, index=False)
+        gdf.to_csv(self.dest, index=False)
 
     def buildPoints(self):
        # Read in the event table
@@ -1639,10 +1698,9 @@ class ModelBuilder:
 
         # Now add the first date of each event and merge daily event detections
         print("Dissolving polygons...")
-        gdf["start_date"] = gdf.groupby("id")["date"].transform("min")
         gdfd = gdf.dissolve(by="did", as_index=False)
-        gdfd["year"] = gdfd["start_date"].apply(lambda x: x[:4])
-        gdfd["month"] = gdfd["start_date"].apply(lambda x: x[5:7])
+        gdfd["year"] = gdfd["ignition_date"].apply(lambda x: x[:4])
+        gdfd["month"] = gdfd["ignition_date"].apply(lambda x: x[5:7])
 
         # For each geometry, if it is a single polygon, cast as a multipolygon
         print("Converting polygons to multipolygons...")
@@ -1653,6 +1711,7 @@ class ModelBuilder:
         gdfd.to_file(daily_shp_path, driver="GPKG")
 
         # Now merge into event level polygons
+        gdf = gdf.drop("did", axis=1)
         gdf = gdf.dissolve(by="id", as_index=False)
 
         # Calculate perimeter length

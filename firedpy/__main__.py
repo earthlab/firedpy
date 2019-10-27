@@ -24,7 +24,14 @@ def main():
         to "modis_events.csv".
         """)
     eco_help = ("""
-        Provide this option to associate each event with an ecoregion. 
+        To associate each event with North American ecoregions (Omernick,
+        1987) provide a number corresponding to an ecoregion level. Ecoregions
+        are retrieved from www.epa.gov and levels I through IV are available.
+        Levels I and II were developed by the North American Commission for
+        Environmental Cooperation. Levels III and IV were developed by the
+        United States Environmental Protection Agency. For events with more
+        than one ecoregion, the most common value will be used. Defaults to
+        none.
         """)
     lc_help = ("""
         To include land cover as an attribute, provide a number corresponding
@@ -71,10 +78,10 @@ def main():
     parser.add_argument("-dest", dest="dest",
                         default="modis_events.csv",
                         help=dest_help)
-    parser.add_argument("-ecoregion", dest="ecoregion", default=None,
-                        help=lc_help)
-    parser.add_argument("-landcover_type", dest="landcover_type", default=None,
-                        help=lc_help)
+    parser.add_argument("-ecoregion_level", dest="ecoregion_level", type=int,
+                        default=None, help=eco_help)
+    parser.add_argument("-landcover_type", dest="landcover_type", type=int,
+                        default=None, help=lc_help)
     parser.add_argument("--shapefile", action='store_true', help=shp_help)
     parser.add_argument("-spatial_param", dest="spatial_param", default=5,
                         type=int, help=sp_help)
@@ -91,7 +98,7 @@ def main():
     # Parse argument responses
     args = parser.parse_args()
     proj_dir = args.proj_dir
-    ecoregion = args.ecoregion
+    ecoregion_level = args.ecoregion_level
     landcover_type = args.landcover_type
     dest = os.path.join(proj_dir, "outputs", "tables", args.dest)
     spatial_param = args.spatial_param
@@ -130,8 +137,8 @@ def main():
         data.getLandcover(landcover_type)
 
     # Get ecoregions if requested
-    if ecoregion:
-        data.getEcoregion(ecoregion)
+    if ecoregion_level:
+        data.getEcoregion(ecoregion_level)
 
     # Create Model Builder object
     models = ModelBuilder(dest=dest,
@@ -140,19 +147,16 @@ def main():
                           spatial_param=spatial_param,
                           temporal_param=temporal_param,
                           landcover_type=landcover_type,
-                          ecoregion=ecoregion)
+                          ecoregion_level=ecoregion_level)
 
     # Now go ahead and create the events (Memory's a bit tight for parallel)
     models.buildEvents()
 
     # Now add attributes to this table
-    lc_dir = data.landcover_mosaic_path
-    eco_dir = None
-    models.buildAttributes(lc_dir=lc_dir, eco_dir=eco_dir)
+    models.buildAttributes()
 
     # And build the polygons
     if shapefile:
-        # Use arguments for shapefile source and destination file paths
         file_base = os.path.splitext(os.path.basename(dest))[0]
         daily_shp_file = "_".join([file_base, "daily"])
         daily_shp_path = os.path.join(proj_dir, "outputs", "shapefiles",

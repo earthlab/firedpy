@@ -30,7 +30,7 @@ dest_help = ("""
     to "modis_events.csv".
     """)    
 eco_help = ("""
-    Provide this option to associate each event with an ecoregion. 
+    Provide this option to associate each event with an ecoregion_level. 
     """)
 lc_help = ("""
         Provide this option if you would like to associate each event with
@@ -78,7 +78,7 @@ parser.add_argument("-proj_dir", dest="proj_dir",
 parser.add_argument("-dest", dest="dest",
                     default="modis_events.csv",
                     help=dest_help)
-parser.add_argument("-ecoregion", dest="ecoregion", default=None,
+parser.add_argument("-ecoregion_level", dest="ecoregion_level", default=4,
                     help=lc_help)
 parser.add_argument("-landcover_type", dest="landcover_type", default=1,
                     help=lc_help)
@@ -95,7 +95,7 @@ parser.add_argument("-tiles", "--names-list", nargs="+", dest="tiles",
 args = parser.parse_args()
 proj_dir = '/home/travis/fired' #args.proj_dir 
 dest = os.path.join(proj_dir, "outputs", "tables", args.dest)
-ecoregion = args.ecoregion
+ecoregion_level = args.ecoregion_level
 landcover_type = args.landcover_type
 spatial_param = args.spatial_param
 temporal_param = args.temporal_param
@@ -125,7 +125,7 @@ models = ModelBuilder(dest=dest,
                       spatial_param=spatial_param,
                       temporal_param=temporal_param,
                       landcover_type=landcover_type,
-                      ecoregion=ecoregion)
+                      ecoregion_level=ecoregion_level)
 
 # Now add attributes to this table
 lc_dir = data.landcover_mosaic_path
