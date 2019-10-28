@@ -147,17 +147,6 @@ def mergeChecker(new_coords, full_list, temporal_param, radius):
             else:
                 return i, False
 
-#
-#def mode(lst):
-#    if len(np.unique(lst)) > 1:
-#        grouped_lst = [list(lst[lst == s]) for s in lst]
-#        counts = {len(a): a for a in grouped_lst}  # overwrites matches
-#        max_count = np.max(list(counts.keys()))
-#        mode = counts[max_count][0]
-#    else:
-#        mode = lst.unique()[0]
-#    return mode
-
 
 def mode(lst):
     return max(set(list(lst)), key=list(lst).count)
