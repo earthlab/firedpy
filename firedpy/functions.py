@@ -690,6 +690,12 @@ class DataGetter:
                 # Retrieve list of links to hdf files
                 url = ("https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.006/" + yr +
                       ".01.01/")
+                
+                logging.basicConfig() 
+                logging.getLogger().setLevel(logging.DEBUG)
+                requests_log = logging.getLogger("requests.packages.urllib3")
+                requests_log.setLevel(logging.DEBUG)
+                requests_log.propagate = True            
                 r = requests.get(url)
                 soup = BeautifulSoup(r.text, 'html.parser')
                 names = [link["href"] for link in soup.find_all("a",
