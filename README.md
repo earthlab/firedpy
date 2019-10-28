@@ -47,4 +47,8 @@ This package will use a space-time window to classify individual burn detections
   - Write shapefiles as outputs in addition to the data table:
   
     `firedpy -spatial_param 6 -temporal_param 10 -tiles h11v09 h12v09 -proj_dir /home/<user>/fired_project --shapefile`
+  
+  - Add the most common level 3 Ecoregion as an attribute to each event:
+  
+    `firedpy -spatial_param 6 -temporal_param 10 -tiles h11v09 h12v09 -proj_dir /home/<user>/fired_project --shapefile -ecoregion_level 3`
 
