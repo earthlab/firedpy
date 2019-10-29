@@ -1565,7 +1565,7 @@ class ModelBuilder:
             # This works faster when split by year and the pointer is outside
             # This is also not the best way
             sgdfs = []
-            for year in tqdm(gdf['year'].unique(), position=0,
+            for year in tqdm(lc_years, position=0,
                              file=sys.stdout):
                 sgdf = gdf[gdf['year'] == year]
                 if year > max(lc_years):
@@ -1614,8 +1614,8 @@ class ModelBuilder:
             gdf = gpd.sjoin(gdf, eco, how="left", op="within")
             gdf = gdf.reset_index(drop=True)
             gdf[eco_code] = gdf.groupby('id')[eco_code].transform(mode)
-            gdf[eco_code] = gdf[eco_code].apply(
-                    lambda x: int(x) if not pd.isna(x) else np.nan)
+#            gdf[eco_code] = gdf[eco_code].apply(
+#                    lambda x: int(x) if not pd.isna(x) else np.nan)
 
             # Add in the type of ecoregion 
             gdf['ecoregion_type'] = eco_types[eco_code]

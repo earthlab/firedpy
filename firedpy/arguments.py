@@ -127,10 +127,6 @@ models = ModelBuilder(dest=dest,
                       landcover_type=landcover_type,
                       ecoregion_level=ecoregion_level)
 
-# Now add attributes to this table
-lc_dir = data.landcover_mosaic_path
-eco_dir = None
-
 # Use arguments for shapefile source and destination file paths
 file_base = os.path.splitext(os.path.basename(dest))[0]
 daily_shp_file = "_".join([file_base, "daily"])
