@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 import argparse
-from .functions import buildEvents, buildPolygons, DataGetter
+from .functions import DataGetter, ModelBuilder
 import os
 import tempfile
 import time
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
+
+# Checkout http://effbot.org/zone/stupid-exceptions-keyboardinterrupt.htm
 
 def main():
     # Start the timer (seconds)
@@ -16,10 +18,33 @@ def main():
         The project directory you would like to use for input and output
         data files. Defaults to a temporary directory.
         """)
-    dest_help = ("""
-        The filename of the resulting dataframe. This will be saved in
+    file_help = ("""
+        The file name of the resulting dataframe. This will be saved in
         the "outputs/tables" folder of the chosen project directory. Defaults
         to "modis_events.csv".
+        """)
+    eco_help = ("""
+        To associate each event with North American ecoregions (Omernick,
+        1987) provide a number corresponding to an ecoregion level. Ecoregions
+        are retrieved from www.epa.gov and levels I through IV are available.
+        Levels I and II were developed by the North American Commission for
+        Environmental Cooperation. Levels III and IV were developed by the
+        United States Environmental Protection Agency. For events with more
+        than one ecoregion, the most common value will be used. Defaults to
+        none.
+        """)
+    lc_help = ("""
+        To include land cover as an attribute, provide a number corresponding
+        with a MODIS/Terra+Aqua Land Cover (MCD12Q1) category. To do so you
+        will have to register at NASA's Earthdata service
+        (https://urs.earthdata.nasa.gov/home) and enter your user name and
+        password when prompted. Available land cover categories:
+            1: IGBP global vegetation classification scheme,
+            2: University of Maryland (UMD) scheme,
+            3: MODIS-derived LAI/fPAR scheme,
+            4: MODIS-derived Net Primary Production (NPP) scheme,
+            5: Plant Functional Type (PFT) scheme.
+        Defaults to none.
         """)
     shp_help = ("""
         Provide this option if you would like to build shapefiles from the
@@ -30,7 +55,7 @@ def main():
         'modis_events_daily.gpkg' and 'modis_events.gpkg')
         """)
     sp_help = ("""
-        The number of cells (463 m2 each) to search for neighboring burn
+        The number of cells (~463 m resolution) to search for neighboring burn
         detections. Defaults to 5 cells in all directions.
         """)
     tile_help = ("""
@@ -50,9 +75,13 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-proj_dir", dest="proj_dir",
                         default=tempfile.mkdtemp(), help=data_help)
-    parser.add_argument("-dest", dest="dest",
+    parser.add_argument("-file_name", dest="file_name",
                         default="modis_events.csv",
-                        help=dest_help)
+                        help=file_help)
+    parser.add_argument("-ecoregion_level", dest="ecoregion_level", type=int,
+                        default=None, help=eco_help)
+    parser.add_argument("-landcover_type", dest="landcover_type", type=int,
+                        default=None, help=lc_help)
     parser.add_argument("--shapefile", action='store_true', help=shp_help)
     parser.add_argument("-spatial_param", dest="spatial_param", default=5,
                         type=int, help=sp_help)
@@ -69,7 +98,9 @@ def main():
     # Parse argument responses
     args = parser.parse_args()
     proj_dir = args.proj_dir
-    dest = os.path.join(proj_dir, "outputs", "tables", args.dest)
+    ecoregion_level = args.ecoregion_level
+    landcover_type = args.landcover_type
+    file_name = os.path.join(proj_dir, "outputs", "tables", args.file_name)
     spatial_param = args.spatial_param
     temporal_param = args.temporal_param
     tiles = args.tiles
@@ -91,25 +122,49 @@ def main():
     else:
         data.tiles = tiles
 
-    # Get all of the MODIS burn area hdfs and landcover and ecoregion data
-    data.getBurns()
+    # Get all of the MODIS burn area hdfs
+    try:
+        data.getBurns()
+    except (KeyboardInterrupt, SystemExit):
+        raise
+    except Exception as e:
+        template = "\nDownload failed: error type {0}:\n{1!r}"
+        message = template.format(type(e).__name__, e.args)
+        print(message)
+
+    # Get land cover if requested
+    if landcover_type:
+        data.getLandcover(landcover_type)
+
+    # Get ecoregions if requested
+    if ecoregion_level:
+        data.getEcoregion(ecoregion_level)
+
+    # Create Model Builder object
+    models = ModelBuilder(file_name=file_name,
+                          proj_dir=proj_dir,
+                          tiles=tiles,
+                          spatial_param=spatial_param,
+                          temporal_param=temporal_param,
+                          landcover_type=landcover_type,
+                          ecoregion_level=ecoregion_level)
 
     # Now go ahead and create the events (Memory's a bit tight for parallel)
-    buildEvents(dest=dest, data_dir=proj_dir, tiles=tiles,
-                spatial_param=spatial_param, temporal_param=temporal_param)
+    models.buildEvents()
+
+    # Now add attributes to this table
+    models.buildAttributes()
 
     # And build the polygons
     if shapefile:
-        # Use arguments for shapefile source and destination file paths
-        file_base = os.path.splitext(os.path.basename(dest))[0]
+        file_base = os.path.splitext(os.path.basename(file_name))[0]
         daily_shp_file = "_".join([file_base, "daily"])
         daily_shp_path = os.path.join(proj_dir, "outputs", "shapefiles",
                                       daily_shp_file + ".gpkg")
         event_shp_path = os.path.join(proj_dir, "outputs", "shapefiles",
                                       file_base + ".gpkg")
-        shp_src = dest
-        buildPolygons(src=shp_src, daily_shp_path=daily_shp_path,
-                      event_shp_path=event_shp_path, data_dir=proj_dir)
+        models.buildPolygons(daily_shp_path=daily_shp_path,
+                             event_shp_path=event_shp_path)
 
     # Print the time it took
     end = time.perf_counter()
