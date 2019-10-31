@@ -24,8 +24,8 @@ data_help = ("""
     The project directory you would like to use for input and output
     data files. Defaults to a temporary directory.
     """)
-dest_help = ("""
-    The filename of the resulting dataframe. This will be saved in
+file_help = ("""
+    The file name of the resulting dataframe. This will be saved in
     the "outputs/tables" folder of the chosen project directory. Defaults
     to "modis_events.csv".
     """)    
@@ -75,9 +75,9 @@ tmp_help = ("""
 parser = argparse.ArgumentParser()
 parser.add_argument("-proj_dir", dest="proj_dir",
                     default=tempfile.mkdtemp(), help=data_help)
-parser.add_argument("-dest", dest="dest",
+parser.add_argument("-file_name", dest="file_name",
                     default="modis_events.csv",
-                    help=dest_help)
+                    help=file_help)
 parser.add_argument("-ecoregion_level", dest="ecoregion_level", default=4,
                     help=lc_help)
 parser.add_argument("-landcover_type", dest="landcover_type", default=1,
@@ -94,7 +94,7 @@ parser.add_argument("-tiles", "--names-list", nargs="+", dest="tiles",
 # Parse argument responses
 args = parser.parse_args()
 proj_dir = '/home/travis/fired' #args.proj_dir 
-dest = os.path.join(proj_dir, "outputs", "tables", args.dest)
+file_name = os.path.join(proj_dir, "outputs", "tables", args.file_name)
 ecoregion_level = args.ecoregion_level
 landcover_type = args.landcover_type
 spatial_param = args.spatial_param
@@ -119,7 +119,7 @@ else:
     data.tiles = tiles
 
 # Create Model Builder object
-models = ModelBuilder(dest=dest,
+models = ModelBuilder(file_name=file_name,
                       proj_dir=proj_dir,
                       tiles=tiles,
                       spatial_param=spatial_param,
@@ -128,7 +128,7 @@ models = ModelBuilder(dest=dest,
                       ecoregion_level=ecoregion_level)
 
 # Use arguments for shapefile source and destination file paths
-file_base = os.path.splitext(os.path.basename(dest))[0]
+file_base = os.path.splitext(os.path.basename(file_name))[0]
 daily_shp_file = "_".join([file_base, "daily"])
 daily_shp_path = os.path.join(proj_dir, "outputs", "shapefiles",
                               daily_shp_file + ".gpkg")

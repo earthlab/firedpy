@@ -8,18 +8,19 @@ import geopandas as gpd
 from getpass import getpass
 from glob import glob
 from http.cookiejar import CookieJar
+from io import BytesIO
 from multiprocessing import cpu_count, Pool
 from netCDF4 import Dataset
 import numpy as np
 import os
 import pandas as pd
+import pycurl
 import rasterio
 from rasterio import logging
 from rasterio.merge import merge
 from shapely.geometry import Point, Polygon, MultiPolygon
 import sys
 from tqdm import tqdm
-import requests
 import urllib.request as urllib2
 import warnings
 
@@ -204,6 +205,18 @@ def rasterize(src, dst, attribute, resolution, crs, extent, all_touch=False,
     del src_data
 
 
+def requestIO(url):
+    b = BytesIO()
+    c = pycurl.Curl()
+    c.setopt(c.URL, url)
+    c.setopt(c.WRITEFUNCTION, b.write)
+    c.perform()
+    c.close()
+    content = b.getvalue()
+
+    return content
+
+
 def spCheck(diffs, sp_buf):
     """
     Quick function to check if events land within the spatial window.
@@ -214,6 +227,7 @@ def spCheck(diffs, sp_buf):
     else:
         check = False
     return check
+
 
 def toAcres(p, res):
     return (p*res**2) * 0.000247105
@@ -278,6 +292,7 @@ def downloadLC(query):
         with open(dst, "wb") as file:
             response = urllib2.urlopen(request).read()
             file.write(response)
+
 
 # Classes
 class DataGetter:
@@ -458,8 +473,8 @@ class DataGetter:
                        "height": mosaic.shape[1],
                        "width": mosaic.shape[2],
                        "transform": transform})
-            with rasterio.open(template_path, "w", **crs) as dest:
-                dest.write(mosaic)
+            with rasterio.open(template_path, "w", **crs) as dst:
+                dst.write(mosaic)
 
         # Build one netcdf per tile
         for tid in tiles:
@@ -510,7 +525,7 @@ class DataGetter:
                 return " ".join(caps)
 
             eco_ref = eco_ref.applymap(ecoCap)
-            eco_ref.to_csv(os.path.join(self.proj_dir, "tables/eco_ref.csv"),
+            eco_ref.to_csv(os.path.join(self.proj_dir, "tables/eco_refs.csv"),
                            index=False)
 
         # Rasterize Omernick Ecoregions
@@ -603,8 +618,11 @@ class DataGetter:
         lp = self.landcover_path
         lc_type = "type" + str(landcover_type)
 
-        # Get available years <------------------------------------------------ Find a quicker way to check the page itself for available years. requests can be slow on some networks, perhaps there is some configuration or other package that would be quicker
-        years = [str(y) for y in range(2001, 2019)]
+        # Get available years
+        r = requestIO("https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.006/")
+        soup = BeautifulSoup(r, 'html.parser')
+        links = [link["href"] for link in soup.find_all("a", href=True)]
+        years = [l[:4] for l in links if '01.01' in l]
 
         # To skip downloaded tiles start by finding local files
         local_files = {os.path.split(fldr)[-1]: files for
@@ -679,8 +697,8 @@ class DataGetter:
                 # Retrieve list of links to hdf files
                 url = ("https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.006/" + yr +
                       ".01.01/")         
-                r = requests.get(url)
-                soup = BeautifulSoup(r.text, 'html.parser')
+                r = requestIO(url)
+                soup = BeautifulSoup(r, 'html.parser')
                 names = [link["href"] for link in soup.find_all("a",
                                                                 href=True)]
                 names = [n for n in names if "hdf" in n and "xml" not in n]
@@ -753,8 +771,8 @@ class DataGetter:
             path = os.path.join(self.proj_dir,
                                 "rasters/landcover/mosaics",
                                 file)
-            with rasterio.open(path, "w", **crs) as dest:
-                dest.write(mosaic)
+            with rasterio.open(path, "w", **crs) as dst:
+                dst.write(mosaic)
 
         # Print location
         print("Landcover data saved to " +
@@ -1237,19 +1255,19 @@ class EventGrid:
 
 
 class ModelBuilder:
-    def __init__(self, dest, proj_dir, tiles, spatial_param=5,
+    def __init__(self, file_name, proj_dir, tiles, spatial_param=5,
                  temporal_param=11, landcover_type=None, ecoregion_level=None):
-        self.dest = dest
+        self.file_name = file_name
         self.proj_dir = proj_dir
         self.tiles = tiles
         self.spatial_param = spatial_param
         self.temporal_param = temporal_param
         self.landcover_type = landcover_type
         self.ecoregion_level = ecoregion_level
-        self.getFiles()
+        self.getFiles(file_name)
         self.setGeometry()
 
-    def getFiles(self):
+    def getFiles(self, file_name):
         # Get the requested files names
         files = []
         for t in self.tiles:
@@ -1258,6 +1276,12 @@ class ModelBuilder:
             files.append(path)
         files.sort()
         self.files = files
+
+        # Make sure the main data frame file name has the right extension
+        if ".csv" not in file_name:
+            self.file_name = os.path.splitext(self.file_name)[0] + ".csv"
+        else:
+            self.file_name = self.file_name
 
     def setGeometry(self):
         # Use the first file to extract some more parameters for later
@@ -1276,8 +1300,8 @@ class ModelBuilder:
         them all together for a seamless set of wildfire events.
         """
         # Make sure the desstination folder exists
-        if not(os.path.exists(os.path.dirname(self.dest))):
-            os.makedirs(os.path.dirname(self.dest))
+        if not(os.path.exists(os.path.dirname(self.file_name))):
+            os.makedirs(os.path.dirname(self.file_name))
 
         # Create an empty list and data frame for the
         tile_list = []
@@ -1456,15 +1480,15 @@ class ModelBuilder:
         df = df[["id", "tile", "date", "x", "y"]]
 
         # Finally save
-        print("Saving merged event table to " + self.dest)
-        df.to_csv(self.dest, index=False)
+        print("Saving merged event table to " + self.file_name)
+        df.to_csv(self.file_name, index=False)
 
     def buildAttributes(self):
         '''
         Take the data table, add in attributes, and overwrite file.
         '''
         # If there is an event table first, make a spatial object out of it
-        if os.path.exists(self.dest):
+        if os.path.exists(self.file_name):
             gdf = self.buildPoints()
         else:
             print("Run BuildEvents first.")
@@ -1634,13 +1658,13 @@ class ModelBuilder:
                        axis='columns')
 
         # Save event level attributes
-        print("Overwriting data frame at " + self.dest + "...")
-        gdf.to_csv(self.dest, index=False)
+        print("Overwriting data frame at " + self.file_name + "...")
+        gdf.to_csv(self.file_name, index=False)
 
     def buildPoints(self):
        # Read in the event table
         print("Reading classified fire event table...")
-        df = pd.read_csv(self.dest)
+        df = pd.read_csv(self.file_name)
 
         # Go ahead and create daily id (did) for later
         df["did"] = df["id"].astype(str) + "-" + df["date"]

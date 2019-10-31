@@ -13,6 +13,7 @@ dependencies:
   - netcdf4
   - numpy
   - pandas
+  - pycurl
   - pyyaml
   - rasterio
   - requests
