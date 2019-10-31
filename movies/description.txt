@@ -1,0 +1,33 @@
+This folder contains a sample movie made with firedpy out put made for
+the Pacific Northwest of the United States.
+
+To recreate these images with QGIS:
+
+1) download the QGIS Time Manager plugin zip file from this url:
+
+   https://plugins.qgis.org/plugins/timemanager/.
+
+2) On the top menu:
+ select Plugins > Manage and Install Plugins... > Install from ZIP >
+    Local zip file > Install Plugin.
+
+3) Load the daily geopackage from the desired firedpy model run
+   (found in "<proj_dir>/outputs/shapefiles/<file_name>_daily.gpkg")
+
+4) In the layers menu, right click the geopackage entry, then select:
+   properties > symbology > "categorized" (top dropdown) > column >
+   "id" > coloramp > "random" > classify (below symbol box) > apply  
+   (this may take some time) > symbol > "simple fill" >  stroke style >
+   "No Pen" > OK > OK
+
+5) If that worked open the Time Manager Plugin. Click the power button
+   if that isn't green already, under "Time Manager Settings" add a
+   layer, select the "date" field for the start period, click
+   click the "Time Display Options" button, choose the correct date format
+   in the "DateTime" input box and adjust other settings to format details.
+   When you are finished with this portal, enter the "Export Video"
+   portal, set the target directory for the images. In one of these options
+   you will be able to aggregate the shape, so do that or most fires will 
+   appear and disappear to quickly to see. Exit this portal to trigger the
+   build and wait. 
+
