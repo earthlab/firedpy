@@ -1,5 +1,7 @@
-This folder contains a sample movie made with firedpy out put made for
-the Pacific Northwest of the United States.
+This folder will contain a sample movie made with firedpy out put made for
+the Pacific Northwest of the United States. Each color represents a classified
+fire event. Shapes expand to show the daily progression and ultimate burnt area
+of each wildfire.
 
 To recreate these images with QGIS:
 
