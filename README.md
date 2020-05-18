@@ -7,7 +7,7 @@ A Python Command Line Interface for classifying fire events from the Collection 
 This package will use a space-time window to classify individual burn detections from late 2001 to near-present into discrete events and return both a data table and shapefiles of these events. The user is able to specify the spatial and temporal parameters of the window, as well as the area of interest using either a shapefile or a list of MODIS Sinusoidal Projection tile IDs. Any area from the world may be selected. However, in the current version, memory constraints may limit the extent available for a single model run. This version is calibrated to handle the Conitiguous United States (CONUS) with a 16 GB machine, though work is underway to move more processing to disk for larger areas. Shapefiles include full- and daily-level event polygons, providing a representation of both final and expanding event perimeters.
 
 
-### To Install:
+### Installation instructions:
 
   - Clone this repository to a local folder and change directories into it:
   
