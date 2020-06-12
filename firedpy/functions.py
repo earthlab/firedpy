@@ -690,13 +690,13 @@ class DataGetter:
                 # Make sure destination folder exists
                 if not os.path.exists(os.path.join(lp, yr)):
                         os.mkdir(os.path.join(lp, yr))
-    
+
                 # Get needed tiles for this year
                 year_tiles = needed_tiles[yr]
-    
+
                 # Retrieve list of links to hdf files
                 url = ("https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.006/" + yr +
-                      ".01.01/")         
+                      ".01.01/")
                 r = requestIO(url)
                 soup = BeautifulSoup(r, 'html.parser')
                 names = [link["href"] for link in soup.find_all("a",
@@ -704,16 +704,16 @@ class DataGetter:
                 names = [n for n in names if "hdf" in n and "xml" not in n]
                 names = [n for n in names if n.split('.')[2] in year_tiles]
                 links = [url + l for l in names]
-    
+
                 # Build list of local file paths and check if they're needed
                 dsts = [os.path.join(lp, yr, names[i]) for
                         i in range(len(links))]
-    
+
                 # Group links and local paths for parallel downloads
                 query = [(links[i], dsts[i]) for i in range(len(links))
                          if not os.path.exists(dsts[i])]
                 queries = queries + query
-    
+
             # Now get land cover data from earthdata.nasa.gov
             if len(queries) > 0:
                 print("Retrieving landcover data...")
@@ -1496,7 +1496,7 @@ class ModelBuilder:
 
         # Space is tight and we need the spatial resolution
         res = self.res
-        
+
         # Adding fire attributes
         print("Adding fire attributes...")
         gdf['pixels'] = gdf.groupby(['id', 'date'])['id'].transform('count')
@@ -1641,7 +1641,7 @@ class ModelBuilder:
 #            gdf[eco_code] = gdf[eco_code].apply(
 #                    lambda x: int(x) if not pd.isna(x) else np.nan)
 
-            # Add in the type of ecoregion 
+            # Add in the type of ecoregion
             gdf['ecoregion_type'] = eco_types[eco_code]
 
             # Add in the name of the modal ecoregion

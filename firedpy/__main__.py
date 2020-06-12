@@ -16,7 +16,7 @@ def main():
     # Call help statements
     data_help = ("""
         The project directory you would like to use for input and output
-        data files. Defaults to a temporary directory.
+        data files. Defaults to a temporary directory 'firedpy/proj'.
         """)
     file_help = ("""
         The file name of the resulting dataframe. This will be saved in
@@ -51,7 +51,7 @@ def main():
         event data frame. Shapefiles of both daily progression and overall
         event perimeters will be written to the "outputs/shapefiles" folder of
         the chosen project directory. These will be saved in geopackage format
-        (.gpkg) using the file basename of the fire event data frame (e.g. 
+        (.gpkg) using the file basename of the fire event data frame (e.g.
         'modis_events_daily.gpkg' and 'modis_events.gpkg')
         """)
     sp_help = ("""
@@ -74,9 +74,9 @@ def main():
     # Provide arguments
     parser = argparse.ArgumentParser()
     parser.add_argument("-proj_dir", dest="proj_dir",
-                        default=tempfile.mkdtemp(), help=data_help)
+                        default=os.path.join(os.getcwd(), 'proj'), help=data_help)
     parser.add_argument("-file_name", dest="file_name",
-                        default="modis_events.csv",
+                        default="fired_events_",
                         help=file_help)
     parser.add_argument("-ecoregion_level", dest="ecoregion_level", type=int,
                         default=None, help=eco_help)
@@ -100,11 +100,14 @@ def main():
     proj_dir = args.proj_dir
     ecoregion_level = args.ecoregion_level
     landcover_type = args.landcover_type
-    file_name = os.path.join(proj_dir, "outputs", "tables", args.file_name)
     spatial_param = args.spatial_param
     temporal_param = args.temporal_param
     tiles = args.tiles
     shapefile = args.shapefile
+    sp = str(spatial_param)
+    tp = str(temporal_param)
+    if args.landcover_type is None:
+        file_name = os.path.join(args.proj_dir, "outputs", "tables", args.file_name+"s"+sp+"_t"+tp+".csv")
 
     # Make sure the project directory exists
     if not os.path.exists(proj_dir):
@@ -139,6 +142,18 @@ def main():
     # Get ecoregions if requested
     if ecoregion_level:
         data.getEcoregion(ecoregion_level)
+
+    # Add date range to the file names before exporting final data frame
+    date_range = []
+    for root, dirs, files in os.walk(os.path.join(proj_dir, "rasters", "burn_area", "hdfs")):
+        for f in files:
+            dr = int(f.split('.')[1][1:])
+            date_range.append(dr)
+    print(date_range)
+    first_date = sorted(date_range)[0]
+    last_date = sorted(date_range)[-1]
+    file_name = file_name[:-4]+"_"+str(first_date)+"_"+str(last_date)+".csv"
+
 
     # Create Model Builder object
     models = ModelBuilder(file_name=file_name,
