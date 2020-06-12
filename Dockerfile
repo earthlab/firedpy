@@ -2,7 +2,7 @@ FROM continuumio/miniconda3:4.6.14
 
 ENV PYTHONDONTWRITEBYTECODE=true
 
-COPY . home/firedpy/
+COPY . /home/firedpy/
 
 RUN conda update conda --yes \
     && conda config --add channels conda-forge \
