@@ -9,7 +9,7 @@ This package will use a space-time window to classify individual burn detections
 
 ### Docker Container:
 
-  - First get the docker container running:
+  - First, get the docker container running:
 
     `docker run -t -i -p 8787:8787 earthlab/firedpy`
 
