@@ -9,7 +9,8 @@ WORKDIR /home/firedpy
 RUN conda update conda --yes \
     && conda config --add channels conda-forge \
     && conda config --set channel_priority strict \
-    && conda env create -f environment.yaml
+    && conda env create -f environment.yaml \
+    && conda activate firedpy
 
 RUN conda clean --all --yes --force-pkgs-dirs \
     && find /opt/conda/ -follow -type f -name '*.a' -delete \
