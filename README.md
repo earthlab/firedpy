@@ -19,7 +19,11 @@ This package will use a space-time window to classify individual burn detections
 
     `docker exec -it <silly_name> /bin/bash`
   
-  - Then you will be in the firedpy directory. The environment should be ready to use.
+  - Then you will be inside of your docker container in the firedpy directory. Now, enter:
+  
+    `conda activate firedpy`
+    
+    And the environment should be ready to use.
 
 ### Method 2. Local Installation Instructions:
 
