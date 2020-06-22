@@ -149,10 +149,9 @@ def main():
         for f in files:
             dr = int(f.split('.')[1][1:])
             date_range.append(dr)
-    print(date_range)
     first_date = sorted(date_range)[0]
     last_date = sorted(date_range)[-1]
-    file_name = file_name[:-4]+"_"+str(first_date)+"_"+str(last_date)+".csv"
+    file_name = file_name[:-4]+"_"+str(last_date)+".csv"
 
 
     # Create Model Builder object

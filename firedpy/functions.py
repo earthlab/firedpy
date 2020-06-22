@@ -355,7 +355,13 @@ class DataGetter:
         for tile in tiles:
             # Find remote folder
             ftp_folder =  "/MCD64A1/C6/" + tile
-            ftp.cwd(ftp_folder)
+            # Check if remote folder exists and if not, continue to next tile
+            try:
+                ftp.cwd(ftp_folder)
+            except:
+                print("No burn products in tile "+tile+" for spatial and temporal parameters ...")
+                pass
+
             hdfs = ftp.nlst()
             hdfs = [h for h in hdfs if ".hdf" in h]
 
@@ -393,6 +399,7 @@ class DataGetter:
                         template = "Download failed: error type {0}:\n{1!r}"
                         message = template.format(type(e).__name__, e.args)
                         print(message)
+
 
             # Check Downloads
             missings = []
@@ -832,30 +839,37 @@ class DataGetter:
         Set or reset the tile list using a shapefile. Where shapes intersect
         with the modis sinusoidal grid determines which tiles to use.
         """
-        source = gpd.read_file(shp_path)
-
-        modis_crs = {'proj': 'sinu', 'lon_0': 0, 'x_0': 0, 'y_0': 0,
-                     'a': 6371007.181, 'b': 6371007.181, 'units': 'm',
-                     'no_defs': True}
-
-        # Attempt to project to modis sinusoidal
-        try:
-            source = source.to_crs(modis_crs)
-        except Exception as e:
-            print("Error: " + str(e))
-            print("Failed to reproject file, ensure a coordinate reference " +
-                  "system is specified.")
-
+        modis_crs = "+proj=sinu +a=6371007.181 +b=6371007.181 +units=m"
         # Attempt to read in the modis grid and download it if not available
         try:
-            modis_grid = gpd.read_file(
-                    os.path.join(self.proj_dir,
-                                 "shapefiles/modis_world_grid.shp"))
+            print(os.path.join(os.getcwd(), "firedpy", "modis_grid_world.gpkg"))
+            modis_grid = gpd.read_file(os.path.join(os.getcwd(), "firedpy", "modis_grid_world.gpkg"))
+            modis_grid.crs = modis_crs
+            modis_grid = modis_grid.to_crs(modis_crs)
+            # modis_grid.crs = self.modis_crs
+            # modis_grid = modis_grid.to_crs(self.modis_crs)
         except:
             modis_grid = gpd.read_file("http://book.ecosens.org/wp-content/" +
                                        "uploads/2016/06/modis_grid.zip")
             modis_grid.to_file(os.path.join(self.proj_dir,
                                             "shapefiles/modis_world_grid.shp"))
+
+        source = gpd.read_file(shp_path)
+        source.crs = modis_crs
+
+        # modis_crs = {'proj': 'sinu', 'lon_0': 0, 'x_0': 0, 'y_0': 0,
+        #              'a': 6371007.181, 'b': 6371007.181, 'units': 'm',
+        #              'no_defs': True}
+
+        # Attempt to project to modis sinusoidal
+        try:
+            source = source.to_crs(modis_crs)
+            print("The input shapefile has CRS "+str(source.crs))
+        except Exception as e:
+            print("Error: " + str(e))
+            print("Failed to reproject file, ensure a coordinate reference " +
+                  "system is specified.")
+
 
         # Left join shapefiles with source shape as the left
         shared = gpd.sjoin(source, modis_grid, how="left").dropna()
