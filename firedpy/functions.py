@@ -309,8 +309,7 @@ class DataGetter:
         self.modis_template_file_root = "mosaic_template.tif"
         self.landcover_path = os.path.join(proj_dir, "rasters/landcover")
         self.landcover_file_root = "lc_mosaic_"
-        self.modis_crs = ("+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a=6371007.181 " +
-                          "+b=6371007.181 +units=m +no_defs")
+        self.modis_crs = ("+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a=6371007.181 +b=6371007.181 +units=m +no_defs")
         self.nc_path = os.path.join(proj_dir, "rasters/burn_area/netcdfs")
         self.hdf_path = os.path.join(proj_dir, "rasters/burn_area/hdfs")
         self.tiles = ["h08v04", "h09v04", "h10v04", "h11v04", "h12v04",
@@ -839,37 +838,37 @@ class DataGetter:
         Set or reset the tile list using a shapefile. Where shapes intersect
         with the modis sinusoidal grid determines which tiles to use.
         """
-        modis_crs = "+proj=sinu +a=6371007.181 +b=6371007.181 +units=m"
         # Attempt to read in the modis grid and download it if not available
         try:
-            print(os.path.join(os.getcwd(), "firedpy", "modis_grid_world.gpkg"))
             modis_grid = gpd.read_file(os.path.join(os.getcwd(), "firedpy", "modis_grid_world.gpkg"))
-            modis_grid.crs = modis_crs
-            modis_grid = modis_grid.to_crs(modis_crs)
-            # modis_grid.crs = self.modis_crs
-            # modis_grid = modis_grid.to_crs(self.modis_crs)
+            modis_crs = modis_grid.crs
         except:
+            print("MODIS Grid not found, downloading from EcoSens...")
             modis_grid = gpd.read_file("http://book.ecosens.org/wp-content/" +
                                        "uploads/2016/06/modis_grid.zip")
             modis_grid.to_file(os.path.join(self.proj_dir,
                                             "shapefiles/modis_world_grid.shp"))
 
+        # Read in the input shapefile and reproject if needed
         source = gpd.read_file(shp_path)
-        source.crs = modis_crs
+        print("Input shape has CRS: "+str(source.crs))
 
-        # modis_crs = {'proj': 'sinu', 'lon_0': 0, 'x_0': 0, 'y_0': 0,
-        #              'a': 6371007.181, 'b': 6371007.181, 'units': 'm',
-        #              'no_defs': True}
-
-        # Attempt to project to modis sinusoidal
-        try:
-            source = source.to_crs(modis_crs)
-            print("The input shapefile has CRS "+str(source.crs))
-        except Exception as e:
-            print("Error: " + str(e))
-            print("Failed to reproject file, ensure a coordinate reference " +
-                  "system is specified.")
-
+        if source.crs != modis_grid.crs:
+            print("Reprojecting input shape to: "+str(modis_crs))
+            try:
+                source.crs = modis_crs
+                source = source.to_crs(modis_crs)
+                new_shp = os.path.join(self.proj_dir, "shapefiles/user_region.shp")
+                source.to_file(new_shp, driver="ESRI Shapefile")
+                source = gpd.read_file(new_shp)
+                source.crs = modis_crs
+                source = source.to_crs(modis_crs)
+            except Exception as e:
+                print("Error: " + str(e))
+                print("Failed to reproject file, ensure a coordinate reference " +
+                      "system is specified.")
+        else:
+            print("Input shape has the correct CRS")
 
         # Left join shapefiles with source shape as the left
         shared = gpd.sjoin(source, modis_grid, how="left").dropna()

@@ -106,8 +106,8 @@ def main():
     shapefile = args.shapefile
     sp = str(spatial_param)
     tp = str(temporal_param)
-    if args.landcover_type is None:
-        file_name = os.path.join(args.proj_dir, "outputs", "tables", args.file_name+"s"+sp+"_t"+tp+".csv")
+    # Assign the temporary file name including the spatial and temporal parameters
+    file_name = os.path.join(args.proj_dir, "outputs", "tables", args.file_name+"s"+sp+"_t"+tp+".csv")
 
     # Make sure the project directory exists
     if not os.path.exists(proj_dir):
@@ -149,7 +149,6 @@ def main():
         for f in files:
             dr = int(f.split('.')[1][1:])
             date_range.append(dr)
-    first_date = sorted(date_range)[0]
     last_date = sorted(date_range)[-1]
     file_name = file_name[:-4]+"_"+str(last_date)+".csv"
 
