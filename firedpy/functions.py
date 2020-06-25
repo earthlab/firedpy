@@ -309,8 +309,7 @@ class DataGetter:
         self.modis_template_file_root = "mosaic_template.tif"
         self.landcover_path = os.path.join(proj_dir, "rasters/landcover")
         self.landcover_file_root = "lc_mosaic_"
-        self.modis_crs = ("+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a=6371007.181 " +
-                          "+b=6371007.181 +units=m +no_defs")
+        self.modis_crs = ("+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a=6371007.181 +b=6371007.181 +units=m +no_defs")
         self.nc_path = os.path.join(proj_dir, "rasters/burn_area/netcdfs")
         self.hdf_path = os.path.join(proj_dir, "rasters/burn_area/hdfs")
         self.tiles = ["h08v04", "h09v04", "h10v04", "h11v04", "h12v04",
@@ -355,7 +354,13 @@ class DataGetter:
         for tile in tiles:
             # Find remote folder
             ftp_folder =  "/MCD64A1/C6/" + tile
-            ftp.cwd(ftp_folder)
+            # Check if remote folder exists and if not, continue to next tile
+            try:
+                ftp.cwd(ftp_folder)
+            except:
+                print("No burn products in tile "+tile+" for spatial and temporal parameters ...")
+                pass
+
             hdfs = ftp.nlst()
             hdfs = [h for h in hdfs if ".hdf" in h]
 
@@ -393,6 +398,7 @@ class DataGetter:
                         template = "Download failed: error type {0}:\n{1!r}"
                         message = template.format(type(e).__name__, e.args)
                         print(message)
+
 
             # Check Downloads
             missings = []
@@ -690,13 +696,13 @@ class DataGetter:
                 # Make sure destination folder exists
                 if not os.path.exists(os.path.join(lp, yr)):
                         os.mkdir(os.path.join(lp, yr))
-    
+
                 # Get needed tiles for this year
                 year_tiles = needed_tiles[yr]
-    
+
                 # Retrieve list of links to hdf files
                 url = ("https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.006/" + yr +
-                      ".01.01/")         
+                      ".01.01/")
                 r = requestIO(url)
                 soup = BeautifulSoup(r, 'html.parser')
                 names = [link["href"] for link in soup.find_all("a",
@@ -704,16 +710,16 @@ class DataGetter:
                 names = [n for n in names if "hdf" in n and "xml" not in n]
                 names = [n for n in names if n.split('.')[2] in year_tiles]
                 links = [url + l for l in names]
-    
+
                 # Build list of local file paths and check if they're needed
                 dsts = [os.path.join(lp, yr, names[i]) for
                         i in range(len(links))]
-    
+
                 # Group links and local paths for parallel downloads
                 query = [(links[i], dsts[i]) for i in range(len(links))
                          if not os.path.exists(dsts[i])]
                 queries = queries + query
-    
+
             # Now get land cover data from earthdata.nasa.gov
             if len(queries) > 0:
                 print("Retrieving landcover data...")
@@ -832,30 +838,37 @@ class DataGetter:
         Set or reset the tile list using a shapefile. Where shapes intersect
         with the modis sinusoidal grid determines which tiles to use.
         """
-        source = gpd.read_file(shp_path)
-
-        modis_crs = {'proj': 'sinu', 'lon_0': 0, 'x_0': 0, 'y_0': 0,
-                     'a': 6371007.181, 'b': 6371007.181, 'units': 'm',
-                     'no_defs': True}
-
-        # Attempt to project to modis sinusoidal
-        try:
-            source = source.to_crs(modis_crs)
-        except Exception as e:
-            print("Error: " + str(e))
-            print("Failed to reproject file, ensure a coordinate reference " +
-                  "system is specified.")
-
         # Attempt to read in the modis grid and download it if not available
         try:
-            modis_grid = gpd.read_file(
-                    os.path.join(self.proj_dir,
-                                 "shapefiles/modis_world_grid.shp"))
+            modis_grid = gpd.read_file(os.path.join(os.getcwd(), "firedpy", "modis_grid_world.gpkg"))
+            modis_crs = modis_grid.crs
         except:
+            print("MODIS Grid not found, downloading from EcoSens...")
             modis_grid = gpd.read_file("http://book.ecosens.org/wp-content/" +
                                        "uploads/2016/06/modis_grid.zip")
             modis_grid.to_file(os.path.join(self.proj_dir,
                                             "shapefiles/modis_world_grid.shp"))
+
+        # Read in the input shapefile and reproject if needed
+        source = gpd.read_file(shp_path)
+        print("Input shape has CRS: "+str(source.crs))
+
+        if source.crs != modis_grid.crs:
+            print("Reprojecting input shape to: "+str(modis_crs))
+            try:
+                source.crs = modis_crs
+                source = source.to_crs(modis_crs)
+                new_shp = os.path.join(self.proj_dir, "shapefiles/user_region.shp")
+                source.to_file(new_shp, driver="ESRI Shapefile")
+                source = gpd.read_file(new_shp)
+                source.crs = modis_crs
+                source = source.to_crs(modis_crs)
+            except Exception as e:
+                print("Error: " + str(e))
+                print("Failed to reproject file, ensure a coordinate reference " +
+                      "system is specified.")
+        else:
+            print("Input shape has the correct CRS")
 
         # Left join shapefiles with source shape as the left
         shared = gpd.sjoin(source, modis_grid, how="left").dropna()
@@ -1496,7 +1509,7 @@ class ModelBuilder:
 
         # Space is tight and we need the spatial resolution
         res = self.res
-        
+
         # Adding fire attributes
         print("Adding fire attributes...")
         gdf['pixels'] = gdf.groupby(['id', 'date'])['id'].transform('count')
@@ -1641,7 +1654,7 @@ class ModelBuilder:
 #            gdf[eco_code] = gdf[eco_code].apply(
 #                    lambda x: int(x) if not pd.isna(x) else np.nan)
 
-            # Add in the type of ecoregion 
+            # Add in the type of ecoregion
             gdf['ecoregion_type'] = eco_types[eco_code]
 
             # Add in the name of the modal ecoregion
