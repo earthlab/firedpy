@@ -865,15 +865,7 @@ class DataGetter:
         elif str(os.path.basename(shp_path).endswith(".gpkg")):
             try:
                 source = gpd.read_file(shp_path)
-                temp_path = os.path.join(os.getcwd(), "firedpy",
-                                        "user_input.shp")
-                source.to_file(temp_path)
-                driver= ogr.GetDriverByName("ESRI Shapefile")
-                source = driver.Open(temp_path)
-                layer = source.GetLayer()
-                spatialRef = layer.GetSpatialRef()
-                transform = osr.CoordinateTransformation(spatialRef, modis)
-                source.Transform(transform)
+                source = source.to_crs(crs=modis_crs)
             except Exception as e:
                 print("Error: " + str(e))
                 print("Failed to reproject file, ensure a coordinate reference " +
