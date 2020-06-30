@@ -15,6 +15,7 @@ import numpy as np
 import os
 import pandas as pd
 import pycurl
+import pyproj as Proj
 import rasterio
 from rasterio import logging
 from rasterio.merge import merge
@@ -838,6 +839,9 @@ class DataGetter:
         Set or reset the tile list using a shapefile. Where shapes intersect
         with the modis sinusoidal grid determines which tiles to use.
         """
+        outSpatialRef = "+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a=6371007.181 +b=6371007.181 +units=m +no_defs"
+        modis = osr.SpatialReference()
+        modis.ImportFromProj4( outSpatialRef )
         # Attempt to read in the modis grid and download it if not available
         try:
             modis_grid = gpd.read_file(os.path.join(os.getcwd(), "firedpy", "modis_grid_world.gpkg"))
@@ -849,26 +853,32 @@ class DataGetter:
             modis_grid.to_file(os.path.join(self.proj_dir,
                                             "shapefiles/modis_world_grid.shp"))
 
-        # Read in the input shapefile and reproject if needed
-        source = gpd.read_file(shp_path)
-        print("Input shape has CRS: "+str(source.crs))
-
-        if source.crs != modis_grid.crs:
-            print("Reprojecting input shape to: "+str(modis_crs))
+        # Read in the input shapefile and reproject to MODIS sinusoidal
+        if str(os.path.basename(shp_path).endswith(".shp")):
             try:
-                source.crs = modis_crs
-                source = source.to_crs(modis_crs)
-                new_shp = os.path.join(self.proj_dir, "shapefiles/user_region.shp")
-                source.to_file(new_shp, driver="ESRI Shapefile")
-                source = gpd.read_file(new_shp)
-                source.crs = modis_crs
-                source = source.to_crs(modis_crs)
+                source = gpd.read_file(shp_path)
+                source = source.to_crs(crs=modis_crs)
             except Exception as e:
                 print("Error: " + str(e))
                 print("Failed to reproject file, ensure a coordinate reference " +
                       "system is specified.")
-        else:
-            print("Input shape has the correct CRS")
+        elif str(os.path.basename(shp_path).endswith(".gpkg")):
+            try:
+                source = gpd.read_file(shp_path)
+                temp_path = os.path.join(os.getcwd(), "firedpy",
+                                        "user_input.shp")
+                source.to_file(temp_path)
+                driver= ogr.GetDriverByName("ESRI Shapefile")
+                source = driver.Open(temp_path)
+                layer = source.GetLayer()
+                spatialRef = layer.GetSpatialRef()
+                transform = osr.CoordinateTransformation(spatialRef, modis)
+                source.Transform(transform)
+            except Exception as e:
+                print("Error: " + str(e))
+                print("Failed to reproject file, ensure a coordinate reference " +
+                      "system is specified.")
+
 
         # Left join shapefiles with source shape as the left
         shared = gpd.sjoin(source, modis_grid, how="left").dropna()
