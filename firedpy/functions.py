@@ -15,6 +15,7 @@ import numpy as np
 import os
 import pandas as pd
 import pycurl
+import pyproj as Proj
 import rasterio
 from rasterio import logging
 from rasterio.merge import merge
@@ -356,105 +357,103 @@ class DataGetter:
             ftp_folder =  "/MCD64A1/C6/" + tile
             # Check if remote folder exists and if not, continue to next tile
             try:
+                # Change directory to remote folder
                 ftp.cwd(ftp_folder)
-            except:
-                print("No burn products in tile "+tile+" for spatial and temporal parameters ...")
-                pass
 
-            hdfs = ftp.nlst()
-            hdfs = [h for h in hdfs if ".hdf" in h]
+                hdfs = ftp.nlst()
+                hdfs = [h for h in hdfs if ".hdf" in h]
 
-            # Make sure local target folder exists
-            folder = os.path.join(self.hdf_path, tile)
-            if not os.path.exists(folder):
-                os.mkdir(folder)
+                # Make sure local target folder exists
+                folder = os.path.join(self.hdf_path, tile)
+                if not os.path.exists(folder):
+                    os.mkdir(folder)
 
-            # Skip this if the final product exists
-            nc_file = os.path.join(
-                    self.proj_dir, "rasters/burn_area/netcdfs/" + tile + ".nc")
-            if not os.path.exists(nc_file):
-                print("Downloading/Checking hdf files for " + tile)
+                # Skip this if the final product exists
+                nc_file = os.path.join(
+                        self.proj_dir, "rasters/burn_area/netcdfs/" + tile + ".nc")
+                if not os.path.exists(nc_file):
+                    print("Downloading/Checking hdf files for " + tile)
 
-                # Create pool
-                pool = Pool(4)
+                    # Create pool
+                    pool = Pool(4)
 
-                # Zip arguments together
-                queries = list(zip(hdfs, np.repeat(self.hdf_path, len(hdfs))))
+                    # Zip arguments together
+                    queries = list(zip(hdfs, np.repeat(self.hdf_path, len(hdfs))))
 
-                # Try to dl in parallel with progress bar
-                try:
-                    for _ in tqdm(pool.imap(downloadBA, queries),
-                                  total=len(hdfs), position=0,
-                                  file=sys.stdout):
-                        pass
-                except ftplib.error_temp:
-                    print("Too many connections from this IP attempted. Try " +
-                          "again later.")
-                except:
+                    # Try to dl in parallel with progress bar
                     try:
-                        _ = [downloadBA(q) for q in tqdm(queries, position=0,
-                                                         file=sys.stdout)]
-                    except Exception as e:
-                        template = "Download failed: error type {0}:\n{1!r}"
-                        message = template.format(type(e).__name__, e.args)
-                        print(message)
-
-
-            # Check Downloads
-            missings = []
-            for hdf in hdfs:
-                trgt = os.path.join(folder, hdf)
-                remote = os.path.join(ftp_folder, hdf)
-                if not os.path.exists(trgt):
-                    missings.append(remote)
-                else:
-                    try:
-                        gdal.Open(trgt).GetSubDatasets()[0][0]
+                        for _ in tqdm(pool.imap(downloadBA, queries),
+                                      total=len(hdfs), position=0,
+                                      file=sys.stdout):
+                            pass
+                    except ftplib.error_temp:
+                        print("Too many connections from this IP attempted. Try " +
+                              "again later.")
                     except:
-                        print("Bad file detected, removing to try again...")
+                        try:
+                            _ = [downloadBA(q) for q in tqdm(queries, position=0,
+                                                             file=sys.stdout)]
+                        except Exception as e:
+                            template = "Download failed: error type {0}:\n{1!r}"
+                            message = template.format(type(e).__name__, e.args)
+                            print(message)
+                # Check Downloads
+                missings = []
+                for hdf in hdfs:
+                    trgt = os.path.join(folder, hdf)
+                    remote = os.path.join(ftp_folder, hdf)
+                    if not os.path.exists(trgt):
                         missings.append(remote)
-                        os.remove(trgt)
+                    else:
+                        try:
+                            gdal.Open(trgt).GetSubDatasets()[0][0]
+                        except:
+                            print("Bad file detected, removing to try again...")
+                            missings.append(remote)
+                            os.remove(trgt)
 
-            # Now try again for the missed files
-            if len(missings) > 0:
-                print("Missed Files: " + str(missings))
-                print("trying again...")
-
-                # Check into FTP server again
-                ftp = ftplib.FTP("fuoco.geog.umd.edu", user="fire",
-                                 passwd="burnt")
-                for remote in missings:
-                    tile = remote.split("/")[-2]
-                    ftp_folder =  "/MCD64A1/C6/" + tile
-                    ftp.cwd(ftp_folder)
-                    file = os.path.basename(remote)
-                    trgt = os.path.join(self.hdf_path, tile, file)
-
-                    # Try to redownload
-                    try:
-                        with open(trgt, "wb") as dst:
-                            ftp.retrbinary("RETR %s" % file, dst.write, 102400)
-                    except ftplib.all_errors as e:
-                        print("FTP Transfer Error: ", e)
-
-                    # Check download
-                    try:
-                        gdal.Open(trgt).GetSubDatasets()[0][0]
-                        missings.remove(file)
-                    except Exception as e:
-                        print(e)
-
-                # Close new ftp connection
-                ftp.quit()
-                ftp.close()
-
-                # If that doesn"t get them all, give up.
+                # Now try again for the missed files
                 if len(missings) > 0:
-                    print("There are still " + str(len(missings)) +
-                          " missed files.")
-                    print("Try downloading these files manually: ")
-                    for m in missings:
-                        print(m)
+                    print("Missed Files: " + str(missings))
+                    print("trying again...")
+
+                    # Check into FTP server again
+                    ftp = ftplib.FTP("fuoco.geog.umd.edu", user="fire",
+                                     passwd="burnt")
+                    for remote in missings:
+                        tile = remote.split("/")[-2]
+                        ftp_folder =  "/MCD64A1/C6/" + tile
+                        ftp.cwd(ftp_folder)
+                        file = os.path.basename(remote)
+                        trgt = os.path.join(self.hdf_path, tile, file)
+
+                        # Try to redownload
+                        try:
+                            with open(trgt, "wb") as dst:
+                                ftp.retrbinary("RETR %s" % file, dst.write, 102400)
+                        except ftplib.all_errors as e:
+                            print("FTP Transfer Error: ", e)
+
+                        # Check download
+                        try:
+                            gdal.Open(trgt).GetSubDatasets()[0][0]
+                            missings.remove(file)
+                        except Exception as e:
+                            print(e)
+
+                    # Close new ftp connection
+                    ftp.quit()
+                    ftp.close()
+
+                    # If that doesn"t get them all, give up.
+                    if len(missings) > 0:
+                        print("There are still " + str(len(missings)) +
+                              " missed files.")
+                        print("Try downloading these files manually: ")
+                        for m in missings:
+                            print(m)
+            except:
+                print("No fires in tile "+str(tile)+" for the MCD64 product")
 
         # Build the netcdfs here
         tile_files = {}
@@ -802,9 +801,7 @@ class DataGetter:
         modis_crs = self.modis_crs
 
         # MODIS Sinusoial World Grid
-        if not os.path.exists(
-                os.path.join(self.proj_dir,
-                             "shapefiles/modis_world_grid.shp")):
+        if not os.path.exists(os.path.join(os.getcwd(), "firedpy", "modis_grid_world.gpkg")):
             print("Downloading MODIS Sinusoidal Projection Grid...")
             src = ("http://book.ecosens.org/wp-content/uploads/2016/06/" +
                    "modis_grid.zip")
@@ -838,6 +835,9 @@ class DataGetter:
         Set or reset the tile list using a shapefile. Where shapes intersect
         with the modis sinusoidal grid determines which tiles to use.
         """
+        outSpatialRef = "+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a=6371007.181 +b=6371007.181 +units=m +no_defs"
+        modis = osr.SpatialReference()
+        modis.ImportFromProj4( outSpatialRef )
         # Attempt to read in the modis grid and download it if not available
         try:
             modis_grid = gpd.read_file(os.path.join(os.getcwd(), "firedpy", "modis_grid_world.gpkg"))
@@ -849,26 +849,24 @@ class DataGetter:
             modis_grid.to_file(os.path.join(self.proj_dir,
                                             "shapefiles/modis_world_grid.shp"))
 
-        # Read in the input shapefile and reproject if needed
-        source = gpd.read_file(shp_path)
-        print("Input shape has CRS: "+str(source.crs))
-
-        if source.crs != modis_grid.crs:
-            print("Reprojecting input shape to: "+str(modis_crs))
+        # Read in the input shapefile and reproject to MODIS sinusoidal
+        if str(os.path.basename(shp_path).endswith(".shp")):
             try:
-                source.crs = modis_crs
-                source = source.to_crs(modis_crs)
-                new_shp = os.path.join(self.proj_dir, "shapefiles/user_region.shp")
-                source.to_file(new_shp, driver="ESRI Shapefile")
-                source = gpd.read_file(new_shp)
-                source.crs = modis_crs
-                source = source.to_crs(modis_crs)
+                source = gpd.read_file(shp_path)
+                source = source.to_crs(crs=modis_crs)
             except Exception as e:
                 print("Error: " + str(e))
                 print("Failed to reproject file, ensure a coordinate reference " +
                       "system is specified.")
-        else:
-            print("Input shape has the correct CRS")
+        elif str(os.path.basename(shp_path).endswith(".gpkg")):
+            try:
+                source = gpd.read_file(shp_path)
+                source = source.to_crs(crs=modis_crs)
+            except Exception as e:
+                print("Error: " + str(e))
+                print("Failed to reproject file, ensure a coordinate reference " +
+                      "system is specified.")
+
 
         # Left join shapefiles with source shape as the left
         shared = gpd.sjoin(source, modis_grid, how="left").dropna()
