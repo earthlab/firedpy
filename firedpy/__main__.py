@@ -72,8 +72,8 @@ def main():
         """)
     daily_help = ("""
         You may specify whether to create the daily polygons or just the event-level perimeter
-        for your analysis area. Options are "yes" (to create the daily polygons),
-        "no"(create the event level) or "both" (for both daily and event level).
+        for your analysis area. Options are "yes" (to create the daily polygons and the event polygons),
+        "no" (create the event level only).
         """)
 
     # Provide arguments

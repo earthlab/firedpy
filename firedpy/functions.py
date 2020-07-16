@@ -1733,7 +1733,7 @@ class ModelBuilder:
 
         # Save the daily before dissolving into event level
         # Only save the daily polygons if user specified to do so
-        if self.daily == "yes" or self.daily == "both":
+        if self.daily == "yes":
             print("Saving daily file to " + daily_shp_path)
             gdfd.to_file(daily_shp_path, driver="GPKG")
         else:
