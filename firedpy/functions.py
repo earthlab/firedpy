@@ -1266,7 +1266,7 @@ class EventGrid:
 
 
 class ModelBuilder:
-    def __init__(self, file_name, proj_dir, tiles, spatial_param=5,
+    def __init__(self, file_name, proj_dir, tiles, daily, spatial_param=5,
                  temporal_param=11, landcover_type=None, ecoregion_level=None):
         self.file_name = file_name
         self.proj_dir = proj_dir
@@ -1275,6 +1275,7 @@ class ModelBuilder:
         self.temporal_param = temporal_param
         self.landcover_type = landcover_type
         self.ecoregion_level = ecoregion_level
+        self.daily = daily
         self.getFiles(file_name)
         self.setGeometry()
 
@@ -1731,21 +1732,23 @@ class ModelBuilder:
         gdfd["geometry"] = gdfd["geometry"].apply(asMultiPolygon)
 
         # Save the daily before dissolving into event level
-        print("Saving daily file to " + daily_shp_path)
-        gdfd.to_file(daily_shp_path, driver="GPKG")
+        # Only save the daily polygons if user specified to do so
+        if self.daily == "yes" or self.daily == "both":
+            print("Saving daily file to " + daily_shp_path)
+            gdfd.to_file(daily_shp_path, driver="GPKG")
+        else:
+            # Now merge into event level polygons
+            gdf = gdf.drop("did", axis=1)
+            gdf = gdf.dissolve(by="id", as_index=False)
 
-        # Now merge into event level polygons
-        gdf = gdf.drop("did", axis=1)
-        gdf = gdf.dissolve(by="id", as_index=False)
+            # Calculate perimeter length
+            print("Calculating perimeter lengths...")
+            gdf["final_perimeter"] = gdf["geometry"].length
 
-        # Calculate perimeter length
-        print("Calculating perimeter lengths...")
-        gdf["final_perimeter"] = gdf["geometry"].length
+            # We still can't have multiple polygon types
+            print("Converting polygons to multipolygons...")
+            gdf["geometry"] = gdf["geometry"].apply(asMultiPolygon)
 
-        # We still can't have multiple polygon types
-        print("Converting polygons to multipolygons...")
-        gdf["geometry"] = gdf["geometry"].apply(asMultiPolygon)
-
-        # Now save as a geopackage
-        print("Saving event-level file to " + event_shp_path )
-        gdf.to_file(event_shp_path, driver="GPKG")
+            # Now save as a geopackage
+            print("Saving event-level file to " + event_shp_path )
+            gdf.to_file(event_shp_path, driver="GPKG")
