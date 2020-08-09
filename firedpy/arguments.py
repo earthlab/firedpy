@@ -28,9 +28,9 @@ file_help = ("""
     The file name of the resulting dataframe. This will be saved in
     the "outputs/tables" folder of the chosen project directory. Defaults
     to "modis_events.csv".
-    """)    
+    """)
 eco_help = ("""
-    Provide this option to associate each event with an ecoregion_level. 
+    Provide this option to associate each event with an ecoregion_level.
     """)
 lc_help = ("""
         Provide this option if you would like to associate each event with
@@ -51,7 +51,7 @@ shp_help = ("""
     event data frame. Shapefiles of both daily progression and overall
     event perimeters will be written to the "outputs/shapefiles" folder of
     the chosen project directory. These will be saved in geopackage format
-    (.gpkg) using the file basename of the fire event data frame (e.g. 
+    (.gpkg) using the file basename of the fire event data frame (e.g.
     'modis_events_daily.gpkg' and 'modis_events.gpkg')
     """)
 sp_help = ("""
@@ -93,7 +93,7 @@ parser.add_argument("-tiles", "--names-list", nargs="+", dest="tiles",
 
 # Parse argument responses
 args = parser.parse_args()
-proj_dir = '/home/travis/fired' #args.proj_dir 
+proj_dir = '/home/travis/fired' #args.proj_dir
 file_name = os.path.join(proj_dir, "outputs", "tables", args.file_name)
 ecoregion_level = args.ecoregion_level
 landcover_type = args.landcover_type

@@ -23,6 +23,11 @@ def main():
         the "outputs/tables" folder of the chosen project directory. Defaults
         to "modis_events.csv".
         """)
+    daily_help = ("""
+        You may specify whether to create the daily polygons or just the event-level perimeter
+        for your analysis area. Options are "yes" (to create the daily polygons and the event polygons),
+        "no" (create the event level only).
+        """)
     eco_help = ("""
         To associate each event with North American ecoregions (Omernick,
         1987) provide a number corresponding to an ecoregion level. Ecoregions
@@ -69,11 +74,6 @@ def main():
     tmp_help = ("""
         The number of days to search for neighboring burn detections. Defaults
         to 11 days between events.
-        """)
-    daily_help = ("""
-        You may specify whether to create the daily polygons or just the event-level perimeter
-        for your analysis area. Options are "yes" (to create the daily polygons and the event polygons),
-        "no" (create the event level only).
         """)
 
     # Provide arguments

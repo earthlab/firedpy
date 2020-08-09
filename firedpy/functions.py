@@ -1503,7 +1503,7 @@ class ModelBuilder:
         if os.path.exists(self.file_name):
             gdf = self.buildPoints()
         else:
-            print("Run BuildEvents first.")
+            print("Run BuildEvents first...")
             return
 
         # Space is tight and we need the spatial resolution
@@ -1511,10 +1511,9 @@ class ModelBuilder:
 
         # Adding fire attributes
         print("Adding fire attributes...")
-        gdf['pixels'] = gdf.groupby(['id', 'date'])['id'].transform('count')
+
         group = gdf.groupby('id')
-        gdf['max_rate_dates'] = group[['date', 'pixels']].apply(maxGrowthDate)
-        gdf['total_pixels'] = group['id'].transform('count')
+
         gdf['date'] = gdf['date'].apply(
                 lambda x: dt.datetime.strptime(x, '%Y-%m-%d')
                 )
@@ -1525,45 +1524,38 @@ class ModelBuilder:
         gdf['ignition_month'] = gdf['ignition_date'].apply(lambda x: x.month)
         gdf['ignition_year'] = gdf['ignition_date'].apply(lambda x: x.year)
         gdf['last_date'] = group['date'].transform('max')
-        gdf['duration'] = gdf['last_date'] - gdf['ignition_date']
-        gdf['duration'] = gdf['duration'].apply(lambda x: x.days + 1)
+
+        gdf['pixels'] = gdf.groupby(['id', 'date'])['id'].transform('count')
+        gdf['total_pixels'] = group['id'].transform('count')
+
+        gdf['daily_duration'] = gdf['date'] - gdf['ignition_date']
+        gdf['event_day'] = gdf['daily_duration'].apply(lambda x: x.days + 1)
+        gdf['final_duration'] = gdf['last_date'] - gdf['ignition_date']
+        gdf['event_duration'] = gdf['final_duration'].apply(lambda x: x.days + 1)
+
+        gdf['daily_area_km2'] = gdf['pixels'].apply(toKms, res=res)
         gdf['total_area_km2'] = gdf['total_pixels'].apply(toKms, res=res)
-        gdf['total_area_acres'] = gdf['total_pixels'].apply(toAcres, res=res)
-        gdf['total_area_ha'] = gdf['total_pixels'].apply(toHa, res=res)
-        gdf['fsr_pixels_per_day'] = gdf['total_pixels'] / gdf['duration']
-        gdf['fsr_km2_per_day'] = gdf['total_pixels'] / gdf['duration']
-        gdf['fsr_acres_per_day'] = gdf['total_pixels'] / gdf['duration']
-        gdf['fsr_ha_per_day'] = gdf['total_pixels'] / gdf['duration']
+
+        gdf['fsr_pixels_per_day'] = gdf['total_pixels'] / gdf['event_duration']
+        gdf['fsr_km2_per_day'] = gdf['fsr_pixels_per_day'].apply(toKms, res=res)
+
         gdf['max_growth_pixels'] = group['pixels'].transform('max')
         gdf['min_growth_pixels'] = group['pixels'].transform('min')
         gdf['mean_growth_pixels'] = group['pixels'].transform('mean')
-        gdf['fsr_km2_per_day'] = gdf['fsr_km2_per_day'].apply(toKms, res=res)
-        gdf['fsr_acres_per_day'] = gdf['fsr_acres_per_day'].apply(toAcres,
-                                                                res=res)
-        gdf['fsr_ha_per_day'] = gdf['fsr_ha_per_day'].apply(toHa, res=res)
+
         gdf['max_growth_km2'] = gdf['max_growth_pixels'].apply(toKms, res=res)
-        gdf['max_growth_acres'] = gdf['max_growth_pixels'].apply(toAcres,
-                                                               res=res)
-        gdf['max_growth_ha'] = gdf['max_growth_pixels'].apply(toHa, res=res)
         gdf['min_growth_km2'] = gdf['min_growth_pixels'].apply(toKms, res=res)
-        gdf['min_growth_acres'] = gdf['min_growth_pixels'].apply(toAcres,
-                                                               res=res)
-        gdf['min_growth_ha'] = gdf['min_growth_pixels'].apply(toHa, res=res)
         gdf['mean_growth_km2'] = gdf['mean_growth_pixels'].apply(toKms, res=res)
-        gdf['mean_growth_acres'] = gdf['mean_growth_pixels'].apply(toAcres,
-                                                                 res=res)
-        gdf['mean_growth_ha'] = gdf['mean_growth_pixels'].apply(toHa, res=res)
+
         gdf['date'] = gdf['date'].apply(lambda x: x.strftime('%Y-%m-%d'))
-        gdf = gdf[['id', 'x', 'y', 'pixels', 'total_pixels', 'date',
-                   'ignition_date', 'ignition_day', 'ignition_month',
-                   'ignition_year', 'last_date', 'duration', 'total_area_km2',
-                   'total_area_acres', 'total_area_ha', 'fsr_pixels_per_day',
-                   'fsr_km2_per_day', 'fsr_acres_per_day', 'fsr_ha_per_day',
-                   'max_growth_pixels', 'min_growth_pixels',
-                   'mean_growth_pixels', 'max_growth_km2', 'max_growth_acres',
-                   'max_growth_ha', 'min_growth_km2', 'min_growth_acres',
-                   'min_growth_ha', 'mean_growth_km2', 'mean_growth_acres',
-                   'mean_growth_ha', 'geometry']]
+
+        gdf = gdf[['id', 'date', 'ignition_date', 'ignition_day', 'ignition_month', 'ignition_year', 'last_date',
+                   'event_duration', 'event_day', 'pixels', 'total_pixels',
+                   'daily_area_km2', 'total_area_km2', 'fsr_pixels_per_day',
+                   'fsr_km2_per_day', 'max_growth_pixels', 'min_growth_pixels',
+                   'mean_growth_pixels', 'max_growth_km2', 'min_growth_km2',
+                   'mean_growth_km2','x', 'y', 'geometry']]
+
         gdf = gdf.reset_index(drop=True)
 
         # Attach names to landcover and ecoregion codes if requested
@@ -1710,6 +1702,8 @@ class ModelBuilder:
                 polygon = MultiPolygon([polygon])
             return polygon
 
+        # space is tight...
+        res = self.res
         # Create a spatial points object
         gdf = self.buildPoints()
 
@@ -1727,6 +1721,30 @@ class ModelBuilder:
         gdfd["year"] = gdfd["ignition_date"].apply(lambda x: x[:4])
         gdfd["month"] = gdfd["ignition_date"].apply(lambda x: x[5:7])
 
+        # Add in cumulative sum attributes
+        gdfd['cml_pixels'] = gdfd.groupby('id')['pixels'].transform(pd.Series.cumsum)
+        gdfd['cml_area_km2'] = gdfd['cml_pixels'].apply(toKms, res=res)
+        gdfd['perc_total_area_km2'] = (gdfd['daily_area_km2'] / gdfd['total_area_km2'] * 100).astype(int)
+        gdfd['perc_cml_area_km2'] = (gdfd['cml_area_km2'] / gdfd['total_area_km2'] * 100).astype(int)
+
+        gdfd = gdfd[['id', 'did', 'date', 'ignition_date', 'ignition_day', 'ignition_month',
+                     'ignition_year', 'last_date', 'event_duration', 'event_day',
+                     'pixels', 'cml_pixels', 'total_pixels', 'daily_area_km2',
+                     'cml_area_km2', 'total_area_km2', 'perc_total_area_km2',
+                     'perc_cml_area_km2', 'fsr_pixels_per_day',  'fsr_km2_per_day',
+                     'max_growth_pixels', 'min_growth_pixels', 'mean_growth_pixels', 'max_growth_km2',
+                     'min_growth_km2', 'mean_growth_km2', 'x', 'y', 'geometry']]
+
+        gdfd = gdfd.reset_index(drop=True)
+
+        # Add the ignition coords
+        gdfd_x = gdfd.groupby('id')['x'].nth(0)
+        gdfd_y = gdfd.groupby('id')['y'].nth(0)
+        gdfd = gdfd.merge(gdfd_x, on='id')
+        gdfd = gdfd.merge(gdfd_y, on='id')
+        gdfd = gdfd.rename(columns={"x_x":"x", "y_x":"y",
+                                    "x_y":"ignition_x", "y_y":"ignition_y"})
+
         # For each geometry, if it is a single polygon, cast as a multipolygon
         print("Converting polygons to multipolygons...")
         gdfd["geometry"] = gdfd["geometry"].apply(asMultiPolygon)
@@ -1734,21 +1752,32 @@ class ModelBuilder:
         # Save the daily before dissolving into event level
         # Only save the daily polygons if user specified to do so
         if self.daily == "yes":
+            # Calculate perimeter lengths
+            gdfd["final_perimeter"] = gdfd["geometry"].length
+
             print("Saving daily file to " + daily_shp_path)
             gdfd.to_file(daily_shp_path, driver="GPKG")
-        else:
-            # Now merge into event level polygons
-            gdf = gdf.drop("did", axis=1)
-            gdf = gdf.dissolve(by="id", as_index=False)
 
-            # Calculate perimeter length
-            print("Calculating perimeter lengths...")
-            gdf["final_perimeter"] = gdf["geometry"].length
+        # Now merge into event level polygons
+        # Define the ignition coordinates from first pixel
+        gdf_x = gdf.groupby('id')['x'].nth(0)
+        gdf_y = gdf.groupby('id')['y'].nth(0)
+        # Drop the daily attributes
+        gdf = gdf.drop(['did', 'pixels', 'date', 'event_day', 'daily_area_km2', 'x', 'y'], axis=1)
+        gdf = gdf.dissolve(by="id", as_index=False)
+        # Add in the ignition coords
+        gdf = gdf.merge(gdf_x, on='id')
+        gdf = gdf.merge(gdf_y, on='id')
+        gdf = gdf.rename(columns={"x":"ignition_x", "y":"ignition_y"})
 
-            # We still can't have multiple polygon types
-            print("Converting polygons to multipolygons...")
-            gdf["geometry"] = gdf["geometry"].apply(asMultiPolygon)
+        # Calculate perimeter length
+        print("Calculating perimeter lengths...")
+        gdf["final_perimeter"] = gdf["geometry"].length
 
-            # Now save as a geopackage
-            print("Saving event-level file to " + event_shp_path )
-            gdf.to_file(event_shp_path, driver="GPKG")
+        # We still can't have multiple polygon types
+        print("Converting polygons to multipolygons...")
+        gdf["geometry"] = gdf["geometry"].apply(asMultiPolygon)
+
+        # Now save as a geopackage
+        print("Saving event-level file to " + event_shp_path )
+        gdf.to_file(event_shp_path, driver="GPKG")
