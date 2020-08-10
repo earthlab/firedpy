@@ -23,6 +23,11 @@ def main():
         the "outputs/tables" folder of the chosen project directory. Defaults
         to "modis_events.csv".
         """)
+    daily_help = ("""
+        You may specify whether to create the daily polygons or just the event-level perimeter
+        for your analysis area. Options are "yes" (to create the daily polygons and the event polygons),
+        "no" (create the event level only).
+        """)
     eco_help = ("""
         To associate each event with North American ecoregions (Omernick,
         1987) provide a number corresponding to an ecoregion level. Ecoregions
@@ -94,12 +99,14 @@ def main():
                                  "h09v05", "h10v05", "h11v05", "h12v05",
                                  "h08v06", "h09v06", "h10v06", "h11v06"],
                         help=tile_help)
+    parser.add_argument("-daily", dest="daily", default="no", help=daily_help)
 
     # Parse argument responses
     args = parser.parse_args()
     proj_dir = args.proj_dir
     ecoregion_level = args.ecoregion_level
     landcover_type = args.landcover_type
+    daily = args.daily
     spatial_param = args.spatial_param
     temporal_param = args.temporal_param
     tiles = args.tiles
@@ -160,7 +167,8 @@ def main():
                           spatial_param=spatial_param,
                           temporal_param=temporal_param,
                           landcover_type=landcover_type,
-                          ecoregion_level=ecoregion_level)
+                          ecoregion_level=ecoregion_level,
+                          daily=daily)
 
     # Now go ahead and create the events (Memory's a bit tight for parallel)
     models.buildEvents()
