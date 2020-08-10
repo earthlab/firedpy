@@ -23,6 +23,7 @@ from shapely.geometry import Point, Polygon, MultiPolygon
 import sys
 from tqdm import tqdm
 import urllib.request as urllib2
+import requests
 import warnings
 
 # The python gdal issue (matching system gdal version)
@@ -285,15 +286,25 @@ def downloadBA(query):
         ftp.quit()
         ftp.close()
 
-def downloadLC(query):
+def downloadLC(query, session):
     link = query[0]
     dst = query[1]
-    if not os.path.exists(dst):
-        request = urllib2.Request(link)
-        with open(dst, "wb") as file:
-            response = urllib2.urlopen(request).read()
-            file.write(response)
 
+    import requests
+
+    filename = link[link.rfind('/')+1:]
+
+    try:
+        # submit the request using the session
+        response = session.get(link, stream=True)
+        # raise an exception in case of http errors
+        response.raise_for_status()
+        # save the file
+        with open(dst, 'wb') as fd:
+            fd.write(response.content)
+    except requests.exceptions.HTTPError as e:
+        # handle any errors here
+        print(e)
 
 # Classes
 class DataGetter:
@@ -606,10 +617,28 @@ class DataGetter:
            South Dakota. 2018, https://lpdaac.usgs.gov/resources/data-action/
            aster-ultimate-2018-winter-olympics-observer/.
         """
+        class SessionWithHeaderRedirection(requests.Session):
+            AUTH_HOST = 'urs.earthdata.nasa.gov'
+            def __init__(self, username, password):
+                super().__init__()
+                self.auth = (username, password)
+            # Overrides from the library to keep headers when redirected to or from
+            # the NASA auth host.
+            def rebuild_auth(self, prepared_request, response):
+                headers = prepared_request.headers
+                url = prepared_request.url
+                if 'Authorization' in headers:
+                    original_parsed = requests.utils.urlparse(response.request.url)
+                    redirect_parsed = requests.utils.urlparse(url)
+                    if (original_parsed.hostname != redirect_parsed.hostname) and \
+                            redirect_parsed.hostname != self.AUTH_HOST and \
+                            original_parsed.hostname != self.AUTH_HOST:
+                        del headers['Authorization']
+                    return
+
         # Use specified tiles or...
         if self.tiles[0].lower() != "all":
             tiles = self.tiles
-
         # ...download all tiles if the list is empty
         else:
             # Check in to the burn data site
@@ -674,17 +703,10 @@ class DataGetter:
             print("Register at the link below to obtain a username and " +
                   "password:")
             print("https://urs.earthdata.nasa.gov/")
+            # create session with the user credentials that will be used to authenticate access to the data
             username = input("Enter NASA Earthdata User Name: ")
             password = getpass("Enter NASA Earthdata Password: ")
-            pw_manager = urllib2.HTTPPasswordMgrWithDefaultRealm()
-            pw_manager.add_password(None, "https://urs.earthdata.nasa.gov",
-                                   username, password)
-            cookiejar = CookieJar()
-            opener = urllib2.build_opener(
-                        urllib2.HTTPBasicAuthHandler(pw_manager),
-                        urllib2.HTTPCookieProcessor(cookiejar)
-                        )
-            urllib2.install_opener(opener)
+            session = SessionWithHeaderRedirection(username, password)
 
             # Get all the remote and local file paths
             queries = []
@@ -722,18 +744,18 @@ class DataGetter:
             # Now get land cover data from earthdata.nasa.gov
             if len(queries) > 0:
                 print("Retrieving landcover data...")
+                # filename = url[url.rfind('/')+1:]
                 ncores = cpu_count()
                 pool = Pool(int(ncores /2))
                 try:
                     for _ in tqdm(pool.imap(downloadLC, queries),
                                   total=len(queries), position=0,
                                   file=sys.stdout):
-                        pass
+                        _
                 except:
                     print("Error, attempting serial download...")
                     try:
-                        _ = [downloadLC(q) for q in tqdm(queries, position=0,
-                                                         file=sys.stdout)]
+                        _ = [downloadLC(q, session) for q in tqdm(queries, position=0, file=sys.stdout)]
                     except Exception as e:
                         template = "Download failed: error type {0}:\n{1!r}"
                         message = template.format(type(e).__name__, e.args)
@@ -741,14 +763,14 @@ class DataGetter:
 
         # Now process these tiles into yearly geotiffs. Do this everytime.
         if not os.path.exists(os.path.join(self.proj_dir,
-                                           "rasters/landcover/mosaics")):
-            os.mkdir(os.path.join(self.proj_dir, "rasters/landcover/mosaics"))
+                                           "rasters\\landcover\\mosaics")):
+            os.mkdir(os.path.join(self.proj_dir, "rasters\\landcover\\mosaics"))
 
         print("Mosaicking/remosaicking landcover tiles...")
         for y in tqdm(years, position=0, file=sys.stdout):
 
             # Filter available files for the requested tiles
-            lc_files = glob(os.path.join(self.landcover_path, y, "*hdf"))
+            lc_files = glob(os.path.join(self.landcover_path, y, "*.hdf"))
             lc_files = [f for f in lc_files if f.split(".")[2] in self.tiles]
 
             # Use the subdataset name to get the right land cover type
@@ -1291,7 +1313,7 @@ class ModelBuilder:
 
         # Make sure the main data frame file name has the right extension
         if ".csv" not in file_name:
-            self.file_name = os.path.splitext(self.file_name)[0] + ".csv"
+            self.file_name = os.path.splitext()[0] + ".csv"
         else:
             self.file_name = self.file_name
 
@@ -1571,16 +1593,13 @@ class ModelBuilder:
 
             # Get mosaicked landcover geotiffs
             lc_files = glob(os.path.join(self.proj_dir,
-                                         "rasters/landcover/mosaics",
-                                         "*tif"))
+                                         "rasters/landcover/mosaics", "*tif"))
             lc_files.sort()
             lc_years = [f[-8:-4] for f in lc_files]
+            lc_years.sort()
             lc_files = {lc_years[i]: lc_files[i] for i in range(len(lc_files))}
 
-            # We have a different landcover file for each year (almost)
-            gdf['year'] = gdf['date'].apply(lambda x: x[:4])
-
-            # Rasterio point querier (will only work here)
+            # # Rasterio point querier (will only work here)
             def pointQuery(row):
                 x = row['x']
                 y = row['y']
@@ -1590,23 +1609,28 @@ class ModelBuilder:
                     val = np.nan
                 return val
 
-            # This works faster when split by year and the pointer is outside
-            # This is also not the best way
+            # Extract raster values to points
             sgdfs = []
-            for year in tqdm(lc_years, position=0,
-                             file=sys.stdout):
-                sgdf = gdf[gdf['year'] == year]
+            gdf["did"] = gdf["id"].astype(str) + "-" + gdf["date"]
+            gdf['year'] = gdf['date'].apply(lambda x: x[:4])
+            for year in tqdm(lc_years, position=0, file=sys.stdout):
+                pts = gdf[gdf['year'] == year]
                 if year > max(lc_years):
                     year = max(lc_years)
                 lc_file = lc_files[year]
+                # pts = gdf[['x', 'y', 'id', 'date', 'ignition_year']]
+                pts.index = range(len(pts))
+                coords = [(x,y) for x, y in zip(pts.x, pts.y)]
                 lc = rasterio.open(lc_file)
-                sgdf['landcover'] = sgdf.apply(pointQuery, axis=1)
-                sgdfs.append(sgdf)
+                pts['lc_code'] = [x[0] for x in lc.sample(coords)]
+                sgdfs.append(pts)
+            # Combine the data frames
             gdf = pd.concat(sgdfs)
-            gdf = gdf.reset_index(drop=True)
-            gdf['landcover_mode'] = gdf.groupby('id')['landcover'].transform(mode)
-            gdf = gdf.drop("landcover", axis=1)
-            gdf['landcover_type'] = lc_types[int(self.landcover_type)]
+            gdf = gdf.reset_index()
+            gdf = gdf.drop_duplicates(subset="did")
+            gdf['lc_mode'] = gdf.groupby('id')['lc_code'].transform(mode)
+            gdf['lc_type'] = lc_types[int(self.landcover_type)]
+            gdf.to_csv('M:/earth_lab/FIRED/lc.csv')
 
         if self.ecoregion_level:
             print("Adding ecoregion attributes...")
@@ -1754,8 +1778,8 @@ class ModelBuilder:
         if self.daily == "yes":
             # Calculate perimeter lengths
             gdfd["final_perimeter"] = gdfd["geometry"].length
-
             print("Saving daily file to " + daily_shp_path)
+            gdfd.to_csv(str(self.file_name)[:-4]+"_daily.csv", index=False)
             gdfd.to_file(daily_shp_path, driver="GPKG")
 
         # Now merge into event level polygons
@@ -1763,7 +1787,8 @@ class ModelBuilder:
         gdf_x = gdf.groupby('id')['x'].nth(0)
         gdf_y = gdf.groupby('id')['y'].nth(0)
         # Drop the daily attributes
-        gdf = gdf.drop(['did', 'pixels', 'date', 'event_day', 'daily_area_km2', 'x', 'y'], axis=1)
+        gdf = gdf.drop(['index', 'did', 'pixels', 'date', 'event_day',
+                        'daily_area_km2', 'x', 'y'], axis=1)
         gdf = gdf.dissolve(by="id", as_index=False)
         # Add in the ignition coords
         gdf = gdf.merge(gdf_x, on='id')
@@ -1780,4 +1805,5 @@ class ModelBuilder:
 
         # Now save as a geopackage
         print("Saving event-level file to " + event_shp_path )
+        gdf.to_csv(self.file_name)
         gdf.to_file(event_shp_path, driver="GPKG")
