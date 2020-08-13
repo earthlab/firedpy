@@ -72,5 +72,5 @@ There are two ways to install firedpy. Method 1 is to run out of a docker contai
   
     `firedpy -spatial_param 6 -temporal_param 10 -tiles h11v09 h12v09 -proj_dir /home/<user>/fired_project --shapefile -ecoregion_level 3`
     
-   Update 08/2020
+   Update 08/13/2020
 
