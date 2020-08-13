@@ -1630,7 +1630,6 @@ class ModelBuilder:
             gdf = gdf.drop_duplicates(subset="did")
             gdf['lc_mode'] = gdf.groupby('id')['lc_code'].transform(mode)
             gdf['lc_type'] = lc_types[int(self.landcover_type)]
-            gdf.to_csv('M:/earth_lab/FIRED/lc.csv')
 
         if self.ecoregion_level:
             print("Adding ecoregion attributes...")
