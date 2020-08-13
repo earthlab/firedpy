@@ -9,8 +9,8 @@ print('find packages ', setuptools.find_packages())
 setuptools.setup(
     name="firedpy",
     version="0.0.1",
-    author="Travis Williams, Lise St. Denis",
-    author_email="travis.williams@nrel.gov, lise.st.denis@colorado.edu",
+    author="Travis Williams, Adam Mahood, Maxwell C. Cook, Maxwell B. Joseph, Joseph McGlinchy, Lise St. Denis",
+    author_email="adam.mahood@colorado.edu",
     description="A CLI for classifying fires using a MODIS Burnt Area Product",
     license="MIT License",
     long_description=long_description,
