@@ -24,5 +24,4 @@ RUN apt-get update \
 
 SHELL ["conda", "run", "-n", "firedpy", "/bin/bash", "-c"]
 
-RUN python setup.py install \
-    && conda activate firedpy
+RUN python setup.py install 
