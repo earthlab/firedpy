@@ -29,7 +29,7 @@ There are two ways to install firedpy. Method 1 is to run out of a docker contai
     
 #### 1.2 Copy firedpy outputs to your local machine
 
-    After creating a new fire product, it might be useful to get it out of the docker container use it. 
+After creating a new fire product, it might be useful to get it out of the docker container in order to use it. 
     
   - First, exit the docker container by typing 
     
