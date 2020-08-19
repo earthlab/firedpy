@@ -11,7 +11,7 @@ There are two ways to install firedpy. Method 1 is to run out of a docker contai
 
 ### Method 1. Run from a Docker Container:
 
-  - First, get the docker container running:
+#### 1.1 Get the docker container running:
 
     `docker run -t -d -p 8787:8787 earthlab/firedpy`
   
@@ -26,7 +26,26 @@ There are two ways to install firedpy. Method 1 is to run out of a docker contai
     `conda activate firedpy`
     
     And the environment should be ready to use.
+    
+#### 1.2 Copy firedpy outputs to your local machine
 
+    After creating a new fire product, it might be useful to get it out of the docker container use it. 
+    
+  - First, exit the docker container by typing 
+    
+    `exit`
+    
+  - Second, copy the file out. Here we will use the example of a container with the name "unruffled_clarke". The `docker cp` command uses the syntax `docker cp <source> <destination>`. Files inside of a docker container will have a prefix of the docker container name (or container ID) followed by a colon, then with a normal path.
+  
+    Here is an example command using the container name:
+  
+    `docker cp unruffled_clarke:/home/firedpy/proj/outputs/shapefiles/fired_events_s5_t11_2020153.gpkg /home/Documents/fired_events_s5_t11_2020153.gpkg`
+    
+    Another example command using the container ID:
+  
+    `docker cp fa73c6d3e007:/home/firedpy/proj/outputs/shapefiles/fired_events_s5_t11_2020153.gpkg /home/Documents/fired_events_s5_t11_2020153.gpkg`
+  
+  
 ### Method 2. Local Installation Instructions:
 
   - Clone this repository to a local folder and change directories into it:
