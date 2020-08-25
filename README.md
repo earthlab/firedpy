@@ -13,7 +13,7 @@ There are two ways to install firedpy. Method 1 is to run out of a docker contai
 
 #### 1.1 Get the docker container running:
 
-    `docker run -t -d -p 8787:8787 earthlab/firedpy`
+    `docker run -t -d earthlab/firedpy`
   
   - Call `docker ps` to get the name of the docker container you just created.
   
