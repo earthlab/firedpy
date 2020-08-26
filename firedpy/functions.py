@@ -750,10 +750,8 @@ class DataGetter:
                 try:
                     for _ in tqdm(pool.imap(downloadLC, queries),
                                   total=len(queries), position=0,
-                                  file=sys.stdout):
-                        _
+                                  file=sys.stdout)
                 except:
-                    print("Error, attempting serial download...")
                     try:
                         _ = [downloadLC(q, session) for q in tqdm(queries, position=0, file=sys.stdout)]
                     except Exception as e:
