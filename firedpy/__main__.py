@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 import argparse
-from .functions import DataGetter, ModelBuilder
 import os
 import tempfile
 import time
 import warnings
+
+from .functions import DataGetter, ModelBuilder
+
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-# Checkout http://effbot.org/zone/stupid-exceptions-keyboardinterrupt.htm
 
 def main():
     # Start the timer (seconds)
