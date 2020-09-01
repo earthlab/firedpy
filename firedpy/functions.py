@@ -84,6 +84,7 @@ def dateRange(perimeter):
 def edgeCheck(yedges, xedges, coord, sp_buffer):
     """
     Identify edge cases to make merging events quicker later
+
     """
     y = coord[0]
     x = coord[1]
@@ -505,7 +506,7 @@ class DataGetter:
                     os.remove(file_name)
 
     def getEcoregion(self, ecoregion_level=1, rasterize=False):
-       # Omernick's Ecoregions - EPA North American Albers
+        # Omernick's Ecoregions - EPA North American Albers
         if not os.path.exists(
                 os.path.join(self.proj_dir,
                              "shapefiles/ecoregion/us_eco_l4.shp")):
@@ -750,7 +751,8 @@ class DataGetter:
                 try:
                     for _ in tqdm(pool.imap(downloadLC, queries),
                                   total=len(queries), position=0,
-                                  file=sys.stdout)
+                                  file=sys.stdout):
+                                  _
                 except:
                     try:
                         _ = [downloadLC(q, session) for q in tqdm(queries, position=0, file=sys.stdout)]
@@ -1488,6 +1490,7 @@ class ModelBuilder:
                 checks = [ychecks[i] * xchecks[i] for i in range(len(ychecks))]
                 if any(checks):
                     # Merge events! Merge into the earliest event
+                    # MC - Need to replace this with the event builder on these points (?)
                     d12 = edf2["days"].min()
                     if d1 < d12:
                         edges["id"][edges["id"] == iden2] = iden
@@ -1628,6 +1631,12 @@ class ModelBuilder:
             gdf = gdf.drop_duplicates(subset="did")
             gdf['lc_mode'] = gdf.groupby('id')['lc_code'].transform(mode)
             gdf['lc_type'] = lc_types[int(self.landcover_type)]
+            # Add in the class description from landcover tables
+            lc_table = pd.read_csv(os.path.join(os.getcwd(), 'data',
+                                                'MCD12Q1_LegendDesc_Type{}.csv'.format(str(self.landcover_type))))
+            gdf = pd.merge(left=gdf, right=lc_table, how='left', left_on='lc_code', right_on='Value')
+            gdf = gdf.drop('Value', axis=1)
+
 
         if self.ecoregion_level:
             print("Adding ecoregion attributes...")
