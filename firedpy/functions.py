@@ -465,7 +465,7 @@ class DataGetter:
                         for m in missings:
                             print(m)
             except:
-                print("No fires in tile "+str(tile)+" for the MCD64 product")
+                print("No fires in tile "+str(tile)+" for the MCD64 product, skipping...")
 
         # Build the netcdfs here
         tile_files = {}
@@ -475,6 +475,7 @@ class DataGetter:
 
         # Merge one year into a reference mosaic
         if not os.path.exists(self.modis_template_path):
+            print("AHAHAHA")
             folders = glob(os.path.join(self.hdf_path, "*"))
             file_groups = [glob(os.path.join(f, "*hdf")) for f in folders]
             for f in file_groups:
@@ -490,7 +491,8 @@ class DataGetter:
                        "height": mosaic.shape[1],
                        "width": mosaic.shape[2],
                        "transform": transform})
-            with rasterio.open(template_path, "w", **crs) as dst:
+
+            with rasterio.open(template_path, "w+", **crs) as dst:
                 dst.write(mosaic)
 
         # Build one netcdf per tile
@@ -546,8 +548,7 @@ class DataGetter:
                            index=False)
 
         # Rasterize Omernick Ecoregions
-        if rasterize and not os.path.exists(
-                os.path.join(self.proj_dir,
+        if rasterize and not os.path.exists(os.path.join(self.proj_dir,
                              "rasters/ecoregion/us_eco_l4_modis.tif")):
 
             # We need something with the correct geometry
@@ -598,7 +599,6 @@ class DataGetter:
             wkt = ds.GetProjection()
             attribute = "US_L3CODE"
             rasterize(src, dst, attribute, xres, wkt, extent)
-
 
     def getLandcover(self, landcover_type=1):
         """
@@ -747,12 +747,12 @@ class DataGetter:
                 print("Retrieving landcover data...")
                 # filename = url[url.rfind('/')+1:]
                 ncores = cpu_count()
-                pool = Pool(int(ncores /2))
+                pool = Pool(int(ncores/2))
                 try:
-                    for _ in tqdm(pool.imap(downloadLC, queries),
+                    for p in tqdm(pool.map(downloadLC, queries),
                                   total=len(queries), position=0,
                                   file=sys.stdout):
-                                  _
+                        p
                 except:
                     try:
                         _ = [downloadLC(q, session) for q in tqdm(queries, position=0, file=sys.stdout)]
@@ -763,8 +763,8 @@ class DataGetter:
 
         # Now process these tiles into yearly geotiffs. Do this everytime.
         if not os.path.exists(os.path.join(self.proj_dir,
-                                           "rasters\\landcover\\mosaics")):
-            os.mkdir(os.path.join(self.proj_dir, "rasters\\landcover\\mosaics"))
+                                           "rasters/landcover/mosaics")):
+            os.mkdir(os.path.join(self.proj_dir, "rasters/landcover/mosaics"))
 
         print("Mosaicking/remosaicking landcover tiles...")
         for y in tqdm(years, position=0, file=sys.stdout):
@@ -866,10 +866,14 @@ class DataGetter:
             modis_crs = modis_grid.crs
         except:
             print("MODIS Grid not found, downloading from EcoSens...")
-            modis_grid = gpd.read_file("http://book.ecosens.org/wp-content/" +
-                                       "uploads/2016/06/modis_grid.zip")
-            modis_grid.to_file(os.path.join(self.proj_dir,
-                                            "shapefiles/modis_world_grid.shp"))
+            # MODIS Sinusoial World Grid
+            src = ("http://book.ecosens.org/wp-content/uploads/2016/06/" +
+                   "modis_grid.zip")
+            modis = gpd.read_file(src)
+            modis.crs = modis_crs
+            modis.to_file(os.path.join(self.proj_dir,
+                                       "shapefiles/modis_world_grid.shp"))
+
 
         # Read in the input shapefile and reproject to MODIS sinusoidal
         if str(os.path.basename(shp_path).endswith(".shp")):
@@ -905,7 +909,6 @@ class DataGetter:
         create a singular netcdf file.
         """
         savepath = self.nc_path
-
         # Check that the target folder exists, agian.
         if not os.path.exists(savepath):
             os.mkdir(savepath)
@@ -1288,16 +1291,19 @@ class EventGrid:
 
 
 class ModelBuilder:
-    def __init__(self, file_name, proj_dir, tiles, daily, spatial_param=5,
-                 temporal_param=11, landcover_type=None, ecoregion_level=None):
+    def __init__(self, file_name, proj_dir, tiles, daily, shapefile, spatial_param=5,
+                 temporal_param=11, landcover_type=None,
+                 ecoregion_type=None, ecoregion_level=None):
         self.file_name = file_name
         self.proj_dir = proj_dir
         self.tiles = tiles
         self.spatial_param = spatial_param
         self.temporal_param = temporal_param
         self.landcover_type = landcover_type
+        self.ecoregion_type = ecoregion_type
         self.ecoregion_level = ecoregion_level
         self.daily = daily
+        self.shapefile = shapefile
         self.getFiles(file_name)
         self.setGeometry()
 
@@ -1572,9 +1578,9 @@ class ModelBuilder:
 
         gdf['date'] = gdf['date'].apply(lambda x: x.strftime('%Y-%m-%d'))
 
-        gdf = gdf[['id', 'date', 'ignition_date', 'ignition_day', 'ignition_month', 'ignition_year', 'last_date',
-                   'event_duration', 'event_day', 'pixels', 'total_pixels',
-                   'daily_area_km2', 'total_area_km2', 'fsr_pixels_per_day',
+        gdf = gdf[['id', 'date', 'ignition_date', 'ignition_day', 'ignition_month',
+                   'ignition_year', 'last_date', 'event_duration', 'event_day',
+                   'pixels', 'total_pixels', 'daily_area_km2', 'total_area_km2', 'fsr_pixels_per_day',
                    'fsr_km2_per_day', 'max_growth_pixels', 'min_growth_pixels',
                    'mean_growth_pixels', 'max_growth_km2', 'min_growth_km2',
                    'mean_growth_km2','x', 'y', 'geometry']]
@@ -1584,7 +1590,6 @@ class ModelBuilder:
         # Attach names to landcover and ecoregion codes if requested
         if self.landcover_type:
             print('Adding landcover attributes...')
-
             # We'll need to specify which type of landcover
             lc_types = {1: "IGBP global vegetation classification scheme",
                         2: "University of Maryland (UMD) scheme",
@@ -1638,58 +1643,78 @@ class ModelBuilder:
             gdf = gdf.drop('Value', axis=1)
 
 
-        if self.ecoregion_level:
+        if self.ecoregion_type or self.ecoregion_level:
             print("Adding ecoregion attributes...")
             # Different levels have different sources
-            eco_types = {
-                'US_L4CODE': ('Level IV Ecoregions ' +
-                              '(US-Environmental Protection Agency)'),
-                'US_L3CODE': ('Level III Ecoregions ' +
-                              '(US-Environmental Protection Agency)'),
-                'NA_L3CODE': ('Level III Ecoregions ' +
-                              '(NA-Commission for Environmental Cooperation)'),
-                'NA_L2CODE': ('Level II Ecoregions ' +
-                              '(NA-Commission for Environmental Cooperation)'),
-                'NA_L1CODE': ('Level I Ecoregions ' +
-                              '(NA-Commission for Environmental Cooperation)')}
+            if self.ecoregion_type==None or self.ecoregion_type=="us":
+                eco_types = {
+                    'US_L4CODE': ('Level IV Ecoregions ' +
+                                  '(US-Environmental Protection Agency)'),
+                    'US_L3CODE': ('Level III Ecoregions ' +
+                                  '(US-Environmental Protection Agency)'),
+                    'NA_L3CODE': ('Level III Ecoregions ' +
+                                  '(NA-Commission for Environmental Cooperation)'),
+                    'NA_L2CODE': ('Level II Ecoregions ' +
+                                  '(NA-Commission for Environmental Cooperation)'),
+                    'NA_L1CODE': ('Level I Ecoregions ' +
+                                  '(NA-Commission for Environmental Cooperation)')}
 
-            # Read in the Level File (contains every level) and reference table
-            shp_path = os.path.join(self.proj_dir,
-                                    'shapefiles/ecoregion/us_eco_l4_modis.shp')
-            eco = gpd.read_file(shp_path)
-            eco.crs = gdf.crs
+                # Read in the Level File (contains every level) and reference table
+                shp_path = os.path.join(self.proj_dir,
+                                        'shapefiles/ecoregion/us_eco_l4_modis.shp')
+                eco = gpd.read_file(shp_path)
+                eco.crs = gdf.crs
 
-            # Filter for selected level (level III defaults to US-EPA version)
-            eco_code = [c for c in eco.columns if str(self.ecoregion_level) in
-                        c and 'CODE' in c]
-            if len(eco_code) > 1:
-                eco_code = [c for c in eco_code if 'US' in c][0]
-            else:
-                eco_code = eco_code[0]
-            eco = eco[[eco_code, 'geometry']]
+                # Filter for selected level (level III defaults to US-EPA version)
+                if not self.ecoregion_level:
+                    self.ecoregion_level = 1
 
-            # Find modal eco region for each event id
-            gdf = gpd.sjoin(gdf, eco, how="left", op="within")
-            gdf = gdf.reset_index(drop=True)
-            gdf[eco_code] = gdf.groupby('id')[eco_code].transform(mode)
-#            gdf[eco_code] = gdf[eco_code].apply(
-#                    lambda x: int(x) if not pd.isna(x) else np.nan)
+                eco_code = [c for c in eco.columns if str(self.ecoregion_level) in
+                            c and 'CODE' in c]
+                if len(eco_code) > 1:
+                    eco_code = [c for c in eco_code if 'US' in c][0]
+                else:
+                    eco_code = eco_code[0]
+                eco = eco[[eco_code, 'geometry']]
 
-            # Add in the type of ecoregion
-            gdf['ecoregion_type'] = eco_types[eco_code]
+                # Find modal eco region for each event id
+                gdf = gpd.sjoin(gdf, eco, how="left", op="within")
+                gdf = gdf.reset_index(drop=True)
+                gdf[eco_code] = gdf.groupby('id')[eco_code].transform(mode)
+                # gdf[eco_code] = gdf[eco_code].apply(
+                #        lambda x: int(x) if not pd.isna(x) else np.nan)
 
-            # Add in the name of the modal ecoregion
-            eco_ref = pd.read_csv(os.path.join(self.proj_dir,
-                                               'tables/eco_refs.csv'))
-            eco_name = eco_code.replace('CODE', 'NAME')
-            eco_df = eco_ref[[eco_code, eco_name]].drop_duplicates()
-            eco_map = dict(zip(eco_df[eco_code], eco_df[eco_name]))
-            gdf['ecoregion_mode_name'] = gdf[eco_code].map(eco_map)
+                # Add in the type of ecoregion
+                gdf['eco_type'] = eco_types[eco_code]
 
-            # Clean up column names
-            gdf = gdf.drop('index_right', axis=1)
-            gdf.rename({eco_code: 'ecoregion_mode'}, inplace=True,
-                       axis='columns')
+                # Add in the name of the modal ecoregion
+                eco_ref = pd.read_csv(os.path.join(self.proj_dir,
+                                                   'tables/eco_refs.csv'))
+                eco_name = eco_code.replace('CODE', 'NAME')
+                eco_df = eco_ref[[eco_code, eco_name]].drop_duplicates()
+                eco_map = dict(zip(eco_df[eco_code], eco_df[eco_name]))
+                gdf['eco_name'] = gdf[eco_code].map(eco_map)
+
+                # Clean up column names
+                gdf = gdf.drop('index_right', axis=1)
+                gdf.rename({eco_code: 'eco_mode'}, inplace=True,
+                           axis='columns')
+
+            elif self.ecoregion_type == "world":
+
+                # Read in the world ecoregions from WWF
+                eco_path = os.path.join(os.getcwd(), "data", "world_ecoregions", "wwf_terr_ecos_modis.shp")
+                eco = gpd.read_file(eco_path)
+                eco = eco.to_crs(crs=gdf.crs)
+
+                # Find modal eco region for each event id
+                gdf = gpd.sjoin(gdf, eco, how="left", op="within")
+                gdf = gdf.reset_index(drop=True)
+
+                gdf["eco_mode"] = gdf.groupby('id')['ECO_NUM'].transform(mode)
+                gdf["eco_name"] = gdf["ECO_NAME"]
+                gdf["eco_type"] = "WWF Terrestrial Ecoregions of the World"
+
 
         # Save event level attributes
         print("Overwriting data frame at " + self.file_name + "...")
@@ -1721,7 +1746,9 @@ class ModelBuilder:
 
         return gdf
 
-    def buildPolygons(self, daily_shp_path, event_shp_path):
+    def buildPolygons(self, daily_shp_path, event_shp_path, shp_path, clipping):
+        print(shp_path)
+        shp = gpd.read_file(shp_path)
         # Make sure we have the target folders
         if not(os.path.exists(os.path.dirname(event_shp_path))):
             os.makedirs(os.path.dirname(event_shp_path))
@@ -1757,23 +1784,66 @@ class ModelBuilder:
         gdfd['perc_total_area_km2'] = (gdfd['daily_area_km2'] / gdfd['total_area_km2'] * 100).astype(int)
         gdfd['perc_cml_area_km2'] = (gdfd['cml_area_km2'] / gdfd['total_area_km2'] * 100).astype(int)
 
-        gdfd = gdfd[['id', 'did', 'date', 'ignition_date', 'ignition_day', 'ignition_month',
-                     'ignition_year', 'last_date', 'event_duration', 'event_day',
-                     'pixels', 'cml_pixels', 'total_pixels', 'daily_area_km2',
-                     'cml_area_km2', 'total_area_km2', 'perc_total_area_km2',
-                     'perc_cml_area_km2', 'fsr_pixels_per_day',  'fsr_km2_per_day',
-                     'max_growth_pixels', 'min_growth_pixels', 'mean_growth_pixels', 'max_growth_km2',
-                     'min_growth_km2', 'mean_growth_km2', 'x', 'y', 'geometry']]
-
-        gdfd = gdfd.reset_index(drop=True)
-
         # Add the ignition coords
         gdfd_x = gdfd.groupby('id')['x'].nth(0)
         gdfd_y = gdfd.groupby('id')['y'].nth(0)
         gdfd = gdfd.merge(gdfd_x, on='id')
         gdfd = gdfd.merge(gdfd_y, on='id')
         gdfd = gdfd.rename(columns={"x_x":"x", "y_x":"y",
-                                    "x_y":"ignition_x", "y_y":"ignition_y"})
+                                    "x_y":"ignition_utm_x", "y_y":"ignition_utm_y"})
+        # Calculate perimeter lengths
+        gdfd["final_perimeter"] = gdfd["geometry"].length
+
+        # Reset column index
+        # Column order depends on arguments
+        # Need to specify column order if landcover and ecoregion are specified
+        if self.landcover_type and self.ecoregion_type or self.ecoregion_level:
+            gdfd = gdfd[['id', 'did', 'date', 'ignition_date', 'ignition_day', 'ignition_month',
+                         'ignition_year', 'last_date', 'event_duration', 'event_day',
+                         'pixels', 'cml_pixels', 'total_pixels', 'daily_area_km2',
+                         'cml_area_km2', 'total_area_km2', 'perc_total_area_km2',
+                         'perc_cml_area_km2', 'fsr_pixels_per_day',  'fsr_km2_per_day',
+                         'max_growth_pixels', 'min_growth_pixels', 'mean_growth_pixels', 'max_growth_km2',
+                         'min_growth_km2', 'mean_growth_km2', 'lc_code', 'lc_name', 'lc_description', 'eco_mode', 'eco_name',
+                         'eco_type', 'x', 'y', 'ignition_utm_x', 'ignition_utm_y',
+                         'final_perimeter', 'geometry']]
+            gdfd = gdfd.reset_index(drop=True)
+
+        elif self.landcover_type and not self.ecoregion_type or self.ecoregion_level:
+            gdfd = gdfd[['id', 'did', 'date', 'ignition_date', 'ignition_day', 'ignition_month',
+                         'ignition_year', 'last_date', 'event_duration', 'event_day',
+                         'pixels', 'cml_pixels', 'total_pixels', 'daily_area_km2',
+                         'cml_area_km2', 'total_area_km2', 'perc_total_area_km2',
+                         'perc_cml_area_km2', 'fsr_pixels_per_day',  'fsr_km2_per_day',
+                         'max_growth_pixels', 'min_growth_pixels', 'mean_growth_pixels', 'max_growth_km2',
+                         'min_growth_km2', 'mean_growth_km2', 'lc_code', 'lc_name', 'lc_description',
+                         'x', 'y', 'ignition_utm_x', 'ignition_utm_y',
+                         'final_perimeter', 'geometry']]
+            gdfd = gdfd.reset_index(drop=True)
+
+        elif self.ecoregion_type or self.ecoregion_level and not self.landcover_type:
+            gdfd = gdfd[['id', 'did', 'date', 'ignition_date', 'ignition_day', 'ignition_month',
+                         'ignition_year', 'last_date', 'event_duration', 'event_day',
+                         'pixels', 'cml_pixels', 'total_pixels', 'daily_area_km2',
+                         'cml_area_km2', 'total_area_km2', 'perc_total_area_km2',
+                         'perc_cml_area_km2', 'fsr_pixels_per_day',  'fsr_km2_per_day',
+                         'max_growth_pixels', 'min_growth_pixels', 'mean_growth_pixels', 'max_growth_km2',
+                         'min_growth_km2', 'mean_growth_km2', 'eco_mode', 'eco_name',
+                         'eco_type', 'x', 'y', 'ignition_utm_x', 'ignition_utm_y',
+                         'final_perimeter', 'geometry']]
+            gdfd = gdfd.reset_index(drop=True)
+
+        else:
+            gdfd = gdfd[['id', 'did', 'date', 'ignition_date', 'ignition_day', 'ignition_month',
+                         'ignition_year', 'last_date', 'event_duration', 'event_day',
+                         'pixels', 'cml_pixels', 'total_pixels', 'daily_area_km2',
+                         'cml_area_km2', 'total_area_km2', 'perc_total_area_km2',
+                         'perc_cml_area_km2', 'fsr_pixels_per_day',  'fsr_km2_per_day',
+                         'max_growth_pixels', 'min_growth_pixels', 'mean_growth_pixels', 'max_growth_km2',
+                         'min_growth_km2', 'mean_growth_km2', 'x', 'y', 'ignition_utm_x', 'ignition_utm_y',
+                         'final_perimeter', 'geometry']]
+            gdfd = gdfd.reset_index(drop=True)
+
 
         # For each geometry, if it is a single polygon, cast as a multipolygon
         print("Converting polygons to multipolygons...")
@@ -1782,34 +1852,84 @@ class ModelBuilder:
         # Save the daily before dissolving into event level
         # Only save the daily polygons if user specified to do so
         if self.daily == "yes":
-            # Calculate perimeter lengths
-            gdfd["final_perimeter"] = gdfd["geometry"].length
             print("Saving daily file to " + daily_shp_path)
             gdfd.to_csv(str(self.file_name)[:-4]+"_daily.csv", index=False)
-            gdfd.to_file(daily_shp_path, driver="GPKG")
+            if self.shapefile:
+                if clipping == "Yes":
+                    # gdfd = gpd.sjoin(gdfd, shp, how="left", op="intersects")
+                    gdfd.to_file(daily_shp_path, driver="GPKG")
+                else:
+                    gdfd.to_file(daily_shp_path, driver="GPKG")
+            # Drop the daily attributes before exporting event-level
+            gdf = gdf.drop(['did', 'pixels', 'date', 'event_day',
+                            'daily_area_km2'], axis=1)
 
         # Now merge into event level polygons
         # Define the ignition coordinates from first pixel
         gdf_x = gdf.groupby('id')['x'].nth(0)
         gdf_y = gdf.groupby('id')['y'].nth(0)
-        # Drop the daily attributes
-        gdf = gdf.drop(['index', 'did', 'pixels', 'date', 'event_day',
-                        'daily_area_km2', 'x', 'y'], axis=1)
+        # Dissolve by ID to create event-level
         gdf = gdf.dissolve(by="id", as_index=False)
         # Add in the ignition coords
         gdf = gdf.merge(gdf_x, on='id')
         gdf = gdf.merge(gdf_y, on='id')
-        gdf = gdf.rename(columns={"x":"ignition_x", "y":"ignition_y"})
-
+        gdf = gdf.rename(columns={"x_x":"x", "y_x":"y",
+                                    "x_y":"ignition_utm_x", "y_y":"ignition_utm_y"})
+        gdf = gdf.drop(['x', 'y'], axis=1)
         # Calculate perimeter length
         print("Calculating perimeter lengths...")
         gdf["final_perimeter"] = gdf["geometry"].length
+
+        # Reset column index based on arguments
+        # Need to specify column order if landcover and ecoregion are specified
+        if self.landcover_type and self.ecoregion_type or self.ecoregion_level:
+            gdf = gdf[['id', 'ignition_date', 'ignition_day', 'ignition_month',
+                         'ignition_year', 'last_date', 'event_duration',
+                         'total_pixels', 'total_area_km2', 'fsr_pixels_per_day',  'fsr_km2_per_day',
+                         'max_growth_pixels', 'min_growth_pixels', 'mean_growth_pixels', 'max_growth_km2',
+                         'min_growth_km2', 'mean_growth_km2', 'lc_mode', 'lc_name', 'lc_description',
+                         'eco_mode', 'eco_name', 'eco_type', 'ignition_utm_x', 'ignition_utm_y',
+                         'final_perimeter', 'geometry']]
+            gdf = gdf.reset_index(drop=True)
+
+        elif self.landcover_type and not self.ecoregion_type or self.ecoregion_level:
+            gdf = gdf[['id', 'ignition_date', 'ignition_day', 'ignition_month',
+                         'ignition_year', 'last_date', 'event_duration',
+                         'total_pixels', 'total_area_km2', 'fsr_pixels_per_day',  'fsr_km2_per_day',
+                         'max_growth_pixels', 'min_growth_pixels', 'mean_growth_pixels', 'max_growth_km2',
+                         'min_growth_km2', 'mean_growth_km2', 'lc_mode', 'lc_name', 'lc_description',
+                         'ignition_utm_x', 'ignition_utm_y', 'final_perimeter', 'geometry']]
+            gdf = gdf.reset_index(drop=True)
+
+        elif self.ecoregion_type or self.ecoregion_level and not self.landcover_type:
+            gdf = gdf[['id', 'ignition_date', 'ignition_day', 'ignition_month',
+                         'ignition_year', 'last_date', 'event_duration',
+                         'total_pixels', 'total_area_km2', 'fsr_pixels_per_day',  'fsr_km2_per_day',
+                         'max_growth_pixels', 'min_growth_pixels', 'mean_growth_pixels', 'max_growth_km2',
+                         'eco_mode', 'eco_name', 'eco_type',
+                         'min_growth_km2', 'mean_growth_km2', 'ignition_utm_x', 'ignition_utm_y',
+                         'final_perimeter', 'geometry']]
+            gdf = gdf.reset_index(drop=True)
+
+        else:
+            gdf = gdf[['id', 'ignition_date', 'ignition_day', 'ignition_month',
+                         'ignition_year', 'last_date', 'event_duration',
+                         'total_pixels', 'total_area_km2', 'fsr_pixels_per_day',  'fsr_km2_per_day',
+                         'max_growth_pixels', 'min_growth_pixels', 'mean_growth_pixels', 'max_growth_km2',
+                         'min_growth_km2', 'mean_growth_km2', 'ignition_utm_x', 'ignition_utm_y',
+                         'final_perimeter', 'geometry']]
+            gdf = gdf.reset_index(drop=True)
 
         # We still can't have multiple polygon types
         print("Converting polygons to multipolygons...")
         gdf["geometry"] = gdf["geometry"].apply(asMultiPolygon)
 
-        # Now save as a geopackage
+        # Now save as a geopackage and csv
         print("Saving event-level file to " + event_shp_path )
-        gdf.to_csv(self.file_name)
-        gdf.to_file(event_shp_path, driver="GPKG")
+        gdf.to_csv(self.file_name, index=False)
+        if self.shapefile:
+            if clipping == "Yes":
+                # gdfd = gpd.sjoin(gdfd, shp, how="left", op="intersects")
+                gdfd.to_file(event_shp_path, driver="GPKG")
+            else:
+                gdfd.to_file(event_shp_path, driver="GPKG")
