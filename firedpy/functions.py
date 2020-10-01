@@ -1637,7 +1637,7 @@ class ModelBuilder:
             gdf['lc_mode'] = gdf.groupby('id')['lc_code'].transform(mode)
             gdf['lc_type'] = lc_types[int(self.landcover_type)]
             # Add in the class description from landcover tables
-            lc_table = pd.read_csv(os.path.join(os.getcwd(), 'data',
+            lc_table = pd.read_csv(os.path.join(os.getcwd(), 'firedpy',
                                                 'MCD12Q1_LegendDesc_Type{}.csv'.format(str(self.landcover_type))))
             gdf = pd.merge(left=gdf, right=lc_table, how='left', left_on='lc_code', right_on='Value')
             gdf = gdf.drop('Value', axis=1)
