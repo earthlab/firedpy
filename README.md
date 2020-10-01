@@ -91,5 +91,5 @@ After creating a new fire product, it might be useful to get it out of the docke
   
     `firedpy -spatial_param 6 -temporal_param 10 -tiles h11v09 h12v09 -proj_dir /home/<user>/fired_project --shapefile -ecoregion_level 3`
     
-   Update 08/13/2020
+   Update 09/22/2020
 
