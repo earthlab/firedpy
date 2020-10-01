@@ -197,9 +197,7 @@ def main():
     event_shp_path = os.path.join(proj_dir, "outputs", "shapefiles",
                                   event_shp_file + ".gpkg")
     models.buildPolygons(daily_shp_path=daily_shp_path,
-                         event_shp_path=event_shp_path,
-                         shp_path=shp,
-                         clipping=clipping)
+                         event_shp_path=event_shp_path)
 
     # Print the time it took
     end = time.perf_counter()

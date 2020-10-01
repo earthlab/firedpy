@@ -1637,7 +1637,7 @@ class ModelBuilder:
             gdf['lc_mode'] = gdf.groupby('id')['lc_code'].transform(mode)
             gdf['lc_type'] = lc_types[int(self.landcover_type)]
             # Add in the class description from landcover tables
-            lc_table = pd.read_csv(os.path.join(os.getcwd(), 'firedpy',
+            lc_table = pd.read_csv(os.path.join(os.getcwd(), 'ref',
                                                 'MCD12Q1_LegendDesc_Type{}.csv'.format(str(self.landcover_type))))
             gdf = pd.merge(left=gdf, right=lc_table, how='left', left_on='lc_code', right_on='Value')
             gdf = gdf.drop('Value', axis=1)
@@ -1703,7 +1703,7 @@ class ModelBuilder:
             elif self.ecoregion_type == "world":
 
                 # Read in the world ecoregions from WWF
-                eco_path = os.path.join(os.getcwd(), "data", "world_ecoregions", "wwf_terr_ecos_modis.shp")
+                eco_path = os.path.join(os.getcwd(), "ref", "world_ecoregions", "wwf_terr_ecos_modis.shp")
                 eco = gpd.read_file(eco_path)
                 eco = eco.to_crs(crs=gdf.crs)
 
@@ -1746,9 +1746,7 @@ class ModelBuilder:
 
         return gdf
 
-    def buildPolygons(self, daily_shp_path, event_shp_path, shp_path, clipping):
-        print(shp_path)
-        shp = gpd.read_file(shp_path)
+    def buildPolygons(self, daily_shp_path, event_shp_path):
         # Make sure we have the target folders
         if not(os.path.exists(os.path.dirname(event_shp_path))):
             os.makedirs(os.path.dirname(event_shp_path))
@@ -1855,11 +1853,9 @@ class ModelBuilder:
             print("Saving daily file to " + daily_shp_path)
             gdfd.to_csv(str(self.file_name)[:-4]+"_daily.csv", index=False)
             if self.shapefile:
-                if clipping == "Yes":
-                    # gdfd = gpd.sjoin(gdfd, shp, how="left", op="intersects")
-                    gdfd.to_file(daily_shp_path, driver="GPKG")
-                else:
-                    gdfd.to_file(daily_shp_path, driver="GPKG")
+                gdfd.to_file(daily_shp_path, driver="GPKG")
+            else:
+                gdfd.to_file(daily_shp_path, driver="GPKG")
             # Drop the daily attributes before exporting event-level
             gdf = gdf.drop(['did', 'pixels', 'date', 'event_day',
                             'daily_area_km2'], axis=1)
@@ -1928,8 +1924,6 @@ class ModelBuilder:
         print("Saving event-level file to " + event_shp_path )
         gdf.to_csv(self.file_name, index=False)
         if self.shapefile:
-            if clipping == "Yes":
-                # gdfd = gpd.sjoin(gdfd, shp, how="left", op="intersects")
-                gdfd.to_file(event_shp_path, driver="GPKG")
-            else:
-                gdfd.to_file(event_shp_path, driver="GPKG")
+            gdfd.to_file(event_shp_path, driver="GPKG")
+        else:
+            gdfd.to_file(event_shp_path, driver="GPKG")
