@@ -79,19 +79,19 @@ After creating a new fire product, it might be useful to get it out of the docke
 
   - Change the spatial and temporal parameters of the model run:
 
-    `firedpy -spatial_param 6 -temporal_param 10`
+    `firedpy -spatial 6 -temporal 10`
  
   - Specify specific tiles and a local project_directory for required data and model outputs:
 
-    `firedpy -spatial_param 6 -temporal_param 10 -tiles h11v09 h12v09 -proj_dir /home/<user>/fired_project`
+    `firedpy -spatial 6 -temporal 10 -tiles h11v09 h12v09 -proj_dir /home/<user>/fired_project`
   
   - Write shapefiles as outputs in addition to the data table:
   
-    `firedpy -spatial_param 6 -temporal_param 10 -tiles h11v09 h12v09 -proj_dir /home/<user>/fired_project --shapefile`
+    `firedpy -spatial 6 -temporal 10 -tiles h11v09 h12v09 -proj_dir /home/<user>/fired_project --shapefile`
   
   - Add the most common level 3 Ecoregion as an attribute to each event:
   
-    `firedpy -spatial_param 6 -temporal_param 10 -tiles h11v09 h12v09 -proj_dir /home/<user>/fired_project --shapefile -ecoregion_level 3`
+    `firedpy -spatial 6 -temporal 10 -tiles h11v09 h12v09 -proj_dir /home/<user>/fired_project --shapefile -ecoregion_level 3`
     
-   Update 10/13/2020
+   Update 02/2020
 
