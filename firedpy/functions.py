@@ -16,7 +16,6 @@ import pycurl
 import rasterio
 from rasterio import logging
 from rasterio.merge import merge
-import rasterstats as rs
 import xarray as xr
 from shapely.geometry import Point, Polygon, MultiPolygon
 import sys
