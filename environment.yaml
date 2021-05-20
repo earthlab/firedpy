@@ -20,3 +20,4 @@ dependencies:
   - toolz
   - tqdm
   - xarray
+  - paramiko
