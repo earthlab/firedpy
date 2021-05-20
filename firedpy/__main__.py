@@ -30,11 +30,14 @@ def main():
         "no" (create the event level only).
         """)
     eco_help = ("""
-        You can specify the ecoregion type as either "world" or "us". World
-        Terrestrial Ecoregions from the World Wildlife Fund (WWF) are used
-        if type "world" is specified. Most common ecoregion across the event is used.
+        You can specify the ecoregion type as either "world" or "epa":
+        "world" = World Terrestrial Ecoregions (World Wildlife Fund (WWF))
+        "epa" = North American ecoregions (Omernick, 1987)
+
+        Most common (modal) ecoregion across the event is used.
+
         Further, to associate each event with North American ecoregions (Omernick,
-        1987) provide a number corresponding to an ecoregion level. Ecoregions
+        1987) you may provide a number corresponding to an ecoregion level. Ecoregions
         are retrieved from www.epa.gov and levels I through IV are available.
         Levels I and II were developed by the North American Commission for
         Environmental Cooperation. Levels III and IV were developed by the
@@ -94,9 +97,9 @@ def main():
     parser.add_argument("-landcover_type", dest="landcover_type", type=int,
                         default=None, help=lc_help)
     parser.add_argument("--shapefile", action='store_true', help=shp_help)
-    parser.add_argument("-s", dest="spatial_param", default=5,
+    parser.add_argument("-spatial", dest="spatial_param", default=5,
                         type=int, help=sp_help)
-    parser.add_argument("-t", dest="temporal_param", default=11,
+    parser.add_argument("-temporal", dest="temporal_param", default=11,
                         type=int, help=tmp_help)
     parser.add_argument("-tiles", "--names-list", nargs="+", dest="tiles",
                         default=["h08v04", "h09v04", "h10v04", "h11v04",
@@ -118,12 +121,11 @@ def main():
     temporal_param = args.temporal_param
     tiles = args.tiles
     shapefile = args.shapefile
-    sp = str(spatial_param)
-    tp = str(temporal_param)
-    clipping = "No"
 
     # Assign the temporary file name including the spatial and temporal parameters
-    file_name = os.path.join(args.proj_dir, "outputs", "tables", args.file_name+"_events.csv")
+    file_name = os.path.join(args.proj_dir,
+                             "outputs", "tables",
+                             args.file_name + "_events.csv")
 
     # Make sure the project directory exists
     if not os.path.exists(proj_dir):
@@ -135,7 +137,6 @@ def main():
     # Assign target MODIS tiles to the data object
     if os.path.splitext(tiles[0])[1] in [".shp", ".gpkg"]:
         shp = tiles[0]
-        clipping = "Yes"
         print("Filtering for MODIS tiles that intersect \n    " + shp)
         data.shapeToTiles(shp)
         tiles = data.tiles
@@ -152,23 +153,22 @@ def main():
         message = template.format(type(e).__name__, e.args)
         print(message)
 
-    # Get land cover if requested
-    if landcover_type:
+    # Download land cover if requested
+    if landcover_type is not None:
         data.getLandcover(landcover_type)
 
     # Get ecoregions if requested
-    if ecoregion_type=="us" or ecoregion_level:
+    if ecoregion_type or ecoregion_level:
         data.getEcoregion(ecoregion_level)
 
-    # # Add date range to the file names before exporting final data frame
-    # date_range = []
-    # for root, dirs, files in os.walk(os.path.join(proj_dir, "rasters", "burn_area", "hdfs")):
-    #     for f in files:
-    #         dr = int(f.split('.')[1][1:])
-    #         date_range.append(dr)
-    # last_date = sorted(date_range)[-1]
-    # file_name = file_name[:-4]+"_"+str(last_date)+".csv"
-
+    # Add date range to the file names before exporting final data frame
+    date_range = []
+    for root, dirs, files in os.walk(os.path.join(proj_dir, "rasters", "burn_area", "hdfs")):
+        for f in files:
+            dr = int(f.split('.')[1][1:])
+            date_range.append(dr)
+    last_date = sorted(date_range)[-1]
+    file_name = file_name[:-4]+"_"+str(last_date)+".csv"
 
     # Create Model Builder object
     models = ModelBuilder(file_name=file_name,
@@ -185,17 +185,20 @@ def main():
     # Now go ahead and create the events (Memory's a bit tight for parallel)
     models.buildEvents()
 
-    # Now add attributes to this table
-    models.buildAttributes()
+    # Now add fire attributes to this table
+    models.buildFireAttributes()
 
-    # And build the polygons
+    # And now build the polygons
     file_base = os.path.basename(args.file_name)
+
     daily_shp_file = "_".join([file_base, "daily"])
     event_shp_file = "_".join([file_base, "events"])
+
     daily_shp_path = os.path.join(proj_dir, "outputs", "shapefiles",
                                   daily_shp_file + ".gpkg")
     event_shp_path = os.path.join(proj_dir, "outputs", "shapefiles",
                                   event_shp_file + ".gpkg")
+
     models.buildPolygons(daily_shp_path=daily_shp_path,
                          event_shp_path=event_shp_path)
 
@@ -204,6 +207,7 @@ def main():
     seconds = end - start
     minutes = seconds/60
     print("Job completed in {} minutes".format(round(minutes, 2)))
+
 
 if __name__ == "__main__":
     main()
