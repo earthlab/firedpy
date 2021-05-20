@@ -9,7 +9,7 @@ This package uses a space-time window to classify individual burn detections fro
 
 ## Installation
 
-There are two ways to install firedpy. Method 1 is to run it out of a docker container, Method 2 is to install locally.
+There are two ways to install firedpy. Method one is to run it out of a docker container, Method 2 is to install locally.
 
 ### Method 1. Run from a Docker Container:
 
