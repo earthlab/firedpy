@@ -23,7 +23,7 @@ There are two ways to install firedpy. Method 1 is to run it out of a docker con
 
     `docker exec -it <silly_name> /bin/bash`
   
-  - Then you will be inside of your docker container in the firedpy directory. Now, enter:
+  - Then you will be inside of the docker container in the firedpy directory. Now, enter:
   
     `conda activate firedpy`
     
