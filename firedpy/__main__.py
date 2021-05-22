@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import argparse
 import os
+import shutil
 import tempfile
 import time
 import warnings
@@ -88,8 +89,7 @@ def main():
     parser.add_argument("-proj_dir", dest="proj_dir",
                         default=os.path.join(os.getcwd(), 'proj'), help=data_help)
     parser.add_argument("-file_name", dest="file_name",
-                        default="fired",
-                        help=file_help)
+                        default="fired", help=file_help)
     parser.add_argument("-ecoregion_type", dest="ecoregion_type", default=None,
                         help=eco_help)
     parser.add_argument("-ecoregion_level", dest="ecoregion_level", type=int,
@@ -126,6 +126,16 @@ def main():
     file_name = os.path.join(args.proj_dir,
                              "outputs", "tables",
                              args.file_name + "_events.csv")
+
+    # Transfer the lookup tables
+    if landcover_type:
+        lookup = os.path.join(os.getcwd(), 'ref', 'landcover',
+                              'MCD12Q1_LegendDesc_Type{}.csv'.format(str(landcover_type)))
+        new_path = os.path.join(proj_dir, 'tables', 'landcover')
+        if not os.path.exists(new_path):
+            os.makedirs(new_path)
+        new_file = os.path.join(new_path, 'MCD12Q1_LegendDesc_Type{}.csv'.format(str(landcover_type)))
+        shutil.copy(lookup, new_file)
 
     # Make sure the project directory exists
     if not os.path.exists(proj_dir):
