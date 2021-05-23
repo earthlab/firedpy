@@ -31,9 +31,9 @@ def main():
         "no" (create the event level only).
         """)
     eco_help = ("""
-        You can specify the ecoregion type as either "world" or "epa":
+        You can specify the ecoregion type as either "world" or "na":
         "world" = World Terrestrial Ecoregions (World Wildlife Fund (WWF))
-        "epa" = North American ecoregions (Omernick, 1987)
+        "na" = North American ecoregions (Omernick, 1987)
 
         Most common (modal) ecoregion across the event is used.
 

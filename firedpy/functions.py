@@ -1703,10 +1703,13 @@ class ModelBuilder:
                     val = np.nan
                 return val
 
+            # Get the range of burn years
+            burn_years = list(gdf['ignition_year'].unique())
+
             # This works faster when split by year and the pointer is outside
             # This is also not the best way
             sgdfs = []
-            for year in tqdm(lc_years, position=0,
+            for year in tqdm(burn_years, position=0,
                              file=sys.stdout):
 
                 sgdf = gdf[gdf['ignition_year'] == year]
@@ -1738,9 +1741,9 @@ class ModelBuilder:
         ############################################
         # Retrieve ecoregion attributes if requested
         # Add the ecoregion attributes
-        print("Adding ecoregion attributes ...")
         if self.ecoregion_type or self.ecoregion_level:
-            if self.ecoregion_level:
+            print("Adding ecoregion attributes ...")
+            if self.ecoregion_level or self.ecoregion_type == "na":
                 # Different levels have different sources
                 eco_types = {
                     'US_L4CODE': ('Level IV Ecoregions ' + '(US-Environmental Protection Agency)'),
@@ -1818,16 +1821,8 @@ class ModelBuilder:
         if not(os.path.exists(os.path.dirname(event_shp_path))):
             os.makedirs(os.path.dirname(event_shp_path))
 
-        # Check user input for ecoregions
-        def checkEco(self):
-            if self.ecoregion_type or self.ecoregion_level:
-                return(True)
-            else:
-                return(False)
-
         # grab the modis crs and space
         res = self.res
-        crs = self.crs
 
         # Create a spatial points object
         gdf = self.buildPoints()
@@ -1870,7 +1865,7 @@ class ModelBuilder:
 
         # Drop the daily attributes before exporting event-level
         gdf = gdfd.drop(['did', 'pixels', 'date', 'event_day',
-                        'daily_area_km2', 'landcover_code'], axis=1)
+                        'daily_area_km2'], axis=1)
 
         # Dissolve by ID to create event-level
         gdf = gdf.dissolve(by="id", as_index=False)
