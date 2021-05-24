@@ -21,4 +21,4 @@ dependencies:
   - tqdm
   - xarray
   - paramiko
-  - shutil
+  - pytest-shutil
