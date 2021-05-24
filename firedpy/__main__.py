@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import argparse
 import os
-import shutil
+import pytest-shutil as shutil
 import tempfile
 import time
 import warnings
