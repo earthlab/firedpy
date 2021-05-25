@@ -2,6 +2,7 @@
 import argparse
 from .functions import DataGetter, ModelBuilder
 import os
+import shutil
 import tempfile
 import time
 import warnings
