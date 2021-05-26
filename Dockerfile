@@ -17,8 +17,6 @@ RUN conda clean --all --yes --force-pkgs-dirs \
     && find /opt/conda/ -follow -type f -name '*.js.map' -delete \
     && conda list
 
-RUN pip install shutil
-
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
     awscli \
