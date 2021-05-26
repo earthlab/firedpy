@@ -107,7 +107,7 @@ def main():
                         help=tile_help)
     parser.add_argument("-daily", dest="daily", default="no", help=daily_help)
 
-    # Parse argument responses
+   # Parse argument responses
     args = parser.parse_args()
     proj_dir = args.proj_dir
     ecoregion_type = args.ecoregion_type
@@ -118,12 +118,21 @@ def main():
     temporal_param = args.temporal_param
     tiles = args.tiles
     shapefile = args.shapefile
-    sp = str(spatial_param)
-    tp = str(temporal_param)
-    clipping = "No"
 
     # Assign the temporary file name including the spatial and temporal parameters
-    file_name = os.path.join(args.proj_dir, "outputs", "tables", args.file_name+"_events.csv")
+    file_name = os.path.join(args.proj_dir,
+                             "outputs", "tables",
+                             args.file_name + "_events.csv")
+
+    # Transfer the lookup tables
+    if landcover_type:
+        lookup = os.path.join(os.getcwd(), 'ref', 'landcover',
+                              'MCD12Q1_LegendDesc_Type{}.csv'.format(str(landcover_type)))
+        new_path = os.path.join(proj_dir, 'tables', 'landcover')
+        if not os.path.exists(new_path):
+            os.makedirs(new_path)
+        new_file = os.path.join(new_path, 'MCD12Q1_LegendDesc_Type{}.csv'.format(str(landcover_type)))
+        shutil.copy(lookup, new_file)
 
     # Make sure the project directory exists
     if not os.path.exists(proj_dir):
