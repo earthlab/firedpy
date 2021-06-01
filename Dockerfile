@@ -20,7 +20,7 @@ RUN conda clean --all --yes --force-pkgs-dirs \
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
     awscli \
-    htop
+    htop 
 
 SHELL ["conda", "run", "-n", "firedpy", "/bin/bash", "-c"]
 
