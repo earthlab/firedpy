@@ -91,11 +91,11 @@ After creating a new fire product, it might be useful to get it out of the docke
   
   - Add the most common level 3 Ecoregion as an attribute to each event:
   
-    `firedpy -spatial 6 -temporal 10 10 -tiles h11v09 h12v09 -proj_dir /home/<user>/fired_project --shapefile -ecoregion_level 3`
+    `firedpy -spatial 6 -temporal 10 -tiles h11v09 h12v09 -proj_dir /home/<user>/fired_project --shapefile -ecoregion_level 3`
   
   - Add landcover information and produce the daily burn file
   
-    `firedpy -spatial 6 -temporal 10 10 -tiles h11v09 h12v09 -proj_dir /home/<user>/fired_project --shapefile -ecoregion_level 3 -landcover_type 1 -daily yes`
+    `firedpy -spatial 6 -temporal 10 -tiles h11v09 h12v09 -proj_dir /home/<user>/fired_project --shapefile -ecoregion_level 3 -landcover_type 1 -daily yes`
     
   For more information about each parameter, use:
     
