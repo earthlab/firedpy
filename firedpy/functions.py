@@ -1793,7 +1793,7 @@ class ModelBuilder:
 
                 # Clean up column names
                 gdf = gdf.drop('index_right', axis=1)
-                gdf = gdf.drop('eco_code', axis=1)
+                #gdf = gdf.drop('eco_code', axis=1)
                 # gdfd.rename({eco_code: 'eco_mode'}, inplace=True, axis='columns')
 
             else:
