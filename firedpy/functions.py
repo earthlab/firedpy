@@ -1627,8 +1627,8 @@ class ModelBuilder:
 
         gdf['ig_date'] = group['date'].transform('min')
         gdf['ig_day'] = gdf['ign_date'].apply(lambda x: dt.datetime.strftime(x, '%j'))
-        gdf['ign_month'] = gdf['ig_date'].apply(lambda x: x.month)
-        gdf['ignition_year'] = gdf['ig_date'].apply(lambda x: x.year)
+        gdf['ig_month'] = gdf['ig_date'].apply(lambda x: x.month)
+        gdf['ig_year'] = gdf['ig_date'].apply(lambda x: x.year)
         gdf['last_date'] = group['date'].transform('max')
 
         gdf['tot_pix'] = group['id'].transform('count')
