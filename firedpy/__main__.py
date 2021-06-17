@@ -167,9 +167,18 @@ def main():
     if landcover_type is not None:
         data.getLandcover(landcover_type)
 
-    # Get ecoregions if requested
+    # Get ecoregions if requested, use local file first
     if ecoregion_type or ecoregion_level:
-        data.getEcoregion(ecoregion_level)
+        try:
+            lookup = os.path.join(os.getcwd(), 'ref', 'us_eco',
+                                  'NA_CEC_Eco_Level3.gpkg')
+            new_path = os.path.join(proj_dir, 'shapefiles', 'ecoregion')
+            if not os.path.exists(new_path):
+                os.makedirs(new_path)
+            new_file = os.path.join(new_path, 'NA_CEC_Eco_Level3.gpkg')
+            shutil.copy(lookup, new_file)
+        except Exception:
+            data.getEcoregion(ecoregion_level)
 
     # Add date range to the file names before exporting final data frame
     date_range = []
