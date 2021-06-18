@@ -123,9 +123,9 @@ def main():
     shapefile = args.shapefile
 
     # Assign the temporary file name including the spatial and temporal parameters
-    file_name = os.path.join(args.proj_dir,
+    file_path = os.path.join(args.proj_dir,
                              "outputs", "tables",
-                             args.file_name + "_events.csv")
+                             args.file_name)
 
     # Transfer the lookup tables
     if landcover_type:
@@ -180,6 +180,9 @@ def main():
         except Exception:
             data.getEcoregion(ecoregion_level)
 
+    # Grab the basename for the output file name
+    file_base = os.path.basename(file_path)
+
     # Add date range to the file names before exporting final data frame
     date_range = []
     for root, dirs, files in os.walk(os.path.join(proj_dir, "rasters", "burn_area", "hdfs")):
@@ -187,7 +190,7 @@ def main():
             dr = int(f.split('.')[1][1:])
             date_range.append(dr)
     last_date = sorted(date_range)[-1]
-    file_name = file_name[:-4]+"_"+str(last_date)+".csv"
+    file_name = os.path.join(os.path.dirname(file_path), file_base+"_to"+str(last_date))
 
     # Create Model Builder object
     models = ModelBuilder(file_name=file_name,
@@ -208,10 +211,9 @@ def main():
     models.buildFireAttributes()
 
     # And now build the polygons
-    file_base = os.path.basename(args.file_name)
-
-    daily_shp_file = "_".join([file_base, "daily"])
-    event_shp_file = "_".join([file_base, "events"])
+    pref = file_base+"_to"+str(last_date)
+    daily_shp_file = "_".join([pref, "daily"])
+    event_shp_file = "_".join([pref, "events"])
 
     daily_shp_path = os.path.join(proj_dir, "outputs", "shapefiles",
                                   daily_shp_file + ".gpkg")

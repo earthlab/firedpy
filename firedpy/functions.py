@@ -1371,7 +1371,7 @@ class ModelBuilder:
 
         # Make sure the main data frame file name has the right extension
         if ".csv" not in file_name:
-            self.file_name = os.path.splitext()[0] + ".csv"
+            self.file_name = os.path.splitext(file_name)[0] + ".csv"
         else:
             self.file_name = self.file_name
 
@@ -1391,8 +1391,9 @@ class ModelBuilder:
         Use the EventGrid class to classify events tile by tile and then merge
         them all together for a seamless set of wildfire events.
         """
-        # Make sure the desstination folder exists
+        # Make sure the destination folder exists
         if not(os.path.exists(os.path.dirname(self.file_name))):
+            print(self.file_name)
             os.makedirs(os.path.dirname(self.file_name))
 
         # Create an empty list and data frame for the
@@ -1740,6 +1741,7 @@ class ModelBuilder:
             gdf = pd.merge(left=gdf, right=lc_table, how='left', left_on='lc_mode', right_on='Value')
             gdf = gdf.drop('Value', axis=1)
             gdf['lc_type'] = lc_types[int(self.landcover_type)]
+            gdf.rename({'lc_description': 'lc_desc'}, inplace=True, axis='columns')
 
         ############################################
         # Retrieve ecoregion attributes if requested
@@ -1860,7 +1862,7 @@ class ModelBuilder:
         # Only save the daily polygons if user specified to do so
         if self.daily == "yes":
             print("Saving daily file to " + daily_shp_path)
-            gdfd.to_csv(str(self.file_name)[:-4]+"_daily.csv", index=False)
+            gdfd.to_csv(str(self.file_name)[:-4]+"_daily"+".csv", index=False)
             if self.shapefile:
                 # gdf.to_crs(outCRS, inplace=True)
                 gdfd.to_file(daily_shp_path, driver="GPKG")
@@ -1880,11 +1882,14 @@ class ModelBuilder:
         print("Converting polygons to multipolygons...")
         gdf["geometry"] = gdf["geometry"].apply(asMultiPolygon)
 
-        # Export to CSV
-        gdf.to_csv(self.file_name, index=False)
+        # Export event-level to CSV
+        gdf.to_csv(str(self.file_name)[:-4]+"_events"+".csv", index=False)
         # Save as gpkg if specified
         if self.shapefile:
             # Now save as a geopackage and csv
             print("Saving event-level file to " + event_shp_path)
             # gdf.to_crs(outCRS, inplace=True)
             gdf.to_file(event_shp_path, driver="GPKG")
+
+        # Remove the intermediate file
+        os.remove(self.file_name)
