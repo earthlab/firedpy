@@ -1627,15 +1627,11 @@ class ModelBuilder:
         gdf['date'] = gdf['date'].apply(lambda x: dt.datetime.strptime(x, '%Y-%m-%d'))
 
         gdf['ig_date'] = group['date'].transform('min')
-<<<<<<< HEAD
+
         gdf['ig_day'] = gdf['ig_date'].apply(lambda x: dt.datetime.strftime(x, '%j'))
-=======
-        
-        gdf['ig_day'] = gdf['ig_date'].apply(lambda x: dt.datetime.strftime(x, '%j'))
-# =======
+
 #        gdf['ig_day'] = gdf['ign_date'].apply(lambda x: dt.datetime.strftime(x, '%j'))
-# >>>>>>> f9c937947a7242699bce38cc69e415131d30db38
->>>>>>> 2edfd75643bfa5b71fc00cacf1afcee9fd085d1a
+
         gdf['ig_month'] = gdf['ig_date'].apply(lambda x: x.month)
         gdf['ig_year'] = gdf['ig_date'].apply(lambda x: x.year)
         gdf['last_date'] = group['date'].transform('max')
@@ -1722,18 +1718,9 @@ class ModelBuilder:
                              file=sys.stdout):
 
                 sgdf = gdf[gdf['ig_year'] == year]
-<<<<<<< HEAD
 
                 # Now set year one back for landcover
                 year = year-1
-=======
-# <<<<<<< HEAD
-
-                # Now set year one back for landcover
-                year = year-1
-#=======
-#>>>>>>> f9c937947a7242699bce38cc69e415131d30db38
->>>>>>> 2edfd75643bfa5b71fc00cacf1afcee9fd085d1a
 
                 # Use previous year's lc
                 if year < min(lc_years):
@@ -1758,14 +1745,10 @@ class ModelBuilder:
             gdf = pd.merge(left=gdf, right=lc_table, how='left', left_on='lc_mode', right_on='Value')
             gdf = gdf.drop('Value', axis=1)
             gdf['lc_type'] = lc_types[int(self.landcover_type)]
-<<<<<<< HEAD
+
             gdf.rename({'lc_description': 'lc_desc'}, inplace=True, axis='columns')
-=======
-#<<<<<<< HEAD
-            gdf.rename({'lc_description': 'lc_desc'}, inplace=True, axis='columns')
-#=======
-#>>>>>>> f9c937947a7242699bce38cc69e415131d30db38
->>>>>>> 2edfd75643bfa5b71fc00cacf1afcee9fd085d1a
+
+
 
         ############################################
         # Retrieve ecoregion attributes if requested
