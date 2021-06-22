@@ -1,7 +1,7 @@
 [![DOI](https://zenodo.org/badge/214283770.svg)](https://zenodo.org/badge/latestdoi/214283770)
 [![Build Status](https://travis-ci.com/earthlab/firedpy.svg?branch=master)](https://travis-ci.com/earthlab/firedpy)
 
-# firedpy
+# firedpy - FIRe Event Delineation for python
 
 A Python Command Line Interface for classifying fire events from the Collection 6 MODIS Burned Area Product.
 
