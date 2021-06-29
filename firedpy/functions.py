@@ -1763,7 +1763,7 @@ class ModelBuilder:
                     'NA_L1CODE': ('Level I Ecoregions ' + '(NA-Commission for Environmental Cooperation)')}
 
                 # Read in the Level File (contains every level) and reference table
-                shp_path = os.path.join(self.proj_dir, "shapefiles/ecoregion/NA_CEC_Eco_Level3.gpkg")
+                shp_path = os.path.join(self.proj_dir, 'shapefiles','ecoregion','NA_CEC_Eco_Level3.gpkg')
                 eco = gpd.read_file(shp_path)
                 eco.to_crs(gdf.crs, inplace=True)
 
