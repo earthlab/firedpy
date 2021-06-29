@@ -169,13 +169,19 @@ def main():
 
     # Get ecoregions if requested, use local file first
     if ecoregion_type or ecoregion_level:
+
+        new_path = os.path.join(proj_dir, 'shapefiles', 'ecoregion')
+        if not os.path.exists(new_path):
+            os.makedirs(new_path)
+
+        if ecoregion_type == 'world':
+            fname = 'wwf_terr_ecos.gpkg'
+            lookup = os.path.join(os.getcwd(), 'ref', 'world_ecoregions', fname)
+        else:
+            fname = 'NA_CEC_Eco_Level3.gpkg'
+            lookup = os.path.join(os.getcwd(), 'ref', 'us_eco', fname)
         try:
-            lookup = os.path.join(os.getcwd(), 'ref', 'us_eco',
-                                  'NA_CEC_Eco_Level3.gpkg')
-            new_path = os.path.join(proj_dir, 'shapefiles', 'ecoregion')
-            if not os.path.exists(new_path):
-                os.makedirs(new_path)
-            new_file = os.path.join(new_path, 'NA_CEC_Eco_Level3.gpkg')
+            new_file = os.path.join(new_path, fname)
             shutil.copy(lookup, new_file)
         except Exception:
             data.getEcoregion(ecoregion_level)

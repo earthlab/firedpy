@@ -1810,17 +1810,22 @@ class ModelBuilder:
             else:
 
                 # Read in the world ecoregions from WWF
-                eco_path = os.path.join(os.getcwd(), "ref", "world_ecoregions", "wwf_terr_ecos_modis.shp")
+                eco_path = os.path.join(self.proj_dir, "shapefiles/ecoregion/wwf_terr_ecos.gpkg")
                 eco = gpd.read_file(eco_path)
-                eco = eco.to_crs(gdf.crs, inplace=True)
+                eco.to_crs(gdf.crs, inplace=True)
 
                 # Find modal eco region for each event id
+                eco = eco[["ECO_NUM", "ECO_NAME", "geometry"]]
                 gdf = gpd.sjoin(gdf, eco, how="left", op="within")
                 gdf = gdf.reset_index(drop=True)
 
                 gdf["eco_mode"] = gdf.groupby('id')['ECO_NUM'].transform(mode)
                 gdf["eco_name"] = gdf["ECO_NAME"]
                 gdf["eco_type"] = "WWF Terrestrial Ecoregions of the World"
+
+                gdf = gdf.drop('index_right', axis=1)
+                gdf = gdf.drop('ECO_NAME', axis=1)
+                gdf = gdf.drop('ECO_NUM', axis=1)
 
         # Save event level attributes
         print("Overwriting data frame at " + self.file_name + "...")
