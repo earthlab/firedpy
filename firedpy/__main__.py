@@ -171,13 +171,14 @@ def main():
     if ecoregion_type or ecoregion_level:
 
         new_path = os.path.join(proj_dir, 'shapefiles', 'ecoregion')
+
         if not os.path.exists(new_path):
             os.makedirs(new_path)
 
         if ecoregion_type == 'world':
             fname = 'wwf_terr_ecos.gpkg'
             lookup = os.path.join(os.getcwd(), 'ref', 'world_ecoregions', fname)
-        else:
+        elif ecoregion_type == 'us' or ecoregion_level:
             fname = 'NA_CEC_Eco_Level3.gpkg'
             lookup = os.path.join(os.getcwd(), 'ref', 'us_eco', fname)
         try:
