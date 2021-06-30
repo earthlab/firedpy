@@ -183,7 +183,7 @@ def main():
             lookup = os.path.join(os.getcwd(), 'ref', 'us_eco', fname)
         try:
             new_file = os.path.join(new_path, fname)
-            shutil.copy(lookup, new_file)
+            shutil.copy(new_file, lookup)
         except Exception:
             data.getEcoregion(ecoregion_level)
 
