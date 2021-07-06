@@ -7,6 +7,13 @@ A Python Command Line Interface for classifying fire events from the Collection 
 
 This package uses a space-time window to classify individual burn detections from late 2001 to near-present into discrete events and return both a data table and shapefiles of these events. The user is able to specify the spatial and temporal parameters of the window, as well as the area of interest using either a shapefile or a list of MODIS Sinusoidal Projection tile IDs. Any area from the world may be selected. However, in the current version, memory constraints may limit the extent available for a single model run. This version is calibrated to handle the Contiguous United States (CONUS) on a machine with 16 GB of RAM, though work is underway to move more processing to disk for larger areas. Shapefiles include full- and daily-level event polygons, providing a representation of both final and expanding event perimeters.
 
+More methodological information is at:
+
+Balch, J. K., St. Denis, L. A., Mahood, A. L., Mietkiewicz, N. P., Williams, T. P., McGlinchy J,
+and Cook, M. C. 2020. FIRED (Fire Events Delineation): An open, flexible algorithm & database
+of U.S. fire events derived from the MODIS burned area product (2001-19). Remote
+Sensing, 12(21), 3498; https://doi.org/10.3390/rs12213498
+
 ## Installation
 
 There are two ways to install firedpy. Method one is to run it out of a docker container, Method 2 is to install locally.
