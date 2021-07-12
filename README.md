@@ -115,9 +115,13 @@ After creating a new fire product, it might be useful to get it out of the docke
 
     'firedpy --help'
     
-  ### Parameter table
+### Parameter table
   
-  | parameter | possible value(s)| example |
-  |:--------------|:----------|:-----|
-  | -spatial | integer | -spatial 5 |
-  | -temporal | integer | -temporal 11 |
+| parameter | value(s)| example | description|
+|:--------------|:----------|:-----|:---------|
+| -spatial | integer | -spatial 5 | pixel radius for moving window|
+| -temporal | integer | -temporal 11 | day radius for moving window|
+| -tiles | character | -tiles h11v09 | which modis tiles should be used|
+|  |  | -tiles <polygon name> | figures out which modis tiles to download based on| the polygon |
+| -proj_dir| character| -proj_dir /home/<user>/firedpy/proj | which directory should firedpy operate within?|
+
