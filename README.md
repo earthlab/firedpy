@@ -14,6 +14,13 @@ and Cook, M. C. 2020. FIRED (Fire Events Delineation): An open, flexible algorit
 of U.S. fire events derived from the MODIS burned area product (2001-19). Remote
 Sensing, 12(21), 3498; https://doi.org/10.3390/rs12213498
 
+Already-created products:
+
+#### CONUS
+
+ - events: https://scholar.colorado.edu/concern/datasets/nv935382p
+ - daily: https://scholar.colorado.edu/concern/datasets/765372341
+
 ## Installation
 
 There are two ways to install firedpy. Method one is to run it out of a docker container, Method 2 is to install locally.
