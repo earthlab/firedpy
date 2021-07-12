@@ -114,3 +114,10 @@ After creating a new fire product, it might be useful to get it out of the docke
   For more information about each parameter, use:
 
     'firedpy --help'
+    
+  ### Parameter table
+  
+  | parameter | possible value(s)| example |
+  |:--------------|:----------|:-----|
+  | -spatial | integer | -spatial 5 |
+  | -temporal | integer | -temporal 11 |
