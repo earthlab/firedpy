@@ -16,7 +16,7 @@ Sensing, 12(21), 3498; https://doi.org/10.3390/rs12213498
 
 Already-created products:
 
-#### CONUS
+#### Coterminous United States
 
  - events: https://scholar.colorado.edu/concern/datasets/nv935382p
  - daily: https://scholar.colorado.edu/concern/datasets/765372341
