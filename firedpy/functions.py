@@ -535,7 +535,7 @@ class DataGetter:
         Update 02/2021: EPA FTP site is glitchy, adding local file in "ref"
         If download fails, use local file
         """
-        if not os.path.exists(os.path.join(self.proj_dir, "shapefiles/ecoregion/us_eco_l4.shp")):
+        if not os.path.exists(os.path.join(self.proj_dir, "shapefiles/ecoregion/NA_CEC_Eco_Level3.gpkg")):
 
             eco_ftp = 'ftp://newftp.epa.gov/EPADataCommons/ORD/Ecoregions/cec_na/NA_CEC_Eco_Level3.zip'
 
