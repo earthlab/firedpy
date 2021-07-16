@@ -137,250 +137,127 @@ After creating a new fire product, it might be useful to get it out of the docke
  
  Continent boundaries are in ref/continents
  
-|Country Name                             |
-|:----------------------------------------|
-|afghanistan.gpkg                         |
-|afghanistan.gpkg-shm                     |
-|afghanistan.gpkg-wal                     |
-|aland.gpkg                               |
-|albania.gpkg                             |
-|algeria.gpkg                             |
-|american_samoa.gpkg                      |
-|andorra.gpkg                             |
-|angola.gpkg                              |
-|anguilla.gpkg                            |
-|antarctica.gpkg                          |
-|antigua_and_barbuda.gpkg                 |
-|argentina.gpkg                           |
-|armenia.gpkg                             |
-|aruba.gpkg                               |
-|ashmore_and_cartier_islands.gpkg         |
-|australia.gpkg                           |
-|austria.gpkg                             |
-|azerbaijan.gpkg                          |
-|bahrain.gpkg                             |
-|bangladesh.gpkg                          |
-|barbados.gpkg                            |
-|belarus.gpkg                             |
-|belgium.gpkg                             |
-|belize.gpkg                              |
-|benin.gpkg                               |
-|bermuda.gpkg                             |
-|bhutan.gpkg                              |
-|bolivia.gpkg                             |
-|bosnia_and_herzegovina.gpkg              |
-|botswana.gpkg                            |
-|brazil.gpkg                              |
-|british_indian_ocean_territory.gpkg      |
-|british_virgin_islands.gpkg              |
-|brunei.gpkg                              |
-|bulgaria.gpkg                            |
-|burkina_faso.gpkg                        |
-|burundi.gpkg                             |
-|cabo_verde.gpkg                          |
-|cambodia.gpkg                            |
-|cameroon.gpkg                            |
-|canada.gpkg                              |
-|cayman_islands.gpkg                      |
-|central_african_republic.gpkg            |
-|chad.gpkg                                |
-|chile.gpkg                               |
-|china.gpkg                               |
-|colombia.gpkg                            |
-|comoros.gpkg                             |
-|cook_islands.gpkg                        |
-|costa_rica.gpkg                          |
-|croatia.gpkg                             |
-|cuba.gpkg                                |
-|curaçao.gpkg                             |
-|cyprus.gpkg                              |
-|czechia.gpkg                             |
-|democratic_republic_of_the_congo.gpkg    |
-|denmark.gpkg                             |
-|djibouti.gpkg                            |
-|dominica.gpkg                            |
-|dominican_republic.gpkg                  |
-|east_timor.gpkg                          |
-|ecuador.gpkg                             |
-|egypt.gpkg                               |
-|el_salvador.gpkg                         |
-|equatorial_guinea.gpkg                   |
-|eritrea.gpkg                             |
-|estonia.gpkg                             |
-|eswatini.gpkg                            |
-|ethiopia.gpkg                            |
-|falkland_islands.gpkg                    |
-|faroe_islands.gpkg                       |
-|federated_states_of_micronesia.gpkg      |
-|fiji.gpkg                                |
-|finland.gpkg                             |
-|france.gpkg                              |
-|french_polynesia.gpkg                    |
-|french_southern_and_antarctic_lands.gpkg |
-|gabon.gpkg                               |
-|gambia.gpkg                              |
-|georgia.gpkg                             |
-|germany.gpkg                             |
-|ghana.gpkg                               |
-|greece.gpkg                              |
-|greenland.gpkg                           |
-|grenada.gpkg                             |
-|guam.gpkg                                |
-|guatemala.gpkg                           |
-|guernsey.gpkg                            |
-|guinea-bissau.gpkg                       |
-|guinea.gpkg                              |
-|guyana.gpkg                              |
-|haiti.gpkg                               |
-|heard_island_and_mcdonald_islands.gpkg   |
-|honduras.gpkg                            |
-|hong_kong_s.a.r..gpkg                    |
-|hungary.gpkg                             |
-|iceland.gpkg                             |
-|india.gpkg                               |
-|indian_ocean_territories.gpkg            |
-|indonesia.gpkg                           |
-|iran.gpkg                                |
-|iraq.gpkg                                |
-|ireland.gpkg                             |
-|isle_of_man.gpkg                         |
-|israel.gpkg                              |
-|italy.gpkg                               |
-|ivory_coast.gpkg                         |
-|jamaica.gpkg                             |
-|japan.gpkg                               |
-|jersey.gpkg                              |
-|jordan.gpkg                              |
-|kazakhstan.gpkg                          |
-|kenya.gpkg                               |
-|kiribati.gpkg                            |
-|kosovo.gpkg                              |
-|kuwait.gpkg                              |
-|kyrgyzstan.gpkg                          |
-|laos.gpkg                                |
-|latvia.gpkg                              |
-|lebanon.gpkg                             |
-|lesotho.gpkg                             |
-|liberia.gpkg                             |
-|libya.gpkg                               |
-|liechtenstein.gpkg                       |
-|lithuania.gpkg                           |
-|luxembourg.gpkg                          |
-|macao_s.a.r.gpkg                         |
-|macedonia.gpkg                           |
-|madagascar.gpkg                          |
-|malawi.gpkg                              |
-|malaysia.gpkg                            |
-|maldives.gpkg                            |
-|mali.gpkg                                |
-|malta.gpkg                               |
-|marshall_islands.gpkg                    |
-|mauritania.gpkg                          |
-|mauritius.gpkg                           |
-|mexico.gpkg                              |
-|moldova.gpkg                             |
-|monaco.gpkg                              |
-|mongolia.gpkg                            |
-|montenegro.gpkg                          |
-|montserrat.gpkg                          |
-|morocco.gpkg                             |
-|mozambique.gpkg                          |
-|myanmar.gpkg                             |
-|namibia.gpkg                             |
-|nauru.gpkg                               |
-|nepal.gpkg                               |
-|netherlands.gpkg                         |
-|new_caledonia.gpkg                       |
-|new_zealand.gpkg                         |
-|nicaragua.gpkg                           |
-|niger.gpkg                               |
-|nigeria.gpkg                             |
-|niue.gpkg                                |
-|norfolk_island.gpkg                      |
-|north_korea.gpkg                         |
-|northern_cyprus.gpkg                     |
-|northern_mariana_islands.gpkg            |
-|norway.gpkg                              |
-|oman.gpkg                                |
-|pakistan.gpkg                            |
-|palau.gpkg                               |
-|palestine.gpkg                           |
-|panama.gpkg                              |
-|papua_new_guinea.gpkg                    |
-|paraguay.gpkg                            |
-|peru.gpkg                                |
-|philippines.gpkg                         |
-|pitcairn_islands.gpkg                    |
-|poland.gpkg                              |
-|portugal.gpkg                            |
-|puerto_rico.gpkg                         |
-|qatar.gpkg                               |
-|republic_of_serbia.gpkg                  |
-|republic_of_the_congo.gpkg               |
-|romania.gpkg                             |
-|russia.gpkg                              |
-|rwanda.gpkg                              |
-|saint_barthelemy.gpkg                    |
-|saint_helena.gpkg                        |
-|saint_kitts_and_nevis.gpkg               |
-|saint_lucia.gpkg                         |
-|saint_martin.gpkg                        |
-|saint_pierre_and_miquelon.gpkg           |
-|saint_vincent_and_the_grenadines.gpkg    |
-|samoa.gpkg                               |
-|san_marino.gpkg                          |
-|são_tomé_and_principe.gpkg               |
-|saudi_arabia.gpkg                        |
-|senegal.gpkg                             |
-|seychelles.gpkg                          |
-|siachen_glacier.gpkg                     |
-|sierra_leone.gpkg                        |
-|singapore.gpkg                           |
-|sint_maarten.gpkg                        |
-|slovakia.gpkg                            |
-|slovenia.gpkg                            |
-|solomon_islands.gpkg                     |
-|somalia.gpkg                             |
-|somaliland.gpkg                          |
-|south_africa.gpkg                        |
-|south_georgia_and_the_islands.gpkg       |
-|south_korea.gpkg                         |
-|south_sudan.gpkg                         |
-|spain.gpkg                               |
-|sri_lanka.gpkg                           |
-|sudan.gpkg                               |
-|suriname.gpkg                            |
-|sweden.gpkg                              |
-|switzerland.gpkg                         |
-|syria.gpkg                               |
-|taiwan.gpkg                              |
-|tajikistan.gpkg                          |
-|tanzania.gpkg                            |
-|thailand.gpkg                            |
-|the_bahamas.gpkg                         |
-|togo.gpkg                                |
-|tonga.gpkg                               |
-|trinidad_and_tobago.gpkg                 |
-|tunisia.gpkg                             |
-|turkey.gpkg                              |
-|turkmenistan.gpkg                        |
-|turks_and_caicos_islands.gpkg            |
-|uganda.gpkg                              |
-|ukraine.gpkg                             |
-|united_arab_emirates.gpkg                |
-|united_kingdom.gpkg                      |
-|united_states_of_america.gpkg            |
-|united_states_virgin_islands.gpkg        |
-|uruguay.gpkg                             |
-|uzbekistan.gpkg                          |
-|vanuatu.gpkg                             |
-|vatican.gpkg                             |
-|venezuela.gpkg                           |
-|vietnam.gpkg                             |
-|wallis_and_futuna.gpkg                   |
-|western_sahara.gpkg                      |
-|yemen.gpkg                               |
-|zambia.gpkg                              |
-|zimbabwe.gpkg                            |
- 
-
+|Country Name                              |Country Name                                 |
+|:----------------------------------------|:-------------------------------------|
+|afghanistan.gpkg                         |liberia.gpkg                          |
+|afghanistan.gpkg-shm                     |libya.gpkg                            |
+|afghanistan.gpkg-wal                     |liechtenstein.gpkg                    |
+|aland.gpkg                               |lithuania.gpkg                        |
+|albania.gpkg                             |luxembourg.gpkg                       |
+|algeria.gpkg                             |macao_s.a.r.gpkg                      |
+|american_samoa.gpkg                      |macedonia.gpkg                        |
+|andorra.gpkg                             |madagascar.gpkg                       |
+|angola.gpkg                              |malawi.gpkg                           |
+|anguilla.gpkg                            |malaysia.gpkg                         |
+|antarctica.gpkg                          |maldives.gpkg                         |
+|antigua_and_barbuda.gpkg                 |mali.gpkg                             |
+|argentina.gpkg                           |malta.gpkg                            |
+|armenia.gpkg                             |marshall_islands.gpkg                 |
+|aruba.gpkg                               |mauritania.gpkg                       |
+|ashmore_and_cartier_islands.gpkg         |mauritius.gpkg                        |
+|australia.gpkg                           |mexico.gpkg                           |
+|austria.gpkg                             |moldova.gpkg                          |
+|azerbaijan.gpkg                          |monaco.gpkg                           |
+|bahrain.gpkg                             |mongolia.gpkg                         |
+|bangladesh.gpkg                          |montenegro.gpkg                       |
+|barbados.gpkg                            |montserrat.gpkg                       |
+|belarus.gpkg                             |morocco.gpkg                          |
+|belgium.gpkg                             |mozambique.gpkg                       |
+|belize.gpkg                              |myanmar.gpkg                          |
+|benin.gpkg                               |namibia.gpkg                          |
+|bermuda.gpkg                             |nauru.gpkg                            |
+|bhutan.gpkg                              |nepal.gpkg                            |
+|bolivia.gpkg                             |netherlands.gpkg                      |
+|bosnia_and_herzegovina.gpkg              |new_caledonia.gpkg                    |
+|botswana.gpkg                            |new_zealand.gpkg                      |
+|brazil.gpkg                              |nicaragua.gpkg                        |
+|british_indian_ocean_territory.gpkg      |niger.gpkg                            |
+|british_virgin_islands.gpkg              |nigeria.gpkg                          |
+|brunei.gpkg                              |niue.gpkg                             |
+|bulgaria.gpkg                            |norfolk_island.gpkg                   |
+|burkina_faso.gpkg                        |north_korea.gpkg                      |
+|burundi.gpkg                             |northern_cyprus.gpkg                  |
+|cabo_verde.gpkg                          |northern_mariana_islands.gpkg         |
+|cambodia.gpkg                            |norway.gpkg                           |
+|cameroon.gpkg                            |oman.gpkg                             |
+|canada.gpkg                              |pakistan.gpkg                         |
+|cayman_islands.gpkg                      |palau.gpkg                            |
+|central_african_republic.gpkg            |palestine.gpkg                        |
+|chad.gpkg                                |panama.gpkg                           |
+|chile.gpkg                               |papua_new_guinea.gpkg                 |
+|china.gpkg                               |paraguay.gpkg                         |
+|colombia.gpkg                            |peru.gpkg                             |
+|comoros.gpkg                             |philippines.gpkg                      |
+|cook_islands.gpkg                        |pitcairn_islands.gpkg                 |
+|costa_rica.gpkg                          |poland.gpkg                           |
+|croatia.gpkg                             |portugal.gpkg                         |
+|cuba.gpkg                                |puerto_rico.gpkg                      |
+|curaçao.gpkg                             |qatar.gpkg                            |
+|cyprus.gpkg                              |republic_of_serbia.gpkg               |
+|czechia.gpkg                             |republic_of_the_congo.gpkg            |
+|democratic_republic_of_the_congo.gpkg    |romania.gpkg                          |
+|denmark.gpkg                             |russia.gpkg                           |
+|djibouti.gpkg                            |rwanda.gpkg                           |
+|dominica.gpkg                            |saint_barthelemy.gpkg                 |
+|dominican_republic.gpkg                  |saint_helena.gpkg                     |
+|east_timor.gpkg                          |saint_kitts_and_nevis.gpkg            |
+|ecuador.gpkg                             |saint_lucia.gpkg                      |
+|egypt.gpkg                               |saint_martin.gpkg                     |
+|el_salvador.gpkg                         |saint_pierre_and_miquelon.gpkg        |
+|equatorial_guinea.gpkg                   |saint_vincent_and_the_grenadines.gpkg |
+|eritrea.gpkg                             |samoa.gpkg                            |
+|estonia.gpkg                             |san_marino.gpkg                       |
+|eswatini.gpkg                            |são_tomé_and_principe.gpkg            |
+|ethiopia.gpkg                            |saudi_arabia.gpkg                     |
+|falkland_islands.gpkg                    |senegal.gpkg                          |
+|faroe_islands.gpkg                       |seychelles.gpkg                       |
+|federated_states_of_micronesia.gpkg      |siachen_glacier.gpkg                  |
+|fiji.gpkg                                |sierra_leone.gpkg                     |
+|finland.gpkg                             |singapore.gpkg                        |
+|france.gpkg                              |sint_maarten.gpkg                     |
+|french_polynesia.gpkg                    |slovakia.gpkg                         |
+|french_southern_and_antarctic_lands.gpkg |slovenia.gpkg                         |
+|gabon.gpkg                               |solomon_islands.gpkg                  |
+|gambia.gpkg                              |somalia.gpkg                          |
+|georgia.gpkg                             |somaliland.gpkg                       |
+|germany.gpkg                             |south_africa.gpkg                     |
+|ghana.gpkg                               |south_georgia_and_the_islands.gpkg    |
+|greece.gpkg                              |south_korea.gpkg                      |
+|greenland.gpkg                           |south_sudan.gpkg                      |
+|grenada.gpkg                             |spain.gpkg                            |
+|guam.gpkg                                |sri_lanka.gpkg                        |
+|guatemala.gpkg                           |sudan.gpkg                            |
+|guernsey.gpkg                            |suriname.gpkg                         |
+|guinea-bissau.gpkg                       |sweden.gpkg                           |
+|guinea.gpkg                              |switzerland.gpkg                      |
+|guyana.gpkg                              |syria.gpkg                            |
+|haiti.gpkg                               |taiwan.gpkg                           |
+|heard_island_and_mcdonald_islands.gpkg   |tajikistan.gpkg                       |
+|honduras.gpkg                            |tanzania.gpkg                         |
+|hong_kong_s.a.r..gpkg                    |thailand.gpkg                         |
+|hungary.gpkg                             |the_bahamas.gpkg                      |
+|iceland.gpkg                             |togo.gpkg                             |
+|india.gpkg                               |tonga.gpkg                            |
+|indian_ocean_territories.gpkg            |trinidad_and_tobago.gpkg              |
+|indonesia.gpkg                           |tunisia.gpkg                          |
+|iran.gpkg                                |turkey.gpkg                           |
+|iraq.gpkg                                |turkmenistan.gpkg                     |
+|ireland.gpkg                             |turks_and_caicos_islands.gpkg         |
+|isle_of_man.gpkg                         |uganda.gpkg                           |
+|israel.gpkg                              |ukraine.gpkg                          |
+|italy.gpkg                               |united_arab_emirates.gpkg             |
+|ivory_coast.gpkg                         |united_kingdom.gpkg                   |
+|jamaica.gpkg                             |united_states_of_america.gpkg         |
+|japan.gpkg                               |united_states_virgin_islands.gpkg     |
+|jersey.gpkg                              |uruguay.gpkg                          |
+|jordan.gpkg                              |uzbekistan.gpkg                       |
+|kazakhstan.gpkg                          |vanuatu.gpkg                          |
+|kenya.gpkg                               |vatican.gpkg                          |
+|kiribati.gpkg                            |venezuela.gpkg                        |
+|kosovo.gpkg                              |vietnam.gpkg                          |
+|kuwait.gpkg                              |wallis_and_futuna.gpkg                |
+|kyrgyzstan.gpkg                          |western_sahara.gpkg                   |
+|laos.gpkg                                |yemen.gpkg                            |
+|latvia.gpkg                              |zambia.gpkg                           |
+|lebanon.gpkg                             |zimbabwe.gpkg                         |
+|lesotho.gpkg                             |                                    |
