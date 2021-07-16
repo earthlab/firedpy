@@ -133,11 +133,13 @@ After creating a new fire product, it might be useful to get it out of the docke
  
  
  
- ### Individual country boundaries available in ref/individual_countries
+### Individual country boundaries
  
- Continent boundaries are in ref/continents
+ - Country boundaries are in **ref/individual_countries**
+ - Continent boundaries are in **ref/continents**
+ - State boundaries for the United States of America are in **ref/us_states**
  
-|Country Name                              |Country Name                                 |
+|Country Name                             |Country Name                          |
 |:----------------------------------------|:-------------------------------------|
 |afghanistan.gpkg                         |liberia.gpkg                          |
 |afghanistan.gpkg-shm                     |libya.gpkg                            |
