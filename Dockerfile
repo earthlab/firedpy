@@ -22,6 +22,9 @@ RUN apt-get update \
     awscli \
     htop 
 
+RUN ln -s /opt/conda/envs/firedpy/lib/libffi.so.6 /opt/conda/envs/firedpy/lib/libffi.so.7 \
+  && pip install ipython
+
 SHELL ["conda", "run", "-n", "firedpy", "/bin/bash", "-c"]
 
 RUN python setup.py install 
