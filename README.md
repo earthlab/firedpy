@@ -14,12 +14,11 @@ and Cook, M. C. 2020. FIRED (Fire Events Delineation): An open, flexible algorit
 of U.S. fire events derived from the MODIS burned area product (2001-19). Remote
 Sensing, 12(21), 3498; https://doi.org/10.3390/rs12213498
 
-Already-created products:
+Already-created products are housed in the CU Scholar data repository in the Earth Lab Data collection.
 
-#### Coterminous United States
+https://scholar.colorado.edu/collections/pz50gx05h
 
- - events: https://scholar.colorado.edu/concern/datasets/nv935382p
- - daily: https://scholar.colorado.edu/concern/datasets/765372341
+As of July 15, 2021, we currently have the coterminous USA + Alaska up to March 2021
 
 ## Installation
 
