@@ -140,9 +140,9 @@ After creating a new fire product, it might be useful to get it out of the docke
  - Country boundaries are in **ref/individual_countries**
  - Continent boundaries are in **ref/continents**
  - State boundaries for the United States of America are in **ref/us_states**
- - For example -tiles ref/us_states/colorado.gpkg, and so on.
+ - For example `firedpy -tiles ref/us_states/colorado.gpkg`, and so on.
 
-### Countries available
+### Country boundary files
   
 |Country Name                             |Country Name                          |
 |:----------------------------------------|:-------------------------------------|
