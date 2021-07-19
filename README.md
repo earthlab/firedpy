@@ -20,7 +20,7 @@ https://scholar.colorado.edu/collections/pz50gx05h
 
 As of July 15, 2021, we currently have:
 
- - coterminous USA + Alaska up to March 2021
+ - Coterminous USA + Alaska up to March 2021
  - Western hemisphere from Jan 2017 to March 2020, intended for use in conjunction with GOES16 active fire detections.
 
 ## Installation
