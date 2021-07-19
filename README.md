@@ -127,7 +127,7 @@ After creating a new fire product, it might be useful to get it out of the docke
  | -ecoregion_level | integer | -ecoregion_level 3 | if ecoregion type = na, the level (1-3) of North American ecoregions |
  | -landcover_type | integer | -landcover_type 2 | number (1-3) corresponding with a MODIS/Terra+Aqua Land Cover (MCD12Q1) category |
  | --shapefile | n/a | --shapefile | builds a .gpkg shapefile from the event data frame and saves it in the "outputs/shapefiles" folder in the project directory |
- | -file_name | character | -file_name fired_events.csv | saves the tables outputted as the designated file name, defaults to "fired" |
+ | -file | character | -file fired_colorado | specifies the base of the file name for the tables and shapefile outputs, defaults to "fired", the example would output as "fired_colorado_toYYYYDDD", with DDD being the julian date of the last month in the time series |
  | -daily | character (yes or no) | -daily yes | creates daily polygons, if no just the event-level perimeters will be created. Defaults to no. |
  
  
