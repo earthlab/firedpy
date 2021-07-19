@@ -18,7 +18,10 @@ Already-created products are housed in the CU Scholar data repository in the Ear
 
 https://scholar.colorado.edu/collections/pz50gx05h
 
-As of July 15, 2021, we currently have the coterminous USA + Alaska up to March 2021
+As of July 15, 2021, we currently have:
+
+ - coterminous USA + Alaska up to March 2021
+ - Western hemisphere from Jan 2017 to March 2020, intended for use in conjunction with GOES16 active fire detections.
 
 ## Installation
 
@@ -137,7 +140,10 @@ After creating a new fire product, it might be useful to get it out of the docke
  - Country boundaries are in **ref/individual_countries**
  - Continent boundaries are in **ref/continents**
  - State boundaries for the United States of America are in **ref/us_states**
- 
+ - For example -tiles ref/us_states/colorado.gpkg, and so on.
+
+### Countries available
+  
 |Country Name                             |Country Name                          |
 |:----------------------------------------|:-------------------------------------|
 |afghanistan.gpkg                         |liberia.gpkg                          |
