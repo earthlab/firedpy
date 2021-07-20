@@ -1,5 +1,6 @@
 [![DOI](https://zenodo.org/badge/214283770.svg)](https://zenodo.org/badge/latestdoi/214283770)
-[![Build Status](https://dockerhub.com/repository/docker/earthlab/firedpy.svg?branch=main)](https://hub.docker.com/repository/docker/earthlab/firedpy)
+
+![Docker Automated build](https://img.shields.io/docker/automated/earthlab/firedpy?style=plastic)
 
 # firedpy - FIRe Event Delineation for python
 
