@@ -2,6 +2,10 @@
 
 ![Docker Automated build](https://img.shields.io/docker/automated/earthlab/firedpy?style=plastic)
 
+![GitHub contributors](https://img.shields.io/github/contributors/earthlab/firedpy)
+
+![GitHub issues](https://img.shields.io/github/issues/earthlab/firedpy)
+
 # firedpy - FIRe Event Delineation for python
 
 A Python Command Line Interface for classifying fire events from the Collection 6 MODIS Burned Area Product.
