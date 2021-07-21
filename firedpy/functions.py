@@ -1391,6 +1391,7 @@ class ModelBuilder:
         """
         Use the EventGrid class to classify events tile by tile and then merge
         them all together for a seamless set of wildfire events.
+
         """
         # Make sure the destination folder exists
         if not(os.path.exists(os.path.dirname(self.file_name))):
@@ -1748,8 +1749,6 @@ class ModelBuilder:
             gdf['lc_type'] = lc_types[int(self.landcover_type)]
 
             gdf.rename({'lc_description': 'lc_desc'}, inplace=True, axis='columns')
-
-
 
         ############################################
         # Retrieve ecoregion attributes if requested
