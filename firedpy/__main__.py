@@ -203,6 +203,7 @@ def main():
     models = ModelBuilder(file_name=file_name,
                           proj_dir=proj_dir,
                           tiles=tiles,
+                          shp=shp,
                           spatial_param=spatial_param,
                           temporal_param=temporal_param,
                           landcover_type=landcover_type,

@@ -1343,12 +1343,13 @@ class EventGrid:
 
 
 class ModelBuilder:
-    def __init__(self, file_name, proj_dir, tiles, daily, shapefile, spatial_param=5,
+    def __init__(self, file_name, proj_dir, tiles, shp, daily, shapefile, spatial_param=5,
                  temporal_param=11, landcover_type=None,
                  ecoregion_type=None, ecoregion_level=None):
         self.file_name = file_name
         self.proj_dir = proj_dir
         self.tiles = tiles
+        self.shp = shp
         self.spatial_param = spatial_param
         self.temporal_param = temporal_param
         self.landcover_type = landcover_type
@@ -1870,6 +1871,20 @@ class ModelBuilder:
         print("Converting polygons to multipolygons...")
         gdfd["geometry"] = gdfd["geometry"].apply(asMultiPolygon)
 
+        # Clip to AOI if specified
+        if self.shp:
+            print("Extracting events which intersect: ", self.shp)
+            shp = gpd.read_file(self.shp)
+            shp.to_crs(gdf.crs, inplace=True)
+            gdfd = gpd.sjoin(gdfd, shp, how="inner", op="intersects", rsuffix='join_')
+            # gdfd = gpd.overlay(gdfd, shp, how="intersection")
+        else:
+            print("No shapefile for clipping found ...")
+
+        # Remove left columns from spatial join
+        cols = [c for c in gdfd.columns if c[:5] != 'join_']
+        gdfd = gdfd[cols]
+
         # Save the daily before dissolving into event level
         # Only save the daily polygons if user specified to do so
         if self.daily == "yes":
@@ -1900,7 +1915,6 @@ class ModelBuilder:
         if self.shapefile:
             # Now save as a geopackage and csv
             print("Saving event-level file to " + event_shp_path)
-            # gdf.to_crs(outCRS, inplace=True)
             gdf.to_file(event_shp_path, driver="GPKG")
 
         # Remove the intermediate file
