@@ -1363,12 +1363,13 @@ class EventGrid:
 
 
 class ModelBuilder:
-    def __init__(self, file_name, proj_dir, tiles, daily, shapefile, spatial_param=5,
+    def __init__(self, file_name, proj_dir, tiles, shp, daily, shapefile, spatial_param=5,
                  temporal_param=11, landcover_type=None,
                  ecoregion_type=None, ecoregion_level=None, shp_type = None):
         self.file_name = file_name
         self.proj_dir = proj_dir
         self.tiles = tiles
+        self.shp = shp
         self.spatial_param = spatial_param
         self.temporal_param = temporal_param
         self.landcover_type = landcover_type
@@ -1411,6 +1412,7 @@ class ModelBuilder:
         """
         Use the EventGrid class to classify events tile by tile and then merge
         them all together for a seamless set of wildfire events.
+
         """
         # Make sure the destination folder exists
         if not(os.path.exists(os.path.dirname(self.file_name))):
@@ -1769,8 +1771,6 @@ class ModelBuilder:
 
             gdf.rename({'lc_description': 'lc_desc'}, inplace=True, axis='columns')
 
-
-
         ############################################
         # Retrieve ecoregion attributes if requested
         # Add the ecoregion attributes
@@ -1890,6 +1890,20 @@ class ModelBuilder:
         # Cast as multipolygon for each geometry
         print("Converting polygons to multipolygons...")
         gdfd["geometry"] = gdfd["geometry"].apply(asMultiPolygon)
+
+        # Clip to AOI if specified
+        if self.shp:
+            print("Extracting events which intersect: ", self.shp)
+            shp = gpd.read_file(self.shp)
+            shp.to_crs(gdf.crs, inplace=True)
+            gdfd = gpd.sjoin(gdfd, shp, how="inner", op="intersects", rsuffix='join_')
+            # gdfd = gpd.overlay(gdfd, shp, how="intersection")
+        else:
+            print("No shapefile for clipping found ...")
+
+        # Remove left columns from spatial join
+        cols = [c for c in gdfd.columns if c[:5] != 'join_']
+        gdfd = gdfd[cols]
 
         # Save the daily before dissolving into event level
         # Only save the daily polygons if user specified to do so
