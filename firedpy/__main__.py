@@ -258,7 +258,7 @@ def main():
         spatial_param = args.spatial_param
         temporal_param = args.temporal_param
         tiles = args.tiles
-        shp_type = args.shapefile
+        shp_type = args.shp_type
         start_yr = args.start_yr
         end_yr = args.end_yr
         if shp_type != 'none':
