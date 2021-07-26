@@ -17,6 +17,7 @@ import rasterio
 from rasterio import logging
 from rasterio.merge import merge
 import xarray as xr
+import rioxarray as rxr
 from shapely.geometry import Point, Polygon, MultiPolygon
 import sys
 from tqdm import tqdm
@@ -1601,6 +1602,21 @@ class ModelBuilder:
 
         gdf = gpd.GeoDataFrame(df, crs=proj4, geometry=df["geometry"])
 
+        # Extract points to AOI if specified
+        # Clip to AOI if specified
+        if self.shp:
+            shp = gpd.read_file(self.shp)
+            shp.to_crs(gdf.crs, inplace=True)
+            shp['geometry'] = shp.geometry.buffer(200000)  # Wide buffer to start
+            gdf = gpd.sjoin(gdf, shp, how="inner", op="intersects", rsuffix='_join_')
+        else:
+            print("No AOI for clipping found ...")
+
+        # Remove left columns from spatial join
+        gdf = gdf.loc[:, ~gdf.columns.str.contains('_join_')]
+        # cols = [c for c in gdf.columns if c[:5] != '_join_']
+        # gdf = gdf[cols]
+
         return gdf
 
     def buildFireAttributes(self):
@@ -1706,7 +1722,7 @@ class ModelBuilder:
                 y = row['y']
                 try:
                     val = int([val for val in lc.sample([(x, y)])][0])
-                except:
+                except Exception:
                     val = np.nan
                 return val
 
@@ -1763,7 +1779,7 @@ class ModelBuilder:
                     'NA_L1CODE': ('Level I Ecoregions ' + '(NA-Commission for Environmental Cooperation)')}
 
                 # Read in the Level File (contains every level) and reference table
-                shp_path = os.path.join(self.proj_dir, 'shapefiles','ecoregion','NA_CEC_Eco_Level3.gpkg')
+                shp_path = os.path.join(self.proj_dir, 'shapefiles', 'ecoregion', 'NA_CEC_Eco_Level3.gpkg')
                 eco = gpd.read_file(shp_path)
                 eco.to_crs(gdf.crs, inplace=True)
 
@@ -1875,14 +1891,13 @@ class ModelBuilder:
             print("Extracting events which intersect: ", self.shp)
             shp = gpd.read_file(self.shp)
             shp.to_crs(gdf.crs, inplace=True)
-            gdfd = gpd.sjoin(gdfd, shp, how="inner", op="intersects", rsuffix='join_')
-            # gdfd = gpd.overlay(gdfd, shp, how="intersection")
+            gdfd = gpd.sjoin(gdfd, shp, how="inner", op="intersects")
         else:
             print("No shapefile for clipping found ...")
 
         # Remove left columns from spatial join
-        cols = [c for c in gdfd.columns if c[:5] != 'join_']
-        gdfd = gdfd[cols]
+        gdfd = gdfd.loc[:, ~gdfd.columns.str.contains('_left')]
+        gdfd = gdfd.loc[:, ~gdfd.columns.str.contains('_right')]
 
         # Save the daily before dissolving into event level
         # Only save the daily polygons if user specified to do so
@@ -1905,7 +1920,7 @@ class ModelBuilder:
         gdf["tot_perim"] = gdf["geometry"].length
 
         # We still can't have multiple polygon types
-        print("Converting polygons to multipolygons...")
+        # print("Converting polygons to multipolygons...")
         gdf["geometry"] = gdf["geometry"].apply(asMultiPolygon)
 
         # Export event-level to CSV
