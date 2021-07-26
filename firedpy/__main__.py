@@ -5,8 +5,10 @@ import shutil
 import tempfile
 import time
 import warnings
+import sys
 
 from .functions import DataGetter, ModelBuilder
+from .readme import makeReadMe
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
@@ -61,10 +63,10 @@ def main():
         """)
     shp_help = ("""
         Provide this option if you would like to build shapefiles from the
-        event data frame. Shapefiles of both daily progression and overall
+        event data frame. Spefify either "shp", "gpkg", or both. Shapefiles of both daily progression and overall
         event perimeters will be written to the "outputs/shapefiles" folder of
-        the chosen project directory. These will be saved in geopackage format
-        (.gpkg) using the file basename of the fire event data frame (e.g.
+        the chosen project directory. These will be saved in the specified geopackage format
+        (.gpkg), ERSI Shapefile format (.shp), or save them in both formats using the file basename of the fire event data frame (e.g.
         'modis_events_daily.gpkg' and 'modis_events.gpkg')
         """)
     sp_help = ("""
@@ -83,6 +85,12 @@ def main():
         The number of days to search for neighboring burn detections. Defaults
         to 11 days between events.
         """)
+    start_yr = ("""
+        The first year of fired events.
+        """)
+    end_yr = ("""
+        The last year of fired events.
+        """)
 
     # Provide arguments
     parser = argparse.ArgumentParser()
@@ -96,7 +104,8 @@ def main():
                         default=None, help=eco_help)
     parser.add_argument("-landcover_type", dest="landcover_type", type=int,
                         default=None, help=lc_help)
-    parser.add_argument("--shapefile", action='store_true', help=shp_help)
+    parser.add_argument("-shp_type", dest = "shp_type", help=shp_help, default = None)
+    #parser.add_argument("--shpfile", action='store_true', help=shpf_help)
     parser.add_argument("-spatial", dest="spatial_param", default=5,
                         type=int, help=sp_help)
     parser.add_argument("-temporal", dest="temporal_param", default=11,
@@ -109,23 +118,158 @@ def main():
                                  "h08v06", "h09v06", "h10v06", "h11v06"],
                         help=tile_help)
     parser.add_argument("-daily", dest="daily", default="no", help=daily_help)
+    parser.add_argument("-start_yr", dest="start_yr", type=int, default=None, help=start_yr)
+    parser.add_argument("-end_yr", dest="end_yr", type=int, default=None, help=end_yr)
 
-    # Parse argument responses
-    args = parser.parse_args()
-    proj_dir = args.proj_dir
-    ecoregion_type = args.ecoregion_type
-    ecoregion_level = args.ecoregion_level
-    landcover_type = args.landcover_type
-    daily = args.daily
-    spatial_param = args.spatial_param
-    temporal_param = args.temporal_param
-    tiles = args.tiles
-    shapefile = args.shapefile
 
-    # Assign the temporary file name including the spatial and temporal parameters
-    file_path = os.path.join(args.proj_dir,
-                             "outputs", "tables",
-                             args.file_name)
+    if len(sys.argv) == 1:
+        proj_dir = input("Enter project directory: ")
+        if proj_dir == '':
+            proj_dir=os.path.join(os.getcwd(), 'proj')
+        if not os.path.exists(proj_dir):
+            proj_dir=os.path.join(os.getcwd(), 'proj')
+            os.makedirs(proj_dir)
+        tilechoice = input("Would you like the fired product on a) continent, b) country, c) US state, or d)speific MODIS tiles?[a/b/c/d]: ")
+        while True:
+            if tilechoice not in ['a','b','c','d']:
+                tilechoice = input("Enter a,b,c, or d: ")
+            else:
+                break
+        if tilechoice == 'a':
+            tilename = input("Please enter the continent name: /n")
+            tiles = ["ref/continents/"+tilename +".gpkg", ]
+            path = os.path.join("ref/continents/",tilename +".gpkg")
+            while True:
+                if os.path.isfile(path):
+                    break
+                else:
+                    print("Not a valid choice. If you would like to see a list of avalible continents please visit: https://github.com/earthlab/firedpy/n")
+                    tilename = input("Please enter the continent name: /n ")
+                    tiles = ["ref/continents/"+tilename +".gpkg", ]
+                    path = os.path.join("ref/continents/",tilename +".gpkg")
+
+            if tilename ==  "north_america":
+                ecoregion_type = 'na'
+                ecoregion_level = 3
+                landcover_type = 1
+            else:
+                ecoregion_type = 'world'
+                landcover_type = None
+                ecoregion_level = None
+
+        if tilechoice == 'b':
+            tilename = input("Please enter the country name:")
+            tiles = ["ref/individual_countries/"+tilename +".gpkg", ]
+            path = os.path.join("ref/individual_countries/",tilename +".gpkg")
+            while True:
+                if os.path.isfile(path):
+                    break
+                else:
+                    print("Not a valid choice. If you would like to see a list of avalible countries please visit: https://github.com/earthlab/firedpy \n")
+                    tilename = input("Please enter the country name: ")
+                    tiles = ["ref/individual_countries/"+tilename +".gpkg", ]
+                    path = os.path.join("ref/individual_countries/",tilename +".gpkg")
+
+
+            na = ['united_States_of_america', 'canada', 'united_states_virgin_islands']
+            if tilename in na:
+                ecoregion_type = 'na'
+                ecoregion_level = 3
+                landcover_type = 1
+            else:
+                ecoregion_type = 'world'
+                landcover_type = None
+                ecoregion_level = None
+
+        if tilechoice == 'c':
+            tilename = input("Please enter the state name: ")
+            tiles = ["ref/us_states/"+tilename +".gpkg", ]
+            path = os.path.join("ref/us_states/",tilename +".gpkg")
+            while True:
+                if os.path.isfile(path):
+                    break
+                else:
+                    print("Not a valid choice. If you would like to see a list of avalible states name please visit: https://github.com/earthlab/firedpy/n")
+                    tilename = input("Please enter the state name: /n ")
+                    tiles = ["ref/us_states/"+tilename +".gpkg", ]
+                    path = os.path.join("ref/us_states/",tilename +".gpkg")
+
+            ecoregion_type = 'na'
+            ecoregion_level = 3
+            landcover_type = 1
+
+        if tilechoice == 'd':
+            tiles = input("Please enter tiles as a list of characters (no quotes no spaces)(e.g., h08v04 h09v04 ...):")
+            ecoregion_type = input("Please enter the ecoregion type [na or world]:")
+            if ecoregion_type == 'na':
+                ecoregion_level = 3
+                landcover_type = 1
+            else:
+                ecoregion_level = None
+                landcover_type =  None
+
+        daily = input("Do you want to create the daily polygons or just the event-level perimeter for your analysis area (yes for daily/no for event-level): \n")
+        if daily == '':
+            daily = 'no'
+        spatial_param = input("Please enter the number of cells (~463 m resolution) to search for neighboring burn detections. Defaults to 5 cells in all directions.\n")
+        temporal_param = input("The number of days to search for neighboring burn detections. Defaults to 11 days between events.\n")
+        if spatial_param == '':
+            spatial_param = 5
+        else:
+            spatial_param = int(spatial_param)
+        if temporal_param == '':
+            temporal_param = 11
+        else:
+            temporal_param = int(temporal_param)
+
+        shp_type = input("""Specify the format of the shapefile you want, [gpkg, shp, both, none] """)
+        options = ["gpkg", "shp", "both", "none"]
+        while True:
+            if shp_type.lower() in options:
+                break
+            else:
+                shp_type = input(""" Specified input was not valid \n Specify the format of the shapefile you want, "gpkg", "shp", "both", or "none" in all lower case """)
+        if shp_type != 'none':
+            shapefile = True
+        elif shp_type == 'none':
+            shapefile = False
+            shp_type = None
+        file_name = tilename
+        file_path = os.path.join(proj_dir,
+                                     "outputs", "tables",
+                                     file_name)
+        start_yr = input("Enter the year you want to start or press enter for all dates: ")
+        end_yr = input("Enter the year you want to end or press enter for all dates: ")
+        if start_yr!='' and end_yr!='':
+            start_yr = int(start_yr)
+            end_yr = int(end_yr)
+        else:
+            start_yr = None
+            end_yr = None
+    else:
+
+        # Parse argument responses
+        args = parser.parse_args()
+        proj_dir = args.proj_dir
+        ecoregion_type = args.ecoregion_type
+        ecoregion_level = args.ecoregion_level
+        landcover_type = args.landcover_type
+        daily = args.daily
+        spatial_param = args.spatial_param
+        temporal_param = args.temporal_param
+        tiles = args.tiles
+        shp_type = args.shp_type
+        start_yr = args.start_yr
+        end_yr = args.end_yr
+        if shp_type != 'none':
+            shapefile = True
+        elif shp_type == 'none':
+            shapefile = False
+            shp_type = None
+            # Assign the temporary file name including the spatial and temporal parameters
+        file_path = os.path.join(args.proj_dir,
+                                         "outputs", "tables",
+                                         args.file_name)
 
     # Transfer the lookup tables
     if landcover_type:
@@ -142,7 +286,7 @@ def main():
         os.makedirs(proj_dir)
 
     # Create data object
-    data = DataGetter(proj_dir)
+    data = DataGetter(proj_dir, start_yr, end_yr)
 
     # Assign target MODIS tiles to the data object
     if os.path.splitext(tiles[0])[1] in [".shp", ".gpkg"]:
@@ -178,12 +322,13 @@ def main():
         if ecoregion_type == 'world':
             fname = 'wwf_terr_ecos.gpkg'
             lookup = os.path.join(os.getcwd(), 'ref', 'world_ecoregions', fname)
-        elif ecoregion_type == 'us' or ecoregion_level:
+        elif ecoregion_type == 'na' or ecoregion_level:
             fname = 'NA_CEC_Eco_Level3.gpkg'
             lookup = os.path.join(os.getcwd(), 'ref', 'us_eco', fname)
+            print(lookup)
         try:
             new_file = os.path.join(new_path, fname)
-            shutil.copy(new_file, lookup)
+            shutil.copyfile(new_file, lookup)
         except Exception:
             data.getEcoregion(ecoregion_level)
 
@@ -192,11 +337,13 @@ def main():
 
     # Add date range to the file names before exporting final data frame
     date_range = []
-    for root, dirs, files in os.walk(os.path.join(proj_dir, "rasters", "burn_area", "hdfs")):
+    for root, dirs, files in os.walk(os.path.join(proj_dir, 'rasters', 'burn_area', 'hdfs')):
         for f in files:
-            dr = int(f.split('.')[1][1:])
-            date_range.append(dr)
+            if "MCD64A1" in f:
+                dr = int(f.split('.')[1][1:])
+                date_range.append(dr)
     last_date = sorted(date_range)[-1]
+    first_date = sorted(date_range)[1]
     file_name = os.path.join(os.path.dirname(file_path), file_base+"_to"+str(last_date))
 
     # Create Model Builder object
@@ -210,7 +357,8 @@ def main():
                           ecoregion_type=ecoregion_type,
                           ecoregion_level=ecoregion_level,
                           daily=daily,
-                          shapefile=shapefile)
+                          shapefile=shapefile,
+                          shp_type=shp_type)
 
     # Now go ahead and create the events (Memory's a bit tight for parallel)
     models.buildEvents()
@@ -223,19 +371,40 @@ def main():
     daily_shp_file = "_".join([pref, "daily"])
     event_shp_file = "_".join([pref, "events"])
 
-    daily_shp_path = os.path.join(proj_dir, "outputs", "shapefiles",
-                                  daily_shp_file + ".gpkg")
-    event_shp_path = os.path.join(proj_dir, "outputs", "shapefiles",
-                                  event_shp_file + ".gpkg")
+    if shp_type == "shp":
+        daily_shp_path_shp = os.path.join(proj_dir, "outputs", "shapefiles",
+                                      daily_shp_file + ".shp")
+        event_shp_path_shp = os.path.join(proj_dir, "outputs", "shapefiles",
+                                      event_shp_file + ".shp")
+    if shp_type == "both":
+        daily_shp_path_shp = os.path.join(proj_dir, "outputs", "shapefiles",
+                                      daily_shp_file + ".shp")
+        daily_shp_path = os.path.join(proj_dir, "outputs", "shapefiles",
+                                      daily_shp_file + ".gpkg")
+        event_shp_path_shp = os.path.join(proj_dir, "outputs", "shapefiles",
+                                      event_shp_file + ".shp")
+        event_shp_path = os.path.join(proj_dir, "outputs", "shapefiles",
+                                      event_shp_file + ".gpkg")
+    else:
+        daily_shp_path = os.path.join(proj_dir, "outputs", "shapefiles",
+                                      daily_shp_file + ".gpkg")
+        event_shp_path = os.path.join(proj_dir, "outputs", "shapefiles",
+                                      event_shp_file + ".gpkg")
+        daily_shp_path_shp = ''
+        event_shp_path_shp = ''
+
 
     models.buildPolygons(daily_shp_path=daily_shp_path,
-                         event_shp_path=event_shp_path)
-
+                         event_shp_path=event_shp_path,
+                         daily_shp_path_shp = daily_shp_path_shp ,
+                         event_shp_path_shp =daily_shp_path_shp )
+    makeReadMe(proj_dir, tilename, first_date, last_date, file_name, ecoregion_type, ecoregion_level, landcover_type, daily, spatial_param, temporal_param, tiles, shapefile, shp_type)
     # Print the time it took
     end = time.perf_counter()
     seconds = end - start
     minutes = seconds/60
     print("Job completed in {} minutes".format(round(minutes, 2)))
+
 
 
 if __name__ == "__main__":

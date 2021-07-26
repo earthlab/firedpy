@@ -25,6 +25,7 @@ import requests
 import warnings
 import paramiko
 
+
 # The python gdal issue (matching system gdal version)
 try:
     from osgeo import gdal, ogr, osr
@@ -313,8 +314,10 @@ class DataGetter:
         - parallel downloads
     """
 
-    def __init__(self, proj_dir):
+    def __init__(self, proj_dir, start_yr, end_yr):
         self.proj_dir = proj_dir
+        self.start_yr= start_yr
+        self.end_yr = end_yr
         self.date = dt.datetime.today().strftime("%m-%d-%Y")
         self.createPaths()
         self.cpus = os.cpu_count()
@@ -366,7 +369,6 @@ class DataGetter:
         ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh_client.connect(hostname="fuoco.geog.umd.edu", username="fire", password="burnt")
         print("Connected to 'fuoco.geog.umd.edu' ...")
-
         # Open the connection to the SFTP
         sftp_client = ssh_client.open_sftp()
 
@@ -408,15 +410,29 @@ class DataGetter:
 
                 if not os.path.exists(nc_file):
                     print("Downloading/Checking HDF files for: " + tile)
-
+                    if self.start_yr and self.end_yr:
+                        yrs= list(range(self.start_yr, self.end_yr+1))
+                        tile_range = []
+                        for yr in yrs:
+                            tile_range.append("MCD64A1.A"+str(yr))
                     # Attempt file download
-                    try:
-                        for h in tqdm(hdfs):
-                            remote = sftp_folder+"/"+h
-                            os.chdir(folder)
-                            sftp_client.get(remote, h)
-                    except Exception as e:
-                        print(e)
+                        try:
+                            for h in tqdm(hdfs):
+                                remote = sftp_folder+"/"+h
+                                for name in tile_range:
+                                    if name in h:
+                                        os.chdir(folder)
+                                        sftp_client.get(remote, h)
+                        except Exception as e:
+                            print(e)
+                    elif self.start_yr==None and self.end_yr==None:
+                        try:
+                            for h in tqdm(hdfs):
+                                remote = sftp_folder+"/"+h
+                                os.chdir(folder)
+                                sftp_client.get(remote, h)
+                        except Exception as e:
+                            print(e)
 
             except Exception:
                 print("No MCD64A1 Product for tile: "+str(tile)+", skipping...")
@@ -424,17 +440,32 @@ class DataGetter:
             # Check downloads for missing files
             missings = []
             for hdf in hdfs:
-                trgt = os.path.join(folder, hdf)
-                remote = os.path.join(sftp_folder, hdf)
-                if not os.path.exists(trgt):
-                    missings.append(remote)
-                else:
-                    try:
-                        gdal.Open(trgt).GetSubDatasets()[0][0]
-                    except Exception:
-                        print("Bad file detected, removing to try again...")
+                if self.start_yr and self.end_yr:
+                    for name in tile_range:
+                        if name in hdf:
+                            trgt = os.path.join(folder, hdf)
+                            remote = os.path.join(sftp_folder, hdf)
+                            if not os.path.exists(trgt):
+                                missings.append(remote)
+                            else:
+                                try:
+                                    gdal.Open(trgt).GetSubDatasets()[0][0]
+                                except Exception:
+                                    print("Bad file detected, removing to try again...")
+                                    missings.append(remote)
+                                    os.remove(trgt)
+                elif self.start_yr==None and self.end_yr==None:
+                    trgt = os.path.join(folder, hdf)
+                    remote = os.path.join(sftp_folder, hdf)
+                    if not os.path.exists(trgt):
                         missings.append(remote)
-                        os.remove(trgt)
+                    else:
+                        try:
+                            gdal.Open(trgt).GetSubDatasets()[0][0]
+                        except Exception:
+                            print("Bad file detected, removing to try again...")
+                            missings.append(remote)
+                            os.remove(trgt)
 
             # Now try again for the missed files
             if len(missings) > 0:
@@ -474,18 +505,7 @@ class DataGetter:
                     except Exception as e:
                         print(e)
 
-                # Close new SFTP connection
-                sftp_client.close()
-                ssh_client.close()
-
-                # If that doesn"t get them all, give up.
-                if len(missings) > 0:
-                    print("There are still " + str(len(missings)) + " missed files.")
-                    print("Try downloading these files manually: ")
-                    for mm in missings:
-                        print(mm)
-
-        # End connection to Clients
+        # Close new SFTP connection
         ssh_client.close()
         sftp_client.close()
         print("Disconnected from 'fuoco.geog.umd.edu' ...")
@@ -632,7 +652,7 @@ class DataGetter:
 
     def getLandcover(self, landcover_type=1):
         """
-        A method to download and process landcover data from NASA"s Land
+        A method to download and process landcover data from  NASA's Land
         Processes Distributed Active Archive Center, which is an Earthdata
         thing. You"ll need register for a username and password, but that"s
         free. Fortunately, there is a tutorial on how to get this data:
@@ -1346,7 +1366,7 @@ class EventGrid:
 class ModelBuilder:
     def __init__(self, file_name, proj_dir, tiles, shp, daily, shapefile, spatial_param=5,
                  temporal_param=11, landcover_type=None,
-                 ecoregion_type=None, ecoregion_level=None):
+                 ecoregion_type=None, ecoregion_level=None, shp_type = None):
         self.file_name = file_name
         self.proj_dir = proj_dir
         self.tiles = tiles
@@ -1358,6 +1378,7 @@ class ModelBuilder:
         self.ecoregion_level = ecoregion_level
         self.daily = daily
         self.shapefile = shapefile
+        self.shp_type = shp_type
         self.getFiles(file_name)
         self.setGeometry()
 
@@ -1779,7 +1800,11 @@ class ModelBuilder:
                     'NA_L1CODE': ('Level I Ecoregions ' + '(NA-Commission for Environmental Cooperation)')}
 
                 # Read in the Level File (contains every level) and reference table
+<<<<<<< HEAD
                 shp_path = os.path.join(self.proj_dir, 'shapefiles', 'ecoregion', 'NA_CEC_Eco_Level3.gpkg')
+=======
+                shp_path = os.path.join(self.proj_dir, 'shapefiles','ecoregion','NA_CEC_Eco_Level3.shp')
+>>>>>>> 8e4fa1e82769d0e85aaa3bd956ac3ff1c637864e
                 eco = gpd.read_file(shp_path)
                 eco.to_crs(gdf.crs, inplace=True)
 
@@ -1847,7 +1872,7 @@ class ModelBuilder:
         print("Overwriting data frame at " + self.file_name + "...")
         gdf.to_csv(self.file_name, index=False)
 
-    def buildPolygons(self, daily_shp_path, event_shp_path):
+    def buildPolygons(self, daily_shp_path, event_shp_path, daily_shp_path_shp , event_shp_path_shp ):
 
         # Make sure we have the target folders
         if not(os.path.exists(os.path.dirname(event_shp_path))):
@@ -1906,7 +1931,18 @@ class ModelBuilder:
             gdfd.to_csv(str(self.file_name)[:-4]+"_daily"+".csv", index=False)
             if self.shapefile:
                 # gdf.to_crs(outCRS, inplace=True)
-                gdfd.to_file(daily_shp_path, driver="GPKG")
+                # gdf.to_crs(outCRS, inplace=True)
+                if self.shp_type == "gpkg":
+                    gdf.to_file(daily_shp_path, driver="GPKG")
+                    print("Saving event-level file to " + daily_shp_path)
+                elif self.shp_type == "shp":
+                    gdf.to_file(daily_shp_path_shp)
+                    print("Saving event-level file to " + daily_shp_path_shp)
+                elif self.shp_type == "both":
+                    print("Saving event-level file to " + daily_shp_path_shp)
+                    print("Saving event-level file to " + daily_shp_path)
+                    gdf.to_file(daily_shp_path_shp)
+                    gdf.to_file(daily_shp_path, driver="GPKG")
 
         # Drop the daily attributes before exporting event-level
         gdf = gdfd.drop(['did', 'pixels', 'date', 'event_day',
@@ -1929,7 +1965,18 @@ class ModelBuilder:
         if self.shapefile:
             # Now save as a geopackage and csv
             print("Saving event-level file to " + event_shp_path)
-            gdf.to_file(event_shp_path, driver="GPKG")
+            # gdf.to_crs(outCRS, inplace=True)
+            if self.shp_type == "gpkg":
+                gdf.to_file(event_shp_path, driver="GPKG")
+                print("Saving event-level file to " + event_shp_path)
+            elif self.shp_type == "shp":
+                gdf.to_file(event_shp_path_shp)
+                print("Saving event-level file to " + event_shp_path_shp)
+            elif self.shp_type == "both":
+                print("Saving event-level file to " + event_shp_path_shp)
+                print("Saving event-level file to " + event_shp_path)
+                gdf.to_file(event_shp_path_shp)
+                gdf.to_file(event_shp_path, driver="GPKG")
 
         # Remove the intermediate file
         os.remove(self.file_name)
