@@ -152,8 +152,7 @@ After creating a new fire product, it might be useful to get it out of the docke
 |Country Name                             |Country Name                          |
 |:----------------------------------------|:-------------------------------------|
 |afghanistan.gpkg                         |liberia.gpkg                          |
-|afghanistan.gpkg-shm                     |libya.gpkg                            |
-|afghanistan.gpkg-wal                     |liechtenstein.gpkg                    |
+|libya.gpkg                               |liechtenstein.gpkg                    |
 |aland.gpkg                               |lithuania.gpkg                        |
 |albania.gpkg                             |luxembourg.gpkg                       |
 |algeria.gpkg                             |macao_s.a.r.gpkg                      |
