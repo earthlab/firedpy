@@ -3,7 +3,7 @@ import datetime as dt
 import re
 import os
 
-def makeReadMe(proj_dir, file_base,pref, first_date, last_date, file_name, ecoregion_type, ecoregion_level, landcover_type, daily, spatial_param, temporal_param, tiles, shapefile, shp_type ):
+def makeReadMe(proj_dir, tilename, file_base, input, first_date, last_date, ecoregion_type, ecoregion_level, landcover_type, daily, spatial_param, temporal_param, shapefile, shp_type):
     read_path = os.path.join(proj_dir, file_base+"_README.txt")
     last_date = str(last_date)
     first_date = str(first_date)
@@ -13,16 +13,20 @@ def makeReadMe(proj_dir, file_base,pref, first_date, last_date, file_name, ecore
     first_date = first_year + dt.timedelta(int(first_date[4:]))
     first_event = first_date.strftime("%B %Y")
     last_event = last_date.strftime("%B %Y")
-
-    file_base = file_base.upper()
-    name = file_base.split("_")
-    file_base = file_base.lower()
+    if input == 3:
+        name = tilename
+    else:
+        tilename = tilename.upper()
+        name = tilename.split("_")
 
     with open(read_path, "w") as text_file:
         print("-------------------\n", file=text_file)
         print("ABSTRACT\n", file=text_file)
         print("-------------------\n", file=text_file)
-        print("This is event- and daily-level polygons for the Fire event delineation (FIRED) product for", *name , "from {}  to {}. It is derived from the MODIS MCD64A1 burned area product (see https://lpdaac.usgs.gov/products/mcd64a1v006/ for more details). The MCD64A1 is a monthly raster grid of estimated burned dates. Firedpy (www.github.com/earthlab/firedpy) is an algorithm that converts these rasters into events by stacking the entire time series into a spatial-temporal data cube, then uses an algorithm to assign event identification numbers to pixels that fit into the same 3-dimensional spatial temporal window. This particular dataset was created using a spatial parameter of 5 pixels and 11 days. The primary benefit to this dataset over others is the ability to calculate fire spread rate. For each of these products (events and daily) the event identification numbers are the same, but the event-level product has only single polygons for each entire event, while the daily product has separate polygons for each date per event.  See the accompanying metadata files for the statistics provided by each data set. See the associated paper for more details on the methods and more:\n".format(first_event, last_event), file=text_file)
+        if input == 3:
+            print("This is event- and daily-level polygons for the Fire event delineation (FIRED) product for MODIS grid tiles", *name , "from {}  to {}. It is derived from the MODIS MCD64A1 burned area product (see https://lpdaac.usgs.gov/products/mcd64a1v006/ for more details). The MCD64A1 is a monthly raster grid of estimated burned dates. Firedpy (www.github.com/earthlab/firedpy) is an algorithm that converts these rasters into events by stacking the entire time series into a spatial-temporal data cube, then uses an algorithm to assign event identification numbers to pixels that fit into the same 3-dimensional spatial temporal window. This particular dataset was created using a spatial parameter of 5 pixels and 11 days. The primary benefit to this dataset over others is the ability to calculate fire spread rate. For each of these products (events and daily) the event identification numbers are the same, but the event-level product has only single polygons for each entire event, while the daily product has separate polygons for each date per event.  See the accompanying metadata files for the statistics provided by each data set. See the associated paper for more details on the methods and more:\n".format(first_event, last_event), file=text_file)
+        else:
+            print("This is event- and daily-level polygons for the Fire event delineation (FIRED) product for", *name , "from {}  to {}. It is derived from the MODIS MCD64A1 burned area product (see https://lpdaac.usgs.gov/products/mcd64a1v006/ for more details). The MCD64A1 is a monthly raster grid of estimated burned dates. Firedpy (www.github.com/earthlab/firedpy) is an algorithm that converts these rasters into events by stacking the entire time series into a spatial-temporal data cube, then uses an algorithm to assign event identification numbers to pixels that fit into the same 3-dimensional spatial temporal window. This particular dataset was created using a spatial parameter of 5 pixels and 11 days. The primary benefit to this dataset over others is the ability to calculate fire spread rate. For each of these products (events and daily) the event identification numbers are the same, but the event-level product has only single polygons for each entire event, while the daily product has separate polygons for each date per event.  See the accompanying metadata files for the statistics provided by each data set. See the associated paper for more details on the methods and more:\n".format(first_event, last_event), file=text_file)
         print("Balch, J.K.; St. Denis, L.A.; Mahood, A.L.; Mietkiewicz, N.P.; Williams, T.M.; McGlinchy, J.; Cook, M.C. FIRED (Fire Events Delineation): An Open, Flexible Algorithm and Database of US Fire Events Derived from the MODIS Burned Area Product (2001–2019). Remote Sens. 2020, 12, 3498. https://doi.org/10.3390/rs12213498 \n", file=text_file)
         print("""-------------------\n
 GENERAL INFORMATION\n
@@ -67,46 +71,46 @@ Balch, J.K.; St. Denis, L.A.; Mahood, A.L.; Mietkiewicz, N.P.; Williams, T.M.; M
         print("1. File List: \n", file=text_file)
         if daily == 'yes' and shapefile:
             print("     1. Tables: ", file=text_file)
-            print("         A. {}_events.csv\n".format(pref), file=text_file)
-            print("         B. {}_daily.csv\n".format(pref), file=text_file)
+            print("         A. {}_events.csv\n".format(file_base), file=text_file)
+            print("         B. {}_daily.csv\n".format(file_base), file=text_file)
             print("             i. This is each fired event split into daily polygons. Each polygon will have an id for the event (which may encompass multiple polygons), and a unique date.\n", file=text_file)
-            print("     2. Shapefiles: \n ".format(str(proj_dir)), file=text_file)
+            print("     2. Shapefiles: \n ", file=text_file)
             if shp_type == 'gpkg':
-                print("         A. {}_events.gpkg\n".format(pref), file=text_file)
-                print("         B. {}_daily.gpkg\n".format(pref), file=text_file)
+                print("         A. {}_events.gpkg\n".format(file_base), file=text_file)
+                print("         B. {}_daily.gpkg\n".format(file_base), file=text_file)
                 print("             i. This is each fired event split into daily polygons. Each polygon will have an id for the event (which may encompass multiple polygons), and a unique date.\n", file=text_file)
             if shp_type == 'shp':
-                print("         A. {}_events.shp\n".format(pref), file=text_file)
-                print("         B. {}_daily.shp\n".format(pref), file=text_file)
+                print("         A. {}_events.shp\n".format(file_base), file=text_file)
+                print("         B. {}_daily.shp\n".format(file_base), file=text_file)
                 print("             i. This is each fired event split into daily polygons. Each polygon will have an id for the event (which may encompass multiple polygons), and a unique date.\n", file=text_file)
             if shp_type == 'both':
-                print("         A. {}_events.shp\n".format(pref), file=text_file)
-                print("         B. {}_daily.shp\n".format(pref), file=text_file)
+                print("         A. {}_events.shp\n".format(file_base), file=text_file)
+                print("         B. {}_daily.shp\n".format(file_base), file=text_file)
                 print("             i. This is each fired event split into daily polygons. Each polygon will have an id for the event (which may encompass multiple polygons), and a unique date.\n", file=text_file)
-                print("         C. {}_events.gpkg\n".format(pref), file=text_file)
-                print("         D. {}_daily.gpkg\n".format(pref), file=text_file)
+                print("         C. {}_events.gpkg\n".format(file_base), file=text_file)
+                print("         D. {}_daily.gpkg\n".format(file_base), file=text_file)
                 print("             i. This is each fired event split into daily polygons. Each polygon will have an id for the event (which may encompass multiple polygons), and a unique date.\n", file=text_file)
 
         elif daily == 'yes' and shapefile == False:
             print("     1. Tables:\n ", file=text_file)
-            print("         A. {}_events.csv\n".format(pref), file=text_file)
-            print("         B. {}_daily.csv\n".format(pref), file=text_file)
+            print("         A. {}_events.csv\n".format(file_base), file=text_file)
+            print("         B. {}_daily.csv\n".format(file_base), file=text_file)
             print("             i. This is each fired event split into daily polygons. Each polygon will have an id for the event (which may encompass multiple polygons), and a unique date.\n", file=text_file)
         elif daily == 'no' and shapefile:
             print("     1. Table:\n ", file=text_file)
-            print("         A. {}_events.csv\n".format(pref), file=text_file)
+            print("         A. {}_events.csv\n".format(file_base), file=text_file)
             print("     2. Shapefile: \n", file=text_file)
             if shp_type == 'gpkg':
-                print("         A. {}_events.gpkg\n".format(pref), file=text_file)
+                print("         A. {}_events.gpkg\n".format(file_base), file=text_file)
             if shp_type == 'shp':
-                print("         A. {}_events.shp\n".format(pref), file=text_file)
+                print("         A. {}_events.shp\n".format(file_base), file=text_file)
             if shp_type == 'both':
-                print("         A. {}_events.shp\n".format(pref), file=text_file)
-                print("         B. {}_events.gpkg\n".format(pref), file=text_file)
+                print("         A. {}_events.shp\n".format(file_base), file=text_file)
+                print("         B. {}_events.gpkg\n".format(file_base), file=text_file)
 
         else:
             print("     1. Table:\n ", file=text_file)
-            print("         A. {}_events.csv\n".format(pref), file=text_file)
+            print("         A. {}_events.csv\n".format(file_base), file=text_file)
         print("-------------------\n", file=text_file)
         print("METHODOLOGICAL INFORMATION\n", file=text_file)
         print("-------------------\n", file=text_file)
@@ -116,17 +120,17 @@ Balch, J.K.; St. Denis, L.A.; Mahood, A.L.; Mietkiewicz, N.P.; Williams, T.M.; M
         print("-------------------\n", file=text_file)
         if shapefile:
             if shp_type == 'gpkg':
-                print("DATA-SPECIFIC INFORMATION FOR: {}_events.csv and {}_events.gpkg".format(pref, pref), file=text_file)
+                print("DATA-SPECIFIC INFORMATION FOR: {}_events.csv and {}_events.gpkg".format(file_base, file_base), file=text_file)
             if shp_type == 'shp':
-                print("DATA-SPECIFIC INFORMATION FOR: {}_events.csv and {}_events.shp".format(pref, pref), file=text_file)
+                print("DATA-SPECIFIC INFORMATION FOR: {}_events.csv and {}_events.shp".format(file_base, file_base), file=text_file)
             if shp_type == 'both':
-                print("DATA-SPECIFIC INFORMATION FOR: {}_events.csv, {}_events.gpkg, {}_events.shp".format(pref, pref,pref), file=text_file)
+                print("DATA-SPECIFIC INFORMATION FOR: {}_events.csv, {}_events.gpkg, {}_events.shp".format(file_base, file_base,file_base), file=text_file)
         else:
-            print("DATA-SPECIFIC INFORMATION FOR: {}_events.csv".format(pref), file=text_file)
+            print("DATA-SPECIFIC INFORMATION FOR: {}_events.csv".format(file_base), file=text_file)
 
         print("-------------------\n", file=text_file)
         filepath = os.path.join(proj_dir, "outputs", "shapefiles",
-                                        file_name+"_daily.csv")
+                                        file_base+"_daily.csv")
         reader = csv.reader(str(filepath))
         row_count = sum(1 for row in reader)
         print("1. Number of variables: 24\n", file=text_file)
@@ -198,16 +202,16 @@ Balch, J.K.; St. Denis, L.A.; Mahood, A.L.; Mietkiewicz, N.P.; Williams, T.M.; M
             print("-------------------\n", file=text_file)
             if shapefile:
                 if shp_type == 'gpkg':
-                    print("DATA-SPECIFIC INFORMATION FOR: {}_daily.csv and {}_daily.gpkg".format(pref, pref), file=text_file)
+                    print("DATA-SPECIFIC INFORMATION FOR: {}_daily.csv and {}_daily.gpkg".format(file_base, file_base), file=text_file)
                 if shp_type == 'shp':
-                    print("DATA-SPECIFIC INFORMATION FOR: {}_daily.csv and {}_daily.shp".format(pref, pref), file=text_file)
+                    print("DATA-SPECIFIC INFORMATION FOR: {}_daily.csv and {}_daily.shp".format(file_base, file_base), file=text_file)
                 if shp_type == 'both':
-                    print("DATA-SPECIFIC INFORMATION FOR: {}_daily.csv, {}_daily.gpkg, {}_daily.shp".format(pref, pref,pref), file=text_file)
+                    print("DATA-SPECIFIC INFORMATION FOR: {}_daily.csv, {}_daily.gpkg, {}_daily.shp".format(file_base, file_base,file_base), file=text_file)
             else:
-                print("DATA-SPECIFIC INFORMATION FOR: {}_daily.csv".format(pref), file=text_file)
+                print("DATA-SPECIFIC INFORMATION FOR: {}_daily.csv".format(file_base), file=text_file)
             print("-------------------\n", file=text_file)
             filepath = os.path.join(proj_dir, "outputs", "shapefiles",
-                                            file_name+"_daily.csv")
+                                            file_base+"_daily.csv")
             reader = csv.reader(str(filepath))
             row_count = sum(1 for row in reader)
             print("1. Number of variables: 29\n", file=text_file)
