@@ -267,11 +267,30 @@ def main():
         elif shp_type == 'none':
             shapefile = False
             shp_type = None
+
+        input = 2
+        name = str(tiles[0])
+        nums=[str(0),str(1),str(4),str(3),str(4),str(5),str(6),str(7),str(8),str(9)]
+        for i in nums:
+            if i in name:
+                input = 3
+                tilename = tiles
+        if input != 3:
+            name = name.split("/")
+            name = name[2]
+            name = name.split(".")
+            tilename = name[0]
+
             # Assign the temporary file name including the spatial and temporal parameters
-        file_path = os.path.join(args.proj_dir,
+            file_path = os.path.join(args.proj_dir,
+                                         "outputs", "tables",
+                                         args.file_name+"_"+str(tilename))
+        else:
+            # Assign the temporary file name including the spatial and temporal parameters
+            file_path = os.path.join(args.proj_dir,
                                          "outputs", "tables",
                                          args.file_name)
-        input = 2                                 
+
 
 
     # Transfer the lookup tables
@@ -299,6 +318,7 @@ def main():
         tiles = data.tiles
     else:
         data.tiles = tiles
+        shp = tiles[0]
 
     # Get all of the MODIS burn area hdfs
     try:
@@ -348,6 +368,7 @@ def main():
     last_date = sorted(date_range)[-1]
     first_date = sorted(date_range)[1]
     file_name = os.path.join(os.path.dirname(file_path), file_base+"_to"+str(last_date))
+
 
 
     # Create Model Builder object
@@ -402,7 +423,7 @@ def main():
                          event_shp_path=event_shp_path,
                          daily_shp_path_shp = daily_shp_path_shp ,
                          event_shp_path_shp =daily_shp_path_shp )
-    makeReadMe(proj_dir, file_base, pref, first_date, last_date, file_name, ecoregion_type, ecoregion_level, landcover_type, daily, spatial_param, temporal_param, tiles, shapefile, shp_type)
+    makeReadMe(proj_dir, tilename, file_base, input, first_date, last_date, ecoregion_type, ecoregion_level, landcover_type, daily, spatial_param, temporal_param, shapefile, shp_type)
     # Print the time it took
     end = time.perf_counter()
     seconds = end - start
