@@ -110,7 +110,7 @@ def main():
                         type=int, help=sp_help)
     parser.add_argument("-temporal", dest="temporal_param", default=11,
                         type=int, help=tmp_help)
-    parser.add_argument("-tiles", "--names-list", nargs="+", dest="tiles",
+    parser.add_argument("-aoi", "--names-list", nargs="+", dest="tiles",
                         default=["h08v04", "h09v04", "h10v04", "h11v04",
                                  "h12v04", "h13v04", "h08v05", "h09v05",
                                  "h10v05", "h11v05", "h13v04", "h08v05",
@@ -234,7 +234,7 @@ def main():
         elif shp_type == 'none':
             shapefile = False
             shp_type = None
-        file_name = tilename
+        file_name = "fired_"+str(tilename)
         file_path = os.path.join(proj_dir,
                                      "outputs", "tables",
                                      file_name)
@@ -246,6 +246,7 @@ def main():
         else:
             start_yr = None
             end_yr = None
+        input = 1
     else:
 
         # Parse argument responses
@@ -270,6 +271,8 @@ def main():
         file_path = os.path.join(args.proj_dir,
                                          "outputs", "tables",
                                          args.file_name)
+        input = 2                                 
+
 
     # Transfer the lookup tables
     if landcover_type:
@@ -328,7 +331,7 @@ def main():
             print(lookup)
         try:
             new_file = os.path.join(new_path, fname)
-            shutil.copyfile(new_file, lookup)
+            shutil.copyfile(lookup, new_file)
         except Exception:
             data.getEcoregion(ecoregion_level)
 
@@ -345,6 +348,7 @@ def main():
     last_date = sorted(date_range)[-1]
     first_date = sorted(date_range)[1]
     file_name = os.path.join(os.path.dirname(file_path), file_base+"_to"+str(last_date))
+
 
     # Create Model Builder object
     models = ModelBuilder(file_name=file_name,
@@ -398,7 +402,7 @@ def main():
                          event_shp_path=event_shp_path,
                          daily_shp_path_shp = daily_shp_path_shp ,
                          event_shp_path_shp =daily_shp_path_shp )
-    makeReadMe(proj_dir, tilename, first_date, last_date, file_name, ecoregion_type, ecoregion_level, landcover_type, daily, spatial_param, temporal_param, tiles, shapefile, shp_type)
+    makeReadMe(proj_dir, file_base, pref, first_date, last_date, file_name, ecoregion_type, ecoregion_level, landcover_type, daily, spatial_param, temporal_param, tiles, shapefile, shp_type)
     # Print the time it took
     end = time.perf_counter()
     seconds = end - start
