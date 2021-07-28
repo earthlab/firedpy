@@ -328,7 +328,7 @@ def main():
             print(lookup)
         try:
             new_file = os.path.join(new_path, fname)
-            shutil.copyfile(new_file, lookup)
+            shutil.copyfile(lookup, new_file)
         except Exception:
             data.getEcoregion(ecoregion_level)
 
