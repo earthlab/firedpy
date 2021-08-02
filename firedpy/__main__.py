@@ -296,12 +296,37 @@ def main():
     # Transfer the lookup tables
     if landcover_type:
         lookup = os.path.join(os.getcwd(), 'ref', 'landcover',
-                              'MCD12Q1_LegendDesc_Type{}.csv'.format(str(landcover_type)))
+                              'MCD12Q1_LegendDesc_Type{}.csv'.format(str(landcover_type))
+                              
         new_path = os.path.join(proj_dir, 'tables', 'landcover')
         if not os.path.exists(new_path):
             os.makedirs(new_path)
         new_file = os.path.join(new_path, 'MCD12Q1_LegendDesc_Type{}.csv'.format(str(landcover_type)))
         shutil.copy(lookup, new_file)
+                              
+                              
+                              
+     # Get ecoregions if requested, use local file first
+    if ecoregion_type or ecoregion_level:
+
+        new_path = os.path.join(proj_dir, 'shapefiles', 'ecoregion')
+
+        if not os.path.exists(new_path):
+            os.makedirs(new_path)
+
+        if ecoregion_type == 'world':
+            fname = 'wwf_terr_ecos.gpkg'
+            lookup = os.path.join(os.getcwd(), 'ref', 'world_ecoregions', fname)
+        elif ecoregion_type == 'na' or ecoregion_level:
+            fname = 'NA_CEC_Eco_Level3.gpkg'
+            lookup = os.path.join(os.getcwd(), 'ref', 'us_eco', fname)
+            print(lookup)
+        try:
+            new_file = os.path.join(new_path, fname)
+            shutil.copy(lookup, new_file)
+        except Exception:
+            data.getEcoregion(ecoregion_level)
+                              
 
     # Make sure the project directory exists
     if not os.path.exists(proj_dir):
@@ -334,26 +359,6 @@ def main():
     if landcover_type is not None:
         data.getLandcover(landcover_type)
 
-    # Get ecoregions if requested, use local file first
-    if ecoregion_type or ecoregion_level:
-
-        new_path = os.path.join(proj_dir, 'shapefiles', 'ecoregion')
-
-        if not os.path.exists(new_path):
-            os.makedirs(new_path)
-
-        if ecoregion_type == 'world':
-            fname = 'wwf_terr_ecos.gpkg'
-            lookup = os.path.join(os.getcwd(), 'ref', 'world_ecoregions', fname)
-        elif ecoregion_type == 'na' or ecoregion_level:
-            fname = 'NA_CEC_Eco_Level3.gpkg'
-            lookup = os.path.join(os.getcwd(), 'ref', 'us_eco', fname)
-            print(lookup)
-        try:
-            new_file = os.path.join(new_path, fname)
-            shutil.copyfile(lookup, new_file)
-        except Exception:
-            data.getEcoregion(ecoregion_level)
 
     # Grab the basename for the output file name
     file_base = os.path.basename(file_path)
