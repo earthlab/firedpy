@@ -248,6 +248,8 @@ def main():
 
         elif landcover_type =='':
             landcover_type = None
+            username = ''
+            password = ''
 
         start_yr = input("Enter the year you want to start or press enter for all dates: ")
         end_yr = input("Enter the year you want to end or press enter for all dates: ")
@@ -369,6 +371,9 @@ def main():
             os.makedirs(new_path)
         new_file = os.path.join(new_path, 'MCD12Q1_LegendDesc_Type{}.csv'.format(str(landcover_type)))
         shutil.copy(lookup, new_file)
+    # Make sure the project directory exists
+    if not os.path.exists(proj_dir):
+        os.makedirs(proj_dir)
 
 
 
@@ -391,15 +396,17 @@ def main():
             new_file = os.path.join(new_path, fname)
             shutil.copy(lookup, new_file)
         except Exception:
-            data.getEcoregion(ecoregion_level)
-
-
-    # Make sure the project directory exists
-    if not os.path.exists(proj_dir):
-        os.makedirs(proj_dir)
+            # data.getEcoregion(ecoregion_level)
+            pass
 
     # Create data object
     data = DataGetter(proj_dir, start_yr, end_yr, username, password)
+    
+    data.getEcoregion(ecoregion_level)
+
+
+
+
 
     # Assign target MODIS tiles to the data object
     if os.path.splitext(tiles[0])[1] in [".shp", ".gpkg"]:

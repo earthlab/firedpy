@@ -571,33 +571,37 @@ class DataGetter:
                 print("Failed to connect to EPA ftp site: using local file ...")
                 eco = gpd.read_file(os.path.join(os.getcwd(),
                                     "ref", "us_eco", "NA_CEC_Eco_Level3.shp"))
+        else:
+            eco = gpd.read_file(os.path.join(os.getcwd(),
+                            "ref", "us_eco", "NA_CEC_Eco_Level3.gpkg"))                    
 
-            ref_cols = ['NA_L3CODE', 'NA_L3NAME',
-                        'NA_L2CODE', 'NA_L2NAME',
-                        'NA_L1CODE', 'NA_L1NAME',
-                        'NA_L3KEY', 'NA_L2KEY', 'NA_L1KEY']
+        ref_cols = ['NA_L3CODE', 'NA_L3NAME',
+                    'NA_L2CODE', 'NA_L2NAME',
+                    'NA_L1CODE', 'NA_L1NAME',
+                    'NA_L3KEY', 'NA_L2KEY', 'NA_L1KEY']
 
-            # Create a reference table for ecoregions
-            eco_ref = eco[ref_cols].drop_duplicates()
+        # Create a reference table for ecoregions
+        eco_ref = eco[ref_cols].drop_duplicates()
 
-            # Character cases are inconsistent between I,II and III,IV levels
-            def ecoCap(string):
-                strings = string.split()
-                strings = [s.lower() if s != "USA" else s for s in strings]
-                caps = [s.capitalize() if s not in ["USA", "and"] else
-                        s for s in strings]
-                for i in range(len(caps)):
-                    cp = caps[i]
-                    if "/" in cp:
-                        cp = "/".join([c.capitalize() for c in cp.split("/")])
-                    if "-" in cp:
-                        cp = "-".join([c.title() for c in cp.split("-")])
-                    caps[i] = cp
-                return " ".join(caps)
+        # Character cases are inconsistent between I,II and III,IV levels
+        def ecoCap(string):
+            strings = string.split()
+            strings = [s.lower() if s != "USA" else s for s in strings]
+            caps = [s.capitalize() if s not in ["USA", "and"] else
+                    s for s in strings]
+            for i in range(len(caps)):
+                cp = caps[i]
+                if "/" in cp:
+                    cp = "/".join([c.capitalize() for c in cp.split("/")])
+                if "-" in cp:
+                    cp = "-".join([c.title() for c in cp.split("-")])
+                caps[i] = cp
+            return " ".join(caps)
 
-            eco_ref = eco_ref.applymap(ecoCap)
-            eco_ref.to_csv(os.path.join(self.proj_dir, "tables/eco_refs.csv"),
-                           index=False)
+        eco_ref = eco_ref.applymap(ecoCap)
+
+        eco_ref.to_csv(os.path.join(self.proj_dir, "tables/eco_refs.csv"),
+                       index=False)
 
         # Rasterize Omernick Ecoregions
         if rasterize and not os.path.exists(os.path.join(self.proj_dir,
