@@ -296,7 +296,7 @@ def main():
     # Transfer the lookup tables
     if landcover_type:
         lookup = os.path.join(os.getcwd(), 'ref', 'landcover',
-                              'MCD12Q1_LegendDesc_Type{}.csv'.format(str(landcover_type))
+                              'MCD12Q1_LegendDesc_Type{}.csv'.format(str(landcover_type)))
                               
         new_path = os.path.join(proj_dir, 'tables', 'landcover')
         if not os.path.exists(new_path):
