@@ -57,9 +57,7 @@ def main():
         account. Available land cover categories:
             1: IGBP global vegetation classification scheme,
             2: University of Maryland (UMD) scheme,
-            3: MODIS-derived LAI/fPAR scheme,
-            4: MODIS-derived Net Primary Production (NPP) scheme,
-            5: Plant Functional Type (PFT) scheme.
+            3: MODIS-derived LAI/fPAR scheme.
 
         If you do not have an account register at https://urs.earthdata.nasa.gov/home. Defaults to none.
         """)
@@ -96,6 +94,8 @@ def main():
 
     # Provide arguments
     parser = argparse.ArgumentParser()
+    parser.add_argument("--default", dest="default",
+                        action='store_true')
     parser.add_argument("-proj_dir", dest="proj_dir",
                         default=os.path.join(os.getcwd(), 'proj'), help=data_help)
     parser.add_argument("-file_name", dest="file_name",
@@ -145,7 +145,7 @@ def main():
                 if os.path.isfile(path):
                     break
                 else:
-                    print("Not a valid choice. If you would like to see a list of avalible continents please visit: https://github.com/earthlab/firedpy/n")
+                    print("Not a valid choice. Please use '_' instead of a space. If you would like to see a list of avalible continents please visit: https://github.com/earthlab/firedpy/n")
                     tilename = input("Please enter the continent name: /n ")
                     tiles = ["ref/continents/"+tilename +".gpkg", ]
                     path = os.path.join("ref/continents/",tilename +".gpkg")
@@ -153,10 +153,8 @@ def main():
             if tilename ==  "north_america":
                 ecoregion_type = 'na'
                 ecoregion_level = 3
-                landcover_type = 1
             else:
                 ecoregion_type = 'world'
-                landcover_type = None
                 ecoregion_level = None
 
         if tilechoice == 'b':
@@ -167,7 +165,7 @@ def main():
                 if os.path.isfile(path):
                     break
                 else:
-                    print("Not a valid choice. If you would like to see a list of avalible countries please visit: https://github.com/earthlab/firedpy \n")
+                    print("Not a valid choice. Please use '_' instead of a space. If you would like to see a list of avalible countries please visit: https://github.com/earthlab/firedpy \n")
                     tilename = input("Please enter the country name: ")
                     tiles = ["ref/individual_countries/"+tilename +".gpkg", ]
                     path = os.path.join("ref/individual_countries/",tilename +".gpkg")
@@ -177,10 +175,8 @@ def main():
             if tilename in na:
                 ecoregion_type = 'na'
                 ecoregion_level = 3
-                landcover_type = 1
             else:
                 ecoregion_type = 'world'
-                landcover_type = None
                 ecoregion_level = None
 
         if tilechoice == 'c':
@@ -191,7 +187,7 @@ def main():
                 if os.path.isfile(path):
                     break
                 else:
-                    print("Not a valid choice. If you would like to see a list of avalible states name please visit: https://github.com/earthlab/firedpy/n")
+                    print("Not a valid choice. Please use '_' instead of a space. If you would like to see a list of avalible states name please visit: https://github.com/earthlab/firedpy/n")
                     tilename = input("Please enter the state name: /n ")
                     tiles = ["ref/us_states/"+tilename +".gpkg", ]
                     path = os.path.join("ref/us_states/",tilename +".gpkg")
@@ -241,9 +237,7 @@ def main():
         print("""If you would like to include landcover as an attribute enter the landcover type number you would like to use. If you would like to not include it, press enter. Available land cover categories:
             1: IGBP global vegetation classification scheme,
             2: University of Maryland (UMD) scheme,
-            3: MODIS-derived LAI/fPAR scheme,
-            4: MODIS-derived Net Primary Production (NPP) scheme,
-            5: Plant Functional Type (PFT) scheme.""")
+            3: MODIS-derived LAI/fPAR scheme""")
         landcover_type = input("")
         if landcover_type !='':
             landcover_type = int(landcover_type)
@@ -268,6 +262,7 @@ def main():
 
         # Parse argument responses
         args = parser.parse_args()
+        default = args.default
         proj_dir = args.proj_dir
         ecoregion_type = args.ecoregion_type
         ecoregion_level = args.ecoregion_level
@@ -284,34 +279,44 @@ def main():
         elif shp_type == 'none':
             shapefile = False
             shp_type = None
-
-        user_pass = landcover_type.split(':', 2)
-        username = str(user_pass[1])
-        password = str(user_pass[2])
-        landcover_type = int(user_pass[0])
-
-        temp = 2
-        name = str(tiles[0])
-        nums=[str(0),str(1),str(4),str(3),str(4),str(5),str(6),str(7),str(8),str(9)]
-        for i in nums:
-            if i in name:
-                temp= 3
-                tilename = tiles
-        if temp != 3:
-            name = name.split("/")
-            name = name[-1]
-            name = name.split(".")
-            tilename = name[0]
-
-            # Assign the temporary file name including the spatial and temporal parameters
-            file_path = os.path.join(args.proj_dir,
-                                         "outputs", "tables",
-                                         args.file_name+"_"+str(tilename))
+        if landcover_type:
+            user_pass = landcover_type.split(':', 2)
+            username = str(user_pass[1])
+            password = str(user_pass[2])
+            landcover_type = int(user_pass[0])
         else:
-            # Assign the temporary file name including the spatial and temporal parameters
+            username = ''
+            password = ''
+        if tiles:
+            temp = 2
+            name = str(tiles[0])
+            nums=[str(0),str(1),str(4),str(3),str(4),str(5),str(6),str(7),str(8),str(9)]
+            for i in nums:
+                if i in name:
+                    temp= 3
+                    tilename = tiles
+            if temp != 3:
+                name = name.split("/")
+                name = name[-1]
+                name = name.split(".")
+                tilename = name[0]
+                file_path = os.path.join(args.proj_dir,
+                                             "outputs", "tables",
+                                             args.file_name+"_"+str(tilename))
+            else:
+                # Assign the temporary file name including the spatial and temporal parameters
+                file_path = os.path.join(args.proj_dir,
+                                             "outputs", "tables",
+                                             args.file_name)
+        else:
+            temp = 2
+            tilename = "CONUS"
             file_path = os.path.join(args.proj_dir,
                                          "outputs", "tables",
                                          args.file_name)
+
+            # Assign the temporary file name including the spatial and temporal parameters
+
 
     # Transfer the lookup tables
     if landcover_type:
@@ -358,15 +363,15 @@ def main():
 
         lookup = os.path.join(os.getcwd(), 'ref', 'landcover',
                               'MCD12Q1_LegendDesc_Type{}.csv'.format(str(landcover_type)))
-                              
+
         new_path = os.path.join(proj_dir, 'tables', 'landcover')
         if not os.path.exists(new_path):
             os.makedirs(new_path)
         new_file = os.path.join(new_path, 'MCD12Q1_LegendDesc_Type{}.csv'.format(str(landcover_type)))
         shutil.copy(lookup, new_file)
-                              
-                              
-                              
+
+
+
      # Get ecoregions if requested, use local file first
     if ecoregion_type or ecoregion_level:
 
@@ -387,7 +392,7 @@ def main():
             shutil.copy(lookup, new_file)
         except Exception:
             data.getEcoregion(ecoregion_level)
-                              
+
 
     # Make sure the project directory exists
     if not os.path.exists(proj_dir):
