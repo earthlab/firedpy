@@ -314,10 +314,12 @@ class DataGetter:
         - parallel downloads
     """
 
-    def __init__(self, proj_dir, start_yr, end_yr):
+    def __init__(self, proj_dir, start_yr, end_yr, username, password):
         self.proj_dir = proj_dir
         self.start_yr= start_yr
         self.end_yr = end_yr
+        self.username = username
+        self.password = password
         self.date = dt.datetime.today().strftime("%m-%d-%Y")
         self.createPaths()
         self.cpus = os.cpu_count()
@@ -765,11 +767,7 @@ class DataGetter:
             # If we need anything at all we'll have to do gain access
             if file_count > 0:
                 print("Retrieving land cover rasters from NASA's Earthdata " + "service...")
-                print("Register at the link below to obtain a username and " + "password:")
-                print("https://urs.earthdata.nasa.gov/")
-                # Create remote session with user credentials/authentication
-                username = input("Enter NASA Earthdata User Name: ")
-                password = getpass("Enter NASA Earthdata Password: ")
+
                 session = SessionWithHeaderRedirection(username, password)
 
                 # Get all the remote and local file paths

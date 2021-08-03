@@ -7,6 +7,9 @@ import time
 import warnings
 import sys
 
+from urllib.parse import urlencode
+from http.cookiejar import CookieJar
+import urllib.request
 from .functions import DataGetter, ModelBuilder
 from .readme import makeReadMe
 
@@ -19,7 +22,7 @@ def main():
 
     # Call help statements
     data_help = ("""
-        The project directory you would like to use for input and output
+        The project directory you would like to use for  and output
         data files. Defaults to a temporary directory 'firedpy/proj'.
         """)
     file_help = ("""
@@ -50,16 +53,15 @@ def main():
         """)
     lc_help = ("""
         To include land cover as an attribute, provide a number corresponding
-        with a MODIS/Terra+Aqua Land Cover (MCD12Q1) category. To do so you
-        will have to register at NASA's Earthdata service
-        (https://urs.earthdata.nasa.gov/home) and enter your user name and
-        password when prompted. Available land cover categories:
+        with a MODIS/Terra+Aqua Land Cover (MCD12Q1) category followed with :username:password of your NASA's Earthdata service
+        account. Available land cover categories:
             1: IGBP global vegetation classification scheme,
             2: University of Maryland (UMD) scheme,
             3: MODIS-derived LAI/fPAR scheme,
             4: MODIS-derived Net Primary Production (NPP) scheme,
             5: Plant Functional Type (PFT) scheme.
-        Defaults to none.
+
+        If you do not have an account register at https://urs.earthdata.nasa.gov/home. Defaults to none.
         """)
     shp_help = ("""
         Provide this option if you would like to build shapefiles from the
@@ -102,7 +104,7 @@ def main():
                         help=eco_help)
     parser.add_argument("-ecoregion_level", dest="ecoregion_level", type=int,
                         default=None, help=eco_help)
-    parser.add_argument("-landcover_type", dest="landcover_type", type=int,
+    parser.add_argument("-landcover_type", dest="landcover_type",
                         default=None, help=lc_help)
     parser.add_argument("-shp_type", dest = "shp_type", help=shp_help, default = None)
     #parser.add_argument("--shpfile", action='store_true', help=shpf_help)
@@ -196,14 +198,12 @@ def main():
 
             ecoregion_type = 'na'
             ecoregion_level = 3
-            landcover_type = 1
 
         if tilechoice == 'd':
             tiles = input("Please enter tiles as a list of characters (no quotes no spaces)(e.g., h08v04 h09v04 ...):")
             ecoregion_type = input("Please enter the ecoregion type [na or world]:")
             if ecoregion_type == 'na':
                 ecoregion_level = 3
-                landcover_type = 1
             else:
                 ecoregion_level = None
                 landcover_type =  None
@@ -238,6 +238,23 @@ def main():
         file_path = os.path.join(proj_dir,
                                      "outputs", "tables",
                                      file_name)
+        print("""If you would like to include landcover as an attribute enter the landcover type number you would like to use. If you would like to not include it, press enter. Available land cover categories:
+            1: IGBP global vegetation classification scheme,
+            2: University of Maryland (UMD) scheme,
+            3: MODIS-derived LAI/fPAR scheme,
+            4: MODIS-derived Net Primary Production (NPP) scheme,
+            5: Plant Functional Type (PFT) scheme.""")
+        landcover_type = input("")
+        if landcover_type !='':
+            landcover_type = int(landcover_type)
+            print("To get the landcover you need to have a username and password with NASA Earthdata services. You can register at the link below to obtain a username and " + "password:")
+            print("https://urs.earthdata.nasa.gov/")
+            username = input("Enter NASA Earthdata User Name: ")
+            password = input("Enter NASA Earthdata Password: ")
+
+        elif landcover_type =='':
+            landcover_type = None
+
         start_yr = input("Enter the year you want to start or press enter for all dates: ")
         end_yr = input("Enter the year you want to end or press enter for all dates: ")
         if start_yr!='' and end_yr!='':
@@ -246,7 +263,7 @@ def main():
         else:
             start_yr = None
             end_yr = None
-        input = 1
+        temp = 1
     else:
 
         # Parse argument responses
@@ -268,16 +285,21 @@ def main():
             shapefile = False
             shp_type = None
 
-        input = 2
+        user_pass = landcover_type.split(':', 2)
+        username = str(user_pass[1])
+        password = str(user_pass[2])
+        landcover_type = int(user_pass[0])
+
+        temp = 2
         name = str(tiles[0])
         nums=[str(0),str(1),str(4),str(3),str(4),str(5),str(6),str(7),str(8),str(9)]
         for i in nums:
             if i in name:
-                input = 3
+                temp= 3
                 tilename = tiles
-        if input != 3:
+        if temp != 3:
             name = name.split("/")
-            name = name[2]
+            name = name[-1]
             name = name.split(".")
             tilename = name[0]
 
@@ -291,10 +313,49 @@ def main():
                                          "outputs", "tables",
                                          args.file_name)
 
-
-
     # Transfer the lookup tables
     if landcover_type:
+        # Earthdata Login
+        #test url for correct user/password
+        url = "https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.006/2019.01.01/MCD12Q1.A2019001.h13v12.006.2020212130349.hdf"
+
+        password_manager = urllib.request.HTTPPasswordMgrWithDefaultRealm()
+        password_manager.add_password(None, "https://urs.earthdata.nasa.gov", username, password)
+        # Create a cookie jar for storing cookies. This is used to store and return
+        # the session cookie given to use by the data server (otherwise it will just
+        # keep sending us back to Earthdata Login to authenticate).  Ideally, we
+        # should use a file based cookie jar to preserve cookies between runs. This
+        # will make it much more efficient.
+        cookie_jar = CookieJar()
+        # Install all the handlers.
+        opener = urllib.request.build_opener(
+            urllib.request.HTTPBasicAuthHandler(password_manager),
+            #urllib.request.HTTPHandler(debuglevel=1),    # Uncomment these two lines to see
+            #urllib.request.HTTPSHandler(debuglevel=1),   # details of the requests/responses
+            urllib.request.HTTPCookieProcessor(cookie_jar))
+        urllib.request.install_opener(opener)
+        ##Checking to make sure username and password is correct:
+        check = None
+        while check is None:
+            try:
+                request = urllib.request.Request(url)
+                response = urllib.request.urlopen(request)
+                check = 1
+            except Exception:
+                print("Invalid username or password for NASA Earthdata service account. Try again \n")
+                #Try again
+                username = input("Enter NASA Earthdata User Name: ")
+                password = input("Enter NASA Earthdata Password: ")
+                password_manager = urllib.request.HTTPPasswordMgrWithDefaultRealm()
+                password_manager.add_password(None, "https://urs.earthdata.nasa.gov", username, password)
+                cookie_jar = CookieJar()
+                opener = urllib.request.build_opener(
+                    urllib.request.HTTPBasicAuthHandler(password_manager),
+                    #urllib.request.HTTPHandler(debuglevel=1),    # Uncomment these two lines to see
+                    #urllib.request.HTTPSHandler(debuglevel=1),   # details of the requests/responses
+                    urllib.request.HTTPCookieProcessor(cookie_jar))
+                urllib.request.install_opener(opener)
+
         lookup = os.path.join(os.getcwd(), 'ref', 'landcover',
                               'MCD12Q1_LegendDesc_Type{}.csv'.format(str(landcover_type)))
         new_path = os.path.join(proj_dir, 'tables', 'landcover')
@@ -308,7 +369,7 @@ def main():
         os.makedirs(proj_dir)
 
     # Create data object
-    data = DataGetter(proj_dir, start_yr, end_yr)
+    data = DataGetter(proj_dir, start_yr, end_yr, username, password)
 
     # Assign target MODIS tiles to the data object
     if os.path.splitext(tiles[0])[1] in [".shp", ".gpkg"]:
@@ -423,7 +484,7 @@ def main():
                          event_shp_path=event_shp_path,
                          daily_shp_path_shp = daily_shp_path_shp ,
                          event_shp_path_shp =daily_shp_path_shp )
-    makeReadMe(proj_dir, tilename, file_base, input, first_date, last_date, ecoregion_type, ecoregion_level, landcover_type, daily, spatial_param, temporal_param, shapefile, shp_type)
+    makeReadMe(proj_dir, tilename, file_base, temp, first_date, last_date, ecoregion_type, ecoregion_level, landcover_type, daily, spatial_param, temporal_param, shapefile, shp_type)
     # Print the time it took
     end = time.perf_counter()
     seconds = end - start
