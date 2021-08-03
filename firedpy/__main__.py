@@ -277,7 +277,7 @@ def main():
                 tilename = tiles
         if input != 3:
             name = name.split("/")
-            name = name[2]
+            name = name[-1]
             name = name.split(".")
             tilename = name[0]
 
