@@ -87,6 +87,11 @@ After creating a new fire product, it might be useful to get it out of the docke
 
 
 ## Use:
+  - Run firedpy with no options to be prompted with input questions for each option/attribute
+     
+    `firedpy` 
+    
+  - Or use the following commands in your command line to specify the options/attributes you would like:   
 
   - In your terminal use this command to print out the available options and their descriptions:
 
@@ -120,9 +125,6 @@ After creating a new fire product, it might be useful to get it out of the docke
 
     'firedpy --help'
     
-  - Run firedpy with no options to be prompted with input questions for each option/attribute
-     
-    `firedpy` 
     
 ### Parameter table (under construction)
   
