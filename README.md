@@ -92,9 +92,9 @@ After creating a new fire product, it might be useful to get it out of the docke
 
     `firedpy --help`
 
-  - Run firedpy with no options to download required data and write a data table of classified fire events to a temporary directory. This uses CONUS as the default area of interest with a spatial parameter of 5 pixels (~2.3 km) and 11 days:
+  - Run firedpy with the default option to download required data and write a data table of classified fire events to a temporary directory. This uses CONUS as the default area of interest with a spatial parameter of 5 pixels (~2.3 km) and 11 days:
 
-    `firedpy`
+    `firedpy --default`
 
   - Change the spatial and temporal parameters of the model run:
 
@@ -120,18 +120,22 @@ After creating a new fire product, it might be useful to get it out of the docke
 
     'firedpy --help'
     
+  - Run firedpy with no options to be prompted with input questions for each option/attribute
+     
+    `firedpy` 
+    
 ### Parameter table (under construction)
   
 | parameter | value(s)| example | description|
 |:--------------|:----------|:-----|:---------|
 | -spatial | integer | -spatial 5 | pixel radius for moving window, defaults to 5|
 | -temporal | integer | -temporal 11 | day radius for moving window, defaults to 11|
-| -aoi | character (MODIS tile) | -tiles h11v09 | which modis tiles should be used|
+| -aoi | character (MODIS tile) | -tiles h11v09 | which modis tiles should be used |
 |  | character (shapefile) | -tiles <polygon name> | figures out which modis tiles to download based on| the polygon |
 | -proj_dir| character| -proj_dir /home/firedpy/proj | which directory should firedpy operate within? Defaults to a folder called "proj" within the current working directory.|
 | -ecoregion_type | character | -ecoregion_type na | type of ecoregion, either world or na|
  | -ecoregion_level | integer | -ecoregion_level 3 | if ecoregion type = na, the level (1-3) of North American ecoregions |
- | -landcover_type | integer | -landcover_type 2 | number (1-3) corresponding with a MODIS/Terra+Aqua Land Cover (MCD12Q1) category |
+ | -landcover_type | integer and character | -landcover_type 2:username:password | number (1-3) corresponding with a MODIS/Terra+Aqua Land Cover (MCD12Q1) category. You will need to also make an account at https://urs.earthdata.nasa.gov/home and include your type:username:password as the argument. |
  | -shp_type | character | -shp_type gpkg | option to build a shapefile for the fired event in gpkg, ESRI shapefile (shp), both, or none  |
  | -file | character | -file fired_colorado | specifies the base of the file name for the tables and shapefile outputs, defaults to "fired", in the format: "(-file aruguement)_toYYYYDDD_(either events or daily).gpkg", with YYYY being the year, and DDD being the julian day of the last month in the time series. The example would output fired_colorado_to2021031_events.gpkg.|
  | -daily | character (yes or no) | -daily yes | creates daily polygons, if no just the event-level perimeters will be created. Defaults to no. |
@@ -145,7 +149,8 @@ After creating a new fire product, it might be useful to get it out of the docke
  - Country boundaries are in **ref/individual_countries**
  - Continent boundaries are in **ref/continents**
  - State boundaries for the United States of America are in **ref/us_states**
- - For example `firedpy -tiles ref/us_states/colorado.gpkg`, and so on.
+ - For example `firedpy -tiles ref/us_states/colorado.gpkg`, and so on. Every space is a '_'. 
+ - If using the user input option, when prompted for the name of the continent, country, or state use "_" for spaces. 
 
 ### Country boundary files
   
