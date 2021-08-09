@@ -680,9 +680,9 @@ class DataGetter:
         class SessionWithHeaderRedirection(requests.Session):
             AUTH_HOST = 'urs.earthdata.nasa.gov'
 
-            def __init__(self):
+            def __init__(self, username,password):
                 super().__init__()
-                self.auth = (self.username, self.password)
+                self.auth = (username, password)
 
             # Overrides from the library to keep headers
             # When redirected to or from the NASA auth host
@@ -771,8 +771,9 @@ class DataGetter:
             # If we need anything at all we'll have to do gain access
             if file_count > 0:
                 print("Retrieving land cover rasters from NASA's Earthdata " + "service...")
-
-                session = SessionWithHeaderRedirection()
+                username = self.username
+                password = self.password
+                session = SessionWithHeaderRedirection(username, password)
 
                 # Get all the remote and local file paths
                 queries = []
