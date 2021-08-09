@@ -772,7 +772,7 @@ class DataGetter:
             if file_count > 0:
                 print("Retrieving land cover rasters from NASA's Earthdata " + "service...")
 
-                session = SessionWithHeaderRedirection(username, password)
+                session = SessionWithHeaderRedirection(self.username, self.password)
 
                 # Get all the remote and local file paths
                 queries = []
