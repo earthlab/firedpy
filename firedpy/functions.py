@@ -573,7 +573,7 @@ class DataGetter:
                                     "ref", "us_eco", "NA_CEC_Eco_Level3.shp"))
         else:
             eco = gpd.read_file(os.path.join(os.getcwd(),
-                            "ref", "us_eco", "NA_CEC_Eco_Level3.gpkg"))                    
+                            "ref", "us_eco", "NA_CEC_Eco_Level3.gpkg"))
 
         ref_cols = ['NA_L3CODE', 'NA_L3NAME',
                     'NA_L2CODE', 'NA_L2NAME',
@@ -680,9 +680,9 @@ class DataGetter:
         class SessionWithHeaderRedirection(requests.Session):
             AUTH_HOST = 'urs.earthdata.nasa.gov'
 
-            def __init__(self, username, password):
+            def __init__(self):
                 super().__init__()
-                self.auth = (username, password)
+                self.auth = (self.username, self.password)
 
             # Overrides from the library to keep headers
             # When redirected to or from the NASA auth host
