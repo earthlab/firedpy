@@ -2,11 +2,13 @@ import csv
 import datetime as dt
 import re
 import os
+import pandas as pd
 
 def makeReadMe(proj_dir, tilename, file_base, input, first_date, last_date, ecoregion_type, ecoregion_level, landcover_type, daily, spatial_param, temporal_param, shapefile, shp_type):
     read_path = os.path.join(proj_dir, file_base+"_README.txt")
     last_date = str(last_date)
     first_date = str(first_date)
+    file_name = file_base+"_to"+last_date
     last_year = dt.datetime(year=int(last_date[:4]), month=1, day=1)
     last_date = last_year + dt.timedelta(int(last_date[4:]))
     first_year = dt.datetime(year=int(first_date[:4]), month=1, day=1)
@@ -71,46 +73,46 @@ Balch, J.K.; St. Denis, L.A.; Mahood, A.L.; Mietkiewicz, N.P.; Williams, T.M.; M
         print("1. File List: \n", file=text_file)
         if daily == 'yes' and shapefile:
             print("     1. Tables: ", file=text_file)
-            print("         A. {}_events.csv\n".format(file_base), file=text_file)
-            print("         B. {}_daily.csv\n".format(file_base), file=text_file)
+            print("         A. {}_events.csv\n".format(file_name), file=text_file)
+            print("         B. {}_daily.csv\n".format(file_name), file=text_file)
             print("             i. This is each fired event split into daily polygons. Each polygon will have an id for the event (which may encompass multiple polygons), and a unique date.\n", file=text_file)
             print("     2. Shapefiles: \n ", file=text_file)
             if shp_type == 'gpkg':
-                print("         A. {}_events.gpkg\n".format(file_base), file=text_file)
-                print("         B. {}_daily.gpkg\n".format(file_base), file=text_file)
+                print("         A. {}_events.gpkg\n".format(file_name, last_date), file=text_file)
+                print("         B. {}_daily.gpkg\n".format(file_name), file=text_file)
                 print("             i. This is each fired event split into daily polygons. Each polygon will have an id for the event (which may encompass multiple polygons), and a unique date.\n", file=text_file)
             if shp_type == 'shp':
-                print("         A. {}_events.shp\n".format(file_base), file=text_file)
-                print("         B. {}_daily.shp\n".format(file_base), file=text_file)
+                print("         A. {}_events.shp\n".format(file_name), file=text_file)
+                print("         B. {}_daily.shp\n".format(file_name), file=text_file)
                 print("             i. This is each fired event split into daily polygons. Each polygon will have an id for the event (which may encompass multiple polygons), and a unique date.\n", file=text_file)
             if shp_type == 'both':
-                print("         A. {}_events.shp\n".format(file_base), file=text_file)
-                print("         B. {}_daily.shp\n".format(file_base), file=text_file)
+                print("         A. {}_events.shp\n".format(file_name), file=text_file)
+                print("         B. {}_daily.shp\n".format(file_name), file=text_file)
                 print("             i. This is each fired event split into daily polygons. Each polygon will have an id for the event (which may encompass multiple polygons), and a unique date.\n", file=text_file)
-                print("         C. {}_events.gpkg\n".format(file_base), file=text_file)
-                print("         D. {}_daily.gpkg\n".format(file_base), file=text_file)
+                print("         C. {}_events.gpkg\n".format(file_name), file=text_file)
+                print("         D. {}_daily.gpkg\n".format(file_name), file=text_file)
                 print("             i. This is each fired event split into daily polygons. Each polygon will have an id for the event (which may encompass multiple polygons), and a unique date.\n", file=text_file)
 
         elif daily == 'yes' and shapefile == False:
             print("     1. Tables:\n ", file=text_file)
-            print("         A. {}_events.csv\n".format(file_base), file=text_file)
-            print("         B. {}_daily.csv\n".format(file_base), file=text_file)
+            print("         A. {}_events.csv\n".format(file_name), file=text_file)
+            print("         B. {}_daily.csv\n".format(file_name), file=text_file)
             print("             i. This is each fired event split into daily polygons. Each polygon will have an id for the event (which may encompass multiple polygons), and a unique date.\n", file=text_file)
         elif daily == 'no' and shapefile:
             print("     1. Table:\n ", file=text_file)
-            print("         A. {}_events.csv\n".format(file_base), file=text_file)
+            print("         A. {}_events.csv\n".format(file_name), file=text_file)
             print("     2. Shapefile: \n", file=text_file)
             if shp_type == 'gpkg':
-                print("         A. {}_events.gpkg\n".format(file_base), file=text_file)
+                print("         A. {}_events.gpkg\n".format(file_name), file=text_file)
             if shp_type == 'shp':
-                print("         A. {}_events.shp\n".format(file_base), file=text_file)
+                print("         A. {}_events.shp\n".format(file_name), file=text_file)
             if shp_type == 'both':
-                print("         A. {}_events.shp\n".format(file_base), file=text_file)
-                print("         B. {}_events.gpkg\n".format(file_base), file=text_file)
+                print("         A. {}_events.shp\n".format(file_name), file=text_file)
+                print("         B. {}_events.gpkg\n".format(file_name), file=text_file)
 
         else:
             print("     1. Table:\n ", file=text_file)
-            print("         A. {}_events.csv\n".format(file_base), file=text_file)
+            print("         A. {}_events.csv\n".format(file_name), file=text_file)
         print("-------------------\n", file=text_file)
         print("METHODOLOGICAL INFORMATION\n", file=text_file)
         print("-------------------\n", file=text_file)
@@ -120,19 +122,20 @@ Balch, J.K.; St. Denis, L.A.; Mahood, A.L.; Mietkiewicz, N.P.; Williams, T.M.; M
         print("-------------------\n", file=text_file)
         if shapefile:
             if shp_type == 'gpkg':
-                print("DATA-SPECIFIC INFORMATION FOR: {}_events.csv and {}_events.gpkg".format(file_base, file_base), file=text_file)
+                print("DATA-SPECIFIC INFORMATION FOR: {}_events.csv and {}_events.gpkg".format(file_name, file_name), file=text_file)
             if shp_type == 'shp':
-                print("DATA-SPECIFIC INFORMATION FOR: {}_events.csv and {}_events.shp".format(file_base, file_base), file=text_file)
+                print("DATA-SPECIFIC INFORMATION FOR: {}_events.csv and {}_events.shp".format(file_name, file_name), file=text_file)
             if shp_type == 'both':
-                print("DATA-SPECIFIC INFORMATION FOR: {}_events.csv, {}_events.gpkg, {}_events.shp".format(file_base, file_base,file_base), file=text_file)
+                print("DATA-SPECIFIC INFORMATION FOR: {}_events.csv, {}_events.gpkg, {}_events.shp".format(file_name, file_name,file_name), file=text_file)
         else:
-            print("DATA-SPECIFIC INFORMATION FOR: {}_events.csv".format(file_base), file=text_file)
+            print("DATA-SPECIFIC INFORMATION FOR: {}_events.csv".format(file_name), file=text_file)
 
         print("-------------------\n", file=text_file)
-        filepath = os.path.join(proj_dir, "outputs", "shapefiles",
-                                        file_base+"_daily.csv")
-        reader = csv.reader(str(filepath))
-        row_count = sum(1 for row in reader)
+        print(proj_dir)
+        filepath = os.path.join(proj_dir, 'outputs', 'tables',
+                                        file_name+"_events.csv")
+        reader = pd.read_csv(filepath)
+        row_count = len(reader)
         print("1. Number of variables: 24\n", file=text_file)
         print("2. Number of cases/rows: {}\n".format(row_count), file=text_file)
         print("3. Projection information (proj4 string): +proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a=6371007.181 +b=6371007.181 +units=m +no_defs\n", file = text_file)
@@ -202,16 +205,16 @@ Balch, J.K.; St. Denis, L.A.; Mahood, A.L.; Mietkiewicz, N.P.; Williams, T.M.; M
             print("-------------------\n", file=text_file)
             if shapefile:
                 if shp_type == 'gpkg':
-                    print("DATA-SPECIFIC INFORMATION FOR: {}_daily.csv and {}_daily.gpkg".format(file_base, file_base), file=text_file)
+                    print("DATA-SPECIFIC INFORMATION FOR: {}_daily.csv and {}_daily.gpkg".format(file_name, file_name), file=text_file)
                 if shp_type == 'shp':
-                    print("DATA-SPECIFIC INFORMATION FOR: {}_daily.csv and {}_daily.shp".format(file_base, file_base), file=text_file)
+                    print("DATA-SPECIFIC INFORMATION FOR: {}_daily.csv and {}_daily.shp".format(file_name, file_name), file=text_file)
                 if shp_type == 'both':
-                    print("DATA-SPECIFIC INFORMATION FOR: {}_daily.csv, {}_daily.gpkg, {}_daily.shp".format(file_base, file_base,file_base), file=text_file)
+                    print("DATA-SPECIFIC INFORMATION FOR: {}_daily.csv, {}_daily.gpkg, {}_daily.shp".format(file_name, file_name,file_name), file=text_file)
             else:
-                print("DATA-SPECIFIC INFORMATION FOR: {}_daily.csv".format(file_base), file=text_file)
+                print("DATA-SPECIFIC INFORMATION FOR: {}_daily.csv".format(file_name), file=text_file)
             print("-------------------\n", file=text_file)
-            filepath = os.path.join(proj_dir, "outputs", "shapefiles",
-                                            file_base+"_daily.csv")
+            filepath = os.path.join(proj_dir, "outputs", "tables",
+                                            file_name+"_daily.csv")
             reader = csv.reader(str(filepath))
             row_count = sum(1 for row in reader)
             print("1. Number of variables: 29\n", file=text_file)

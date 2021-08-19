@@ -391,7 +391,6 @@ def main():
         elif ecoregion_type == 'na' or ecoregion_level:
             fname = 'NA_CEC_Eco_Level3.gpkg'
             lookup = os.path.join(os.getcwd(), 'ref', 'us_eco', fname)
-            print(lookup)
         try:
             new_file = os.path.join(new_path, fname)
             shutil.copy(lookup, new_file)
@@ -401,7 +400,7 @@ def main():
 
     # Create data object
     data = DataGetter(proj_dir, start_yr, end_yr, username, password)
-    
+
     data.getEcoregion(ecoregion_level)
 
 
