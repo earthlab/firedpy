@@ -5,7 +5,7 @@ import os
 import pandas as pd
 
 def makeReadMe(proj_dir, tilename, file_base, input, first_date, last_date, ecoregion_type, ecoregion_level, landcover_type, daily, spatial_param, temporal_param, shapefile, shp_type):
-    read_path = os.path.join(proj_dir, file_base+"_README.txt")
+    read_path = os.path.join(proj_dir, 'outputs',file_base+"_README.txt")
     last_date = str(last_date)
     first_date = str(first_date)
     file_name = file_base+"_to"+last_date
@@ -131,7 +131,6 @@ Balch, J.K.; St. Denis, L.A.; Mahood, A.L.; Mietkiewicz, N.P.; Williams, T.M.; M
             print("DATA-SPECIFIC INFORMATION FOR: {}_events.csv".format(file_name), file=text_file)
 
         print("-------------------\n", file=text_file)
-        print(proj_dir)
         filepath = os.path.join(proj_dir, 'outputs', 'tables',
                                         file_name+"_events.csv")
         reader = pd.read_csv(filepath)
@@ -213,10 +212,10 @@ Balch, J.K.; St. Denis, L.A.; Mahood, A.L.; Mietkiewicz, N.P.; Williams, T.M.; M
             else:
                 print("DATA-SPECIFIC INFORMATION FOR: {}_daily.csv".format(file_name), file=text_file)
             print("-------------------\n", file=text_file)
-            filepath = os.path.join(proj_dir, "outputs", "tables",
+            filepath = os.path.join(proj_dir, 'outputs', 'tables',
                                             file_name+"_daily.csv")
-            reader = csv.reader(str(filepath))
-            row_count = sum(1 for row in reader)
+            reader = pd.read_csv(filepath)
+            row_count = len(reader)
             print("1. Number of variables: 29\n", file=text_file)
             print("2. Number of cases/rows: {}\n".format(row_count), file=text_file)
             print("3. Projection information (proj4 string): +proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a=6371007.181 +b=6371007.181 +units=m +no_defs\n", file = text_file)
