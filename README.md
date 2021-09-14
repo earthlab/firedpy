@@ -18,11 +18,28 @@ Sensing, 12(21), 3498; https://doi.org/10.3390/rs12213498
 
 Already-created products are housed in the CU Scholar data repository in the Earth Lab Data collection: https://scholar.colorado.edu/collections/pz50gx05h
 
-As of July 15, 2021, we currently have:
+or here: https://scholar.colorado.edu/catalog?f%5Bacademic_affiliation_sim%5D%5B%5D=Earth+Lab&locale=en
 
- - Coterminous USA + Alaska up to March 2021
- - Western hemisphere from Jan 2017 to March 2020, intended for use in conjunction with GOES16 active fire detections.
- - Bolivia to May 2021
+As of September 13, 2021, we currently have fire histories from November 2001 - May 2021 for:
+
+North America
+ - Coterminous USA + Alaska 
+ - US plus Canada
+ - Hawaii
+ - All the countries in the Carribean
+ - Mexico and Central america
+
+South America
+ - Bolivia
+ - Argentina 
+ - Northern South America (Colombia, Venezuela, Ecuador, Suriname, French Guiana, Guyana, Peru)
+ - Chile
+ - Uruguay
+ - Brazil is still processing... Coming soon!
+
+Entire Western hemisphere from Jan 2017 to March 2020, intended for use in conjunction with GOES16 active fire detections.
+
+Eastern side of earth is in progress.
 
 ## Installation
 
