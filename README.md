@@ -20,7 +20,9 @@ Already-created products are housed in the CU Scholar data repository in the Ear
 
 or here: https://scholar.colorado.edu/catalog?f%5Bacademic_affiliation_sim%5D%5B%5D=Earth+Lab&locale=en
 
-As of September 13, 2021, we currently have fire histories from November 2001 - May 2021 for:
+## Current status of created products
+
+As of September 13, 2021, we currently have fire histories from November 2000 - May 2021 for:
 
 North America
  - Coterminous USA + Alaska 
