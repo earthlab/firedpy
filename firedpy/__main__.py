@@ -79,7 +79,9 @@ def main():
         covering the Contiguous United States. Specify "all" to use all
         available MODIS tiles. Alternatively, provide a path to a shapefile
         with either a ".shp" or ".gpkg" extension to use intersecting MODIS
-        tiles.
+        tiles. In the firedpy directory, you can access any of the 50 states by specifying ref/us_states/state_name.gpkg,
+        all 7 continents by specifying ref/continents/continent_name.gpkg, and a country by ref/individual_countries/country_name.gpkg.
+        A list of all avalible countries can be found in the ReadMe. 
         """)
     tmp_help = ("""
         The number of days to search for neighboring burn detections. Defaults
@@ -298,6 +300,15 @@ def main():
                     temp= 3
                     tilename = tiles
             if temp != 3:
+                check_file = tiles[0]
+                while True:
+                    if os.path.exists(check_file):
+                        break
+                    else:
+                        print("Not a valid file name.")
+                        check_file = input("Enter aoi again in ref/dir_name/aoi_file.gpkg format:")
+                        tiles = [check_file, ]
+                        name = str(tiles[0])
                 name = name.split("/")
                 name = name[-1]
                 name = name.split(".")
