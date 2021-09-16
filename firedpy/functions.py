@@ -1628,7 +1628,7 @@ class ModelBuilder:
 
         # Extract points to AOI if specified
         # Clip to AOI if specified
-        if [i for i in [".shp", ".gpkg"] if(i in self.shp)]::
+        if [i for i in [".shp", ".gpkg"] if(i in self.shp)]:
             shp = gpd.read_file(self.shp)
             shp.to_crs(gdf.crs, inplace=True)
             shp['geometry'] = shp.geometry.buffer(200000)  # Wide buffer to start
