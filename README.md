@@ -34,14 +34,14 @@ North America
 South America
  - Bolivia
  - Argentina 
- - Northern South America (Colombia, Venezuela, Ecuador, Suriname, French Guiana, Guyana, Peru)
+ - Northern South America (Suriname, French Guiana, Guyana)
  - Chile
  - Uruguay
- - Brazil is still processing... Coming soon!
+ - Brazil is processing... Coming soon!
 
 Entire Western hemisphere from Jan 2017 to March 2020, intended for use in conjunction with GOES16 active fire detections.
 
-Eastern side of earth is in progress.
+Eastern side of earth coming soon.
 
 ## Installation
 
