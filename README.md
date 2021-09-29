@@ -41,7 +41,8 @@ South America
 
 Entire Western hemisphere from Jan 2017 to March 2020, intended for use in conjunction with GOES16 active fire detections.
 
-Eastern side of earth coming soon.
+Europe
+ - [Northern Europe](https://scholar.colorado.edu/concern/datasets/sb397945f)
 
 ## Installation
 
