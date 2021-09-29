@@ -41,7 +41,7 @@ South America
 
 [Entire Western hemisphere from Jan 2017 to March 2020, intended for use in conjunction with GOES16 active fire detections.](https://scholar.colorado.edu/concern/datasets/d217qq78g)
 
-Europe
+Europe (November 2000 to July 2021)
  - [Northern Europe (ICELAND, SWEDEN, NORWAY, and DENMARK)](https://scholar.colorado.edu/concern/datasets/sb397945f)
  - [Russia](https://scholar.colorado.edu/concern/datasets/q811kk87t)
  - [Italy](https://scholar.colorado.edu/concern/datasets/v979v416g)
