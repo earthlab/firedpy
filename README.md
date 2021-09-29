@@ -25,24 +25,30 @@ or here: https://scholar.colorado.edu/catalog?f%5Bacademic_affiliation_sim%5D%5B
 As of September 13, 2021, we currently have fire histories from November 2000 - May 2021 for:
 
 North America
- - Coterminous USA + Alaska 
- - US plus Canada
- - Hawaii
- - All the countries in the Carribean
- - Mexico and Central america
+ - [Coterminous USA + Alaska](https://scholar.colorado.edu/concern/datasets/d504rm74m)
+ - [US plus Canada](https://scholar.colorado.edu/concern/datasets/8336h304x)
+ - [Hawaii](https://scholar.colorado.edu/concern/datasets/7h149r06p)
+ - [All the countries in the Carribean](https://scholar.colorado.edu/concern/datasets/x633f230f)
+ - [Mexico and Central America](https://scholar.colorado.edu/concern/datasets/vd66w1102)
 
 South America
- - Bolivia
- - Argentina 
- - Northern South America (Suriname, French Guiana, Guyana)
- - Chile
- - Uruguay
+ - [Bolivia](https://scholar.colorado.edu/concern/datasets/b2773w83t)
+ - [Argentina](https://scholar.colorado.edu/concern/datasets/5t34sk58k)
+ - [Northern South America (Suriname, French Guiana, Guyana)](https://scholar.colorado.edu/concern/datasets/qv33rx839)
+ - [Chile](https://scholar.colorado.edu/concern/datasets/qr46r2052)
+ - [Uruguay](https://scholar.colorado.edu/concern/datasets/q524jq130)
  - Brazil is processing... Coming soon!
 
-Entire Western hemisphere from Jan 2017 to March 2020, intended for use in conjunction with GOES16 active fire detections.
+[Entire Western hemisphere from Jan 2017 to March 2020, intended for use in conjunction with GOES16 active fire detections.](https://scholar.colorado.edu/concern/datasets/d217qq78g)
 
 Europe
- - [Northern Europe](https://scholar.colorado.edu/concern/datasets/sb397945f)
+ - [Northern Europe (ICELAND, SWEDEN, NORWAY, and DENMARK)](https://scholar.colorado.edu/concern/datasets/sb397945f)
+ - [Russia](https://scholar.colorado.edu/concern/datasets/q811kk87t)
+ - [Italy](https://scholar.colorado.edu/concern/datasets/v979v416g)
+ - [Spain & Portugal](https://scholar.colorado.edu/concern/datasets/gb19f7006)
+ - [Western Europe (FRANCE, GERMANY, POLAND, SWITZERLAND, BELGIUM, NETHERLANDS, LUXEMBOURG and AUSTRIA)](https://scholar.colorado.edu/concern/datasets/v692t736f)
+ - [Central to Southern Europe (ESTONIA, LATVIA, LITHUANIA, BELARUS, UKRAINE, CZECH REPUBLIC, SLOVAKIA, HUNGARY, ROMANIA, BULGARIA, MONTENEGRO, BOSNIA, TURKEY, REPUBLIC OF MOLDOVA, SERBIA, ALBANIA, SLOVENIA, and NORTH MACEDONIA)](https://scholar.colorado.edu/concern/datasets/7h149r07z)
+ - [Greece](https://scholar.colorado.edu/concern/datasets/bc386k355)
 
 ## Installation
 
