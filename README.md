@@ -157,8 +157,8 @@ After creating a new fire product, it might be useful to get it out of the docke
 |:--------------|:----------|:-----|:---------|
 | -spatial | integer | -spatial 5 | pixel radius for moving window, defaults to 5|
 | -temporal | integer | -temporal 11 | day radius for moving window, defaults to 11|
-| -aoi | character (MODIS tile) | -tiles h11v09 | which modis tiles should be used |
-|  | character (shapefile) | -tiles <polygon name> | figures out which modis tiles to download based on| the polygon |
+| -aoi | character (MODIS tile) | -aoi h11v09 | which modis tiles should be used |
+|  | character (shapefile) | -aoi <full path ending in polygon name> | figures out which modis tiles to download based on| the polygon |
 | -proj_dir| character| -proj_dir /home/firedpy/proj | which directory should firedpy operate within? Defaults to a folder called "proj" within the current working directory.|
 | -ecoregion_type | character | -ecoregion_type na | type of ecoregion, either world or na|
  | -ecoregion_level | integer | -ecoregion_level 3 | if ecoregion type = na, the level (1-3) of North American ecoregions |
