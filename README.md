@@ -37,7 +37,7 @@ South America
  - [Northern South America (Suriname, French Guiana, Guyana)](https://scholar.colorado.edu/concern/datasets/qv33rx839)
  - [Chile](https://scholar.colorado.edu/concern/datasets/qr46r2052)
  - [Uruguay](https://scholar.colorado.edu/concern/datasets/q524jq130)
- - Brazil
+ - [Brazil](https://scholar.colorado.edu/concern/datasets/05741s90q)
  
 [Entire Western hemisphere from Jan 2017 to March 2020, intended for use in conjunction with GOES16 active fire detections.](https://scholar.colorado.edu/concern/datasets/d217qq78g)
 
@@ -51,8 +51,8 @@ Europe (November 2000 to July 2021)
  - [Greece](https://scholar.colorado.edu/concern/datasets/bc386k355)
 
 Africa
- - Senegal
- - Gambia
+ - [Senegal](https://scholar.colorado.edu/concern/datasets/tt44pp176)
+ - [Gambia](https://scholar.colorado.edu/concern/datasets/pn89d7911)
 
 ## Installation
 
