@@ -37,8 +37,8 @@ South America
  - [Northern South America (Suriname, French Guiana, Guyana)](https://scholar.colorado.edu/concern/datasets/qv33rx839)
  - [Chile](https://scholar.colorado.edu/concern/datasets/qr46r2052)
  - [Uruguay](https://scholar.colorado.edu/concern/datasets/q524jq130)
- - Brazil is processing... Coming soon!
-
+ - Brazil
+ 
 [Entire Western hemisphere from Jan 2017 to March 2020, intended for use in conjunction with GOES16 active fire detections.](https://scholar.colorado.edu/concern/datasets/d217qq78g)
 
 Europe (November 2000 to July 2021)
@@ -49,6 +49,10 @@ Europe (November 2000 to July 2021)
  - [Western Europe (FRANCE, GERMANY, POLAND, SWITZERLAND, BELGIUM, NETHERLANDS, LUXEMBOURG and AUSTRIA)](https://scholar.colorado.edu/concern/datasets/v692t736f)
  - [Central to Southern Europe (ESTONIA, LATVIA, LITHUANIA, BELARUS, UKRAINE, CZECH REPUBLIC, SLOVAKIA, HUNGARY, ROMANIA, BULGARIA, MONTENEGRO, BOSNIA, TURKEY, REPUBLIC OF MOLDOVA, SERBIA, ALBANIA, SLOVENIA, and NORTH MACEDONIA)](https://scholar.colorado.edu/concern/datasets/7h149r07z)
  - [Greece](https://scholar.colorado.edu/concern/datasets/bc386k355)
+
+Africa
+ - Senegal
+ - Gambia
 
 ## Installation
 
@@ -132,19 +136,19 @@ After creating a new fire product, it might be useful to get it out of the docke
 
   - Specify specific tiles and a local project_directory for required data and model outputs:
 
-    `firedpy -spatial 6 -temporal 10 -tiles h11v09 h12v09 -proj_dir /home/<user>/fired_project`
+    `firedpy -spatial 6 -temporal 10 -aoi h11v09 h12v09 -proj_dir /home/<user>/fired_project`
 
   - Write shapefiles as outputs in addition to the data table:
 
-    `firedpy -spatial 6 -temporal 10 -tiles h11v09 h12v09 -proj_dir /home/<user>/fired_project --shapefile`
+    `firedpy -spatial 6 -temporal 10 -aoi h11v09 h12v09 -proj_dir /home/<user>/fired_project --shapefile`
 
   - Add the most common level 3 Ecoregion as an attribute to each event:
 
-    `firedpy -spatial 6 -temporal 10 -tiles h11v09 h12v09 -proj_dir /home/<user>/fired_project --shapefile -ecoregion_level 3`
+    `firedpy -spatial 6 -temporal 10 -aoi h11v09 h12v09 -proj_dir /home/<user>/fired_project --shapefile -ecoregion_level 3`
 
   - Add landcover information and produce the daily burn file
 
-    `firedpy -spatial 6 -temporal 10 -tiles h11v09 h12v09 -proj_dir /home/<user>/fired_project --shapefile -ecoregion_level 3 -landcover_type 1 -daily yes`
+    `firedpy -spatial 6 -temporal 10 -aoi h11v09 h12v09 -proj_dir /home/<user>/fired_project --shapefile -ecoregion_level 3 -landcover_type 1 -daily yes`
 
   For more information about each parameter, use:
 
@@ -157,12 +161,12 @@ After creating a new fire product, it might be useful to get it out of the docke
 |:--------------|:----------|:-----|:---------|
 | -spatial | integer | -spatial 5 | pixel radius for moving window, defaults to 5|
 | -temporal | integer | -temporal 11 | day radius for moving window, defaults to 11|
-| -aoi | character (MODIS tile) | -tiles h11v09 | which modis tiles should be used |
-|  | character (shapefile) | -tiles <polygon name> | figures out which modis tiles to download based on| the polygon |
+| -aoi | character (MODIS tile) | -aoi h11v09 | which modis tiles should be used |
+| -aoi | character (shapefile) | -aoi /home/firedpy/individual_countries/canada.gpkg | figures out which modis tiles to download based on the polygon |
 | -proj_dir| character| -proj_dir /home/firedpy/proj | which directory should firedpy operate within? Defaults to a folder called "proj" within the current working directory.|
 | -ecoregion_type | character | -ecoregion_type na | type of ecoregion, either world or na|
  | -ecoregion_level | integer | -ecoregion_level 3 | if ecoregion type = na, the level (1-3) of North American ecoregions |
- | -landcover_type | integer and character | -landcover_type 2:username:password | number (1-3) corresponding with a MODIS/Terra+Aqua Land Cover (MCD12Q1) category. You will need to also make an account at https://urs.earthdata.nasa.gov/home and include your type:username:password as the argument. |
+ | -landcover_type | integer and character | -landcover_type 2:username:password | number (1-3) corresponding with a MODIS/Terra+Aqua Land Cover (MCD12Q1) category. You will need to also make an account at https://urs.earthdata.nasa.gov/home and include your login information within the argument. |
  | -shp_type | character | -shp_type gpkg | option to build a shapefile for the fired event in gpkg, ESRI shapefile (shp), both, or none  |
  | -file | character | -file fired_colorado | specifies the base of the file name for the tables and shapefile outputs, defaults to "fired", in the format: "(-file aruguement)_toYYYYDDD_(either events or daily).gpkg", with YYYY being the year, and DDD being the julian day of the last month in the time series. The example would output fired_colorado_to2021031_events.gpkg.|
  | -daily | character (yes or no) | -daily yes | creates daily polygons, if no just the event-level perimeters will be created. Defaults to no. |

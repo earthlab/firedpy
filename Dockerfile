@@ -21,9 +21,11 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends \
     awscli \
     htop 
-
-RUN ln -s /opt/conda/envs/firedpy/lib/libffi.so.6 /opt/conda/envs/firedpy/lib/libffi.so.7 \
-  && pip install ipython
+    
+# The following line of code solved a problem that apparently is now not happening, and now this creates its own problem.
+# If one is trying to do a docker build, and gets an error involving libffi.so.7, uncomment the following lines.
+# RUN ln -s /opt/conda/envs/firedpy/lib/libffi.so.6 /opt/conda/envs/firedpy/lib/libffi.so.7 \
+#  && pip install ipython
 
 SHELL ["conda", "run", "-n", "firedpy", "/bin/bash", "-c"]
 
