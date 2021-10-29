@@ -53,6 +53,10 @@ Europe (November 2000 to July 2021)
 Africa
  - [Senegal](https://scholar.colorado.edu/concern/datasets/tt44pp176)
  - [Gambia](https://scholar.colorado.edu/concern/datasets/pn89d7911)
+ - [Morocco](https://scholar.colorado.edu/concern/datasets/td96k3751)
+
+Asia
+ - [China](https://scholar.colorado.edu/concern/datasets/qz20st810)
 
 ## Installation
 
