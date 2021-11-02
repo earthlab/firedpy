@@ -11,7 +11,7 @@ from urllib.parse import urlencode
 from http.cookiejar import CookieJar
 import urllib.request
 from .functions import DataGetter, ModelBuilder
-from .readme import makeReadMe
+from .create_readme import makeReadMe
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
