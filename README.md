@@ -47,6 +47,7 @@ Europe (November 2000 to July 2021)
  - [Western Europe (FRANCE, GERMANY, POLAND, SWITZERLAND, BELGIUM, NETHERLANDS, LUXEMBOURG and AUSTRIA)](https://scholar.colorado.edu/concern/datasets/v692t736f)
  - [Central to Southern Europe (ESTONIA, LATVIA, LITHUANIA, BELARUS, UKRAINE, CZECH REPUBLIC, SLOVAKIA, HUNGARY, ROMANIA, BULGARIA, MONTENEGRO, BOSNIA, TURKEY, REPUBLIC OF MOLDOVA, SERBIA, ALBANIA, SLOVENIA, and NORTH MACEDONIA)](https://scholar.colorado.edu/concern/datasets/7h149r07z)
  - [Greece](https://scholar.colorado.edu/concern/datasets/bc386k355)
+ - [UK and Ireland](https://scholar.colorado.edu/concern/datasets/pc289k33c)
 
 Africa
  - [Senegal](https://scholar.colorado.edu/concern/datasets/tt44pp176)
@@ -55,6 +56,9 @@ Africa
 
 Asia
  - [China](https://scholar.colorado.edu/concern/datasets/qz20st810)
+ - [India](https://scholar.colorado.edu/concern/datasets/ht24wk47t)
+ - [Central Asia (Turkmenistan, Kazakhstan, Uzbekistan, Kyrgystan, Tajikistan, Afghanistan, and Pakistan)](https://scholar.colorado.edu/concern/datasets/47429b07v)
+ - [Middle East (Saudi Arabia, Quatar, Oman, Yemen, United Arab Emirates, Iraq, Jordan, Syria, Israel, Palestine, Lebanon, Egypt)](https://scholar.colorado.edu/concern/datasets/5d86p139h)
 
 ## Installation
 
