@@ -38,8 +38,11 @@ ggsave(wrld, filename = "/home/a/projects/firedpy/completed_countries_plot.png",
 # australia management
 ge<- st_read("/home/a/projects/firedpy/ref/individual_countries/georgia.gpkg")
 aus<-st_read("/home/a/Desktop/FIRED_stuff/STE_2021_AUST_GDA2020.shp") %>%
- st_simplify(aus) %>%
-  st_transform(crs = st_crs(ge))
+  st_transform(crs = st_crs(ge))%>%
+  st_simplify(preserveTopology = F, dTolerance = 10000)
+
+ggplot(aus)+
+  geom_sf()
 
 for(i in aus$STE_NAME21[1:7]){
 aus %>%
@@ -53,5 +56,10 @@ aus %>% filter(STE_NAME21 == "New South Wales" | STE_NAME21 == "Australian Capit
   summarise %>% 
   st_write("/home/a/projects/firedpy/ref/australia_states/nsw_capital.gpkg", 
            delete_dsn=TRUE)
+
+st_read("/home/a/projects/firedpy/ref/west_australia.gpkg") %>% st_transform(crs=st_crs(ge)) %>%
+  summarise() %>%
+  st_simplify(preserveTopology = F, dTolerance = 10000)%>%
+  st_write("/home/a/projects/firedpy/ref/west_australia.gpkg", delete_dsn=T)
 
 
