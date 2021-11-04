@@ -10,6 +10,7 @@ plot()
 completed_countries <-c(filter(world, CONTINENT == "North America") %>% pull(NAME_EN),
                         filter(world, CONTINENT == "Europe") %>% pull(NAME_EN),
                         "uzbekistan", "afghanistan", "pakistan", "brazil",
+                        "armenia", "georgia", "azerbaijan",
                         "chile", "argentina", "uruguay", "paraguay","suriname", 
                         "bolivia", "guyana", "senegal", "morocco", "the_gambia","french guyana",
                         "turkmenistan", "people's_republic_of_china", "russia", "saudi_arabia", "jordan",
