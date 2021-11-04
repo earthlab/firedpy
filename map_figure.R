@@ -12,19 +12,27 @@ completed_countries <-c(filter(world, CONTINENT == "North America") %>% pull(NAM
                         "uzbekistan", "afghanistan", "pakistan", "brazil",
                         "chile", "argentina", "uruguay", "paraguay","suriname", 
                         "bolivia", "guyana", "senegal", "morocco", "the_gambia","french guyana",
-                        "turkmenistan", "china", "russia")
+                        "turkmenistan", "people's_republic_of_china", "russia", "saudi_arabia", "jordan",
+                        "lebanon", "iraq", "syria", "turkey", "oman", "yemen","tajikistan",
+                        "united_arab_emirates", "india", "palestine", "israel",
+                        "egypt", "iran", "kazakhstan", "kyrgyzstan")
 lut_completed <- rep("complete",length(completed_countries))
 names(lut_completed) <- completed_countries
 
 
-world %>%
+wrld<-world %>%
   mutate(completed = lut_completed[as.character(NAME_EN)])%>%
 ggplot()+
-  geom_sf(aes(fill = completed)) +
+  geom_sf(aes(fill = completed),lwd=0.25) +
   scale_fill_manual(values = c("red", "white"),na.value = "grey90")+
-  theme_void()
+  theme_void()+
+  ggtitle("Completed Countries")+
+  theme(legend.position = c(.1,.3),
+          plot.title = element_text(hjust=.5),
+        legend.justification = c(0,0));wrld
 
-ggsave("")
+ggsave(wrld, filename = "/home/a/projects/firedpy/completed_countries_plot.png",
+       bg="white",width=7, height=5, dpi=300)
 # 
 # Coterminous USA + Alaska
 # US plus Canada
