@@ -58,7 +58,7 @@ Europe (November 2000 to July 2021)
 
 Africa
  - [Senegal](https://scholar.colorado.edu/concern/datasets/tt44pp176)
- - [Gambia](https://scholar.colorado.edu/concern/datasets/pn89d7911)
+ - [The Gambia](https://scholar.colorado.edu/concern/datasets/pn89d7911)
  - [Morocco](https://scholar.colorado.edu/concern/datasets/td96k3751)
  - [Central North Africa (Libya, Algeria, Tunisia)](https://scholar.colorado.edu/concern/datasets/8910jv77j)
 
