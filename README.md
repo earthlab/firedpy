@@ -42,7 +42,7 @@ South America
  - [Colombia](https://scholar.colorado.edu/concern/datasets/mp48sd91d)
  - [Ecuador](https://scholar.colorado.edu/concern/datasets/pc289k34n)
  - [Venezuela](https://scholar.colorado.edu/concern/datasets/7m01bm95m)
- - Paraguay coming soon
+ - [Paraguay](https://scholar.colorado.edu/concern/datasets/rb68xd05p)
  
 [Entire Western hemisphere from Jan 2017 to March 2020, intended for use in conjunction with GOES16 active fire detections.](https://scholar.colorado.edu/concern/datasets/d217qq78g)
 
