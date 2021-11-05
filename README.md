@@ -60,9 +60,7 @@ Africa
  - [Senegal](https://scholar.colorado.edu/concern/datasets/tt44pp176)
  - [Gambia](https://scholar.colorado.edu/concern/datasets/pn89d7911)
  - [Morocco](https://scholar.colorado.edu/concern/datasets/td96k3751)
- - [Libya]()
- - [Algeria]()
- - [Tunisia}()
+ - [Central North Africa (Libya, Algeria, Tunisia)](https://scholar.colorado.edu/concern/datasets/8910jv77j)
 
 Asia
  - [China](https://scholar.colorado.edu/concern/datasets/qz20st810)
