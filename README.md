@@ -38,6 +38,11 @@ South America
  - [Chile](https://scholar.colorado.edu/concern/datasets/qr46r2052)
  - [Uruguay](https://scholar.colorado.edu/concern/datasets/q524jq130)
  - [Brazil](https://scholar.colorado.edu/concern/datasets/05741s90q)
+ - [Peru](https://scholar.colorado.edu/concern/datasets/x346d5616)
+ - [Colombia](https://scholar.colorado.edu/concern/datasets/mp48sd91d)
+ - [Ecuador](https://scholar.colorado.edu/concern/datasets/pc289k34n)
+ - [Venezuela](https://scholar.colorado.edu/concern/datasets/7m01bm95m)
+ - Paraguay coming soon
  
 [Entire Western hemisphere from Jan 2017 to March 2020, intended for use in conjunction with GOES16 active fire detections.](https://scholar.colorado.edu/concern/datasets/d217qq78g)
 
@@ -55,12 +60,17 @@ Africa
  - [Senegal](https://scholar.colorado.edu/concern/datasets/tt44pp176)
  - [Gambia](https://scholar.colorado.edu/concern/datasets/pn89d7911)
  - [Morocco](https://scholar.colorado.edu/concern/datasets/td96k3751)
+ - [Libya]()
+ - [Algeria]()
+ - [Tunisia}()
 
 Asia
  - [China](https://scholar.colorado.edu/concern/datasets/qz20st810)
  - [India](https://scholar.colorado.edu/concern/datasets/ht24wk47t)
  - [Central Asia (Turkmenistan, Kazakhstan, Uzbekistan, Kyrgystan, Tajikistan, Afghanistan, and Pakistan)](https://scholar.colorado.edu/concern/datasets/47429b07v)
  - [Middle East (Saudi Arabia, Quatar, Oman, Yemen, United Arab Emirates, Iraq, Jordan, Syria, Israel, Palestine, Lebanon, Egypt)](https://scholar.colorado.edu/concern/datasets/5d86p139h)
+ - [Mongolia](https://scholar.colorado.edu/concern/datasets/4x51hk21h)
+ - [Caucasus (Armenia, Azerbaijan, Georgia)](https://scholar.colorado.edu/concern/datasets/gf06g385j)
 
 ## Installation
 
