@@ -47,12 +47,12 @@ South America
 [Entire Western hemisphere from Jan 2017 to March 2020, intended for use in conjunction with GOES16 active fire detections.](https://scholar.colorado.edu/concern/datasets/d217qq78g)
 
 Europe (November 2000 to July 2021)
- - [Northern Europe (ICELAND, SWEDEN, NORWAY, and DENMARK)](https://scholar.colorado.edu/concern/datasets/sb397945f)
+ - [Northern Europe (Iceland, Sweden, Norway, and Denmark)](https://scholar.colorado.edu/concern/datasets/sb397945f)
  - [Russia](https://scholar.colorado.edu/concern/datasets/q811kk87t)
  - [Italy](https://scholar.colorado.edu/concern/datasets/v979v416g)
  - [Spain & Portugal](https://scholar.colorado.edu/concern/datasets/gb19f7006)
- - [Western Europe (FRANCE, GERMANY, POLAND, SWITZERLAND, BELGIUM, NETHERLANDS, LUXEMBOURG and AUSTRIA)](https://scholar.colorado.edu/concern/datasets/v692t736f)
- - [Central to Southern Europe (ESTONIA, LATVIA, LITHUANIA, BELARUS, UKRAINE, CZECH REPUBLIC, SLOVAKIA, HUNGARY, ROMANIA, BULGARIA, MONTENEGRO, BOSNIA, TURKEY, REPUBLIC OF MOLDOVA, SERBIA, ALBANIA, SLOVENIA, and NORTH MACEDONIA)](https://scholar.colorado.edu/concern/datasets/7h149r07z)
+ - [Western Europe (France, Germany, Poland, Switzerland, Belgium, Netherlands, Luxembourg and Austria)](https://scholar.colorado.edu/concern/datasets/v692t736f)
+ - [Central to Southern Europe (Estonia, Latvia, Lithuania, Belarus, Ukraine, Czech Republic, Slovakia, Hungary, Romania, Bulgaria, Montenegro, Bosnia, Turkey, Republic Of Moldova, Serbia, Albania, Slovenia, and North Macedonia)](https://scholar.colorado.edu/concern/datasets/7h149r07z)
  - [Greece](https://scholar.colorado.edu/concern/datasets/bc386k355)
  - [UK and Ireland](https://scholar.colorado.edu/concern/datasets/pc289k33c)
 
