@@ -179,7 +179,7 @@ After creating a new fire product, it might be useful to get it out of the docke
 | -spatial | integer | -spatial 5 | pixel radius for moving window, defaults to 5|
 | -temporal | integer | -temporal 11 | day radius for moving window, defaults to 11|
 | -aoi | character (MODIS tile) | -aoi h11v09 | which modis tiles should be used |
-| -aoi | character (shapefile) | -aoi /home/firedpy/individual_countries/canada.gpkg | figures out which modis tiles to download based on the polygon |
+| -aoi | character (shapefile) | -aoi /home/firedpy/individual_countries/canada.gpkg | figures out which modis tiles to download based on the polygon -- **polygon must be in the same projection as MODIS MCD64** -- all the polygons in the *ref* folder are correctly projected and can be used as crs templates to prepare other polygons. |
 | -proj_dir| character| -proj_dir /home/firedpy/proj | which directory should firedpy operate within? Defaults to a folder called "proj" within the current working directory.|
 | -ecoregion_type | character | -ecoregion_type na | type of ecoregion, either world or na|
  | -ecoregion_level | integer | -ecoregion_level 3 | if ecoregion type = na, the level (1-3) of North American ecoregions |
