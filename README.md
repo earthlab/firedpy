@@ -61,6 +61,7 @@ Africa
  - [The Gambia](https://scholar.colorado.edu/concern/datasets/pn89d7911)
  - [Morocco](https://scholar.colorado.edu/concern/datasets/td96k3751)
  - [Central North Africa (Libya, Algeria, Tunisia)](https://scholar.colorado.edu/concern/datasets/8910jv77j)
+ - [Madagascar](https://scholar.colorado.edu/concern/datasets/fb494955x)
 
 Asia
  - [China](https://scholar.colorado.edu/concern/datasets/qz20st810)
