@@ -192,7 +192,7 @@ After creating a new fire product, it might be useful to get it out of the docke
  
  
  
-### Boundary files are available for use as regions of interest
+### Boundary files are available for use as areas of interest
  
  - Country boundaries are in **ref/individual_countries**
  - Continent boundaries are in **ref/continents**
