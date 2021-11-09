@@ -22,7 +22,7 @@ Already-created products are housed in the CU Scholar data repository in the [Ea
 
 ![completed countries are below](completed_countries_plot.png)
 
-As of September 13, 2021, we currently have fire histories from November 2000 - May 2021 for:
+We currently have fire histories from November 2000 - May 2021 for:
 
 North America
  - [Coterminous USA + Alaska](https://scholar.colorado.edu/concern/datasets/d504rm74m)
