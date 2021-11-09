@@ -11,7 +11,7 @@ setuptools.setup(
     version="0.0.2",
     author="Travis Williams, Lise St. Denis, Adam Mahood, Maxwell C. Cook, Maxwell B. Joseph, Joseph McGlinchy",
     author_email="adam.mahood@colorado.edu",
-    description="A CLI for classifying fires using a MODIS Burnt Area Product",
+    description="A command line interface for classifying fires using a MODIS Burnt Area Product",
     license="MIT License",
     long_description=long_description,
     long_description_content_type="text/markdown",
