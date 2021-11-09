@@ -11,7 +11,7 @@ completed_countries <-c(filter(world, CONTINENT == "North America") %>% pull(NAM
                         filter(world, CONTINENT == "Europe") %>% pull(NAME_EN),
                         "uzbekistan", "afghanistan", "pakistan", "brazil",
                         "armenia", "georgia", "azerbaijan","mongolia",
-                        "mali", "mauritania",
+                        "mali", "mauritania","guinea", "guinea-bissau", "sierra_leone",
                         "libya", "algeria", "tunisia","madagascar",
                         "colombia", "ecuador", "peru", "venezuela",
                         "chile", "argentina", "uruguay", "paraguay","suriname", 
