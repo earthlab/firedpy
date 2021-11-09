@@ -64,6 +64,9 @@ Africa
  - [Madagascar](https://scholar.colorado.edu/concern/datasets/fb494955x)
  - [Mali](https://scholar.colorado.edu/concern/datasets/pr76f4544)
  - [Mauritania](https://scholar.colorado.edu/concern/datasets/x059c864s)
+ - [Guinea](https://scholar.colorado.edu/concern/datasets/05741s910)
+ - [Guinea-Bissau](https://scholar.colorado.edu/concern/datasets/nc580n858)
+ - [Sierra Leone](https://scholar.colorado.edu/concern/datasets/5712m779r)
 
 Asia
  - [China](https://scholar.colorado.edu/concern/datasets/qz20st810)
