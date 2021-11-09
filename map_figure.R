@@ -32,7 +32,7 @@ ggplot()+
   theme_void()+
   scale_x_continuous(expand = c(0,0))+
   scale_y_continuous(expand = c(0,0))+
-  ggtitle("Firedpy: Completed Countries")+
+  ggtitle("Firedpy: Fire Perimeter Datasets Available")+
   theme(legend.position = c(.1,.3),
           plot.title = element_text(hjust=.5),
         legend.justification = c(0,0));wrld
