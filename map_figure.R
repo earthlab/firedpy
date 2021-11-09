@@ -10,7 +10,7 @@ plot()
 completed_countries <-c(filter(world, CONTINENT == "North America") %>% pull(NAME_EN),
                         filter(world, CONTINENT == "Europe") %>% pull(NAME_EN),
                         "uzbekistan", "afghanistan", "pakistan", "brazil",
-                        "armenia", "georgia", "azerbaijan","mongolia",
+                        "armenia", "georgia", "azerbaijan","mongolia", "eritrea",
                         "mali", "mauritania","guinea", "guinea-bissau", "sierra_leone",
                         "libya", "algeria", "tunisia","madagascar",
                         "colombia", "ecuador", "peru", "venezuela",
@@ -27,7 +27,7 @@ names(lut_completed) <- completed_countries
 wrld<-world %>%
   mutate(completed = lut_completed[as.character(NAME_EN)])%>%
 ggplot()+
-  geom_sf(aes(fill = completed),lwd=0.25) +
+  geom_sf(aes(fill = completed),lwd=0.15) +
   scale_fill_manual(values = c("red", "white"),na.value = "grey90")+
   theme_void()+
   scale_x_continuous(expand = c(0,0))+
