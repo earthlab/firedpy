@@ -67,6 +67,7 @@ Africa
  - [Guinea](https://scholar.colorado.edu/concern/datasets/05741s910)
  - [Guinea-Bissau](https://scholar.colorado.edu/concern/datasets/nc580n858)
  - [Sierra Leone](https://scholar.colorado.edu/concern/datasets/5712m779r)
+ - [Eritrea](https://scholar.colorado.edu/concern/datasets/5m60qt182)
 
 Asia
  - [China](https://scholar.colorado.edu/concern/datasets/qz20st810)
