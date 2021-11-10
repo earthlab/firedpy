@@ -28,12 +28,12 @@ names(lut_completed) <- completed_countries
 wrld<-world %>%
   mutate(completed = lut_completed[as.character(NAME_EN)])%>%
 ggplot()+
-  geom_sf(aes(fill = completed),lwd=0.15) +
+  geom_sf(aes(fill = completed),lwd=0.10) +
   scale_fill_manual(values = c("red", "white"),na.value = "grey90")+
   theme_void()+
   scale_x_continuous(expand = c(0,0))+
   scale_y_continuous(expand = c(0,0))+
-  ggtitle("Firedpy: Fire Perimeter Datasets Available")+
+  ggtitle("Fire Perimeter Datasets Available")+
   theme(legend.position = c(.1,.3),
           plot.title = element_text(hjust=.5),
         legend.justification = c(0,0));wrld
