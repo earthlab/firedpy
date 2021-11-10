@@ -68,6 +68,12 @@ Africa
  - [Guinea-Bissau](https://scholar.colorado.edu/concern/datasets/nc580n858)
  - [Sierra Leone](https://scholar.colorado.edu/concern/datasets/5712m779r)
  - [Eritrea](https://scholar.colorado.edu/concern/datasets/5m60qt182)
+ - [Somalia](https://scholar.colorado.edu/concern/datasets/xd07gt798)
+ - [Somaliland](https://scholar.colorado.edu/concern/datasets/8c97kr53f)
+ - [Djibouti](https://scholar.colorado.edu/concern/datasets/1831cm01x)
+ - [Ethiopia](https://scholar.colorado.edu/concern/datasets/z316q2977)
+ - [Ivory Coast](https://scholar.colorado.edu/concern/datasets/vq27zp62f)
+ - [Liberia](https://scholar.colorado.edu/concern/datasets/6h440t58k)
 
 Asia
  - [China](https://scholar.colorado.edu/concern/datasets/qz20st810)
@@ -76,6 +82,8 @@ Asia
  - [Middle East (Saudi Arabia, Quatar, Oman, Yemen, United Arab Emirates, Iraq, Jordan, Syria, Israel, Palestine, Lebanon, Egypt)](https://scholar.colorado.edu/concern/datasets/5d86p139h)
  - [Mongolia](https://scholar.colorado.edu/concern/datasets/4x51hk21h)
  - [Caucasus (Armenia, Azerbaijan, Georgia)](https://scholar.colorado.edu/concern/datasets/gf06g385j)
+
+
 
 ## Installation
 
