@@ -74,6 +74,11 @@ Africa
  - [Ethiopia](https://scholar.colorado.edu/concern/datasets/z316q2977)
  - [Ivory Coast](https://scholar.colorado.edu/concern/datasets/vq27zp62f)
  - [Liberia](https://scholar.colorado.edu/concern/datasets/6h440t58k)
+ - [Benin](https://scholar.colorado.edu/concern/datasets/z603qz58m)
+ - [Togo](https://scholar.colorado.edu/concern/datasets/fj236325p)
+ - [Burkina Faso](https://scholar.colorado.edu/concern/datasets/9g54xj875)
+ - [Niger](https://scholar.colorado.edu/concern/datasets/m039k605q)
+ - [Ghana](https://scholar.colorado.edu/concern/datasets/2r36tz735)
 
 Asia
  - [China](https://scholar.colorado.edu/concern/datasets/qz20st810)
