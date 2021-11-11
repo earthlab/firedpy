@@ -1,7 +1,7 @@
 
 [![DOI](https://zenodo.org/badge/214283770.svg)](https://zenodo.org/badge/latestdoi/214283770) [![Docker Automated build](https://img.shields.io/docker/automated/earthlab/firedpy?style=plastic)](https://hub.docker.com/repository/docker/earthlab/firedpy/builds) ![GitHub contributors](https://img.shields.io/github/contributors/earthlab/firedpy) [![GitHub issues](https://img.shields.io/github/issues/earthlab/firedpy)](https://github.com/earthlab/firedpy/issues) ![GitHub commit activity](https://img.shields.io/github/commit-activity/w/earthlab/firedpy) 
 
-# firedpy - FIRe Event Delineation for python
+# FIREDpy - FIRe Event Delineation for python
 
 A Python Command Line Interface for classifying fire events from the Collection 6 MODIS Burned Area Product.
 
