@@ -88,6 +88,10 @@ Asia
  - [Mongolia](https://scholar.colorado.edu/concern/datasets/4x51hk21h)
  - [Caucasus (Armenia, Azerbaijan, Georgia)](https://scholar.colorado.edu/concern/datasets/gf06g385j)
 
+Australia (state by state)
+ - [Tasmania](https://scholar.colorado.edu/concern/datasets/c534fq19w)
+ - [Victoria](https://scholar.colorado.edu/concern/datasets/2r36tz74f)
+
 
 
 ## Installation
