@@ -30,7 +30,7 @@ wrld<-world %>%
   mutate(completed = lut_completed[as.character(NAME_EN)])%>%
 ggplot()+
   geom_sf(aes(fill = completed),lwd=0.10) +
-  scale_fill_manual(values = c("red", "white"),na.value = "grey90")+
+  scale_fill_manual(values = c("red", "white"),na.value = "grey95")+
   theme_void()+
   scale_x_continuous(expand = c(0,0))+
   scale_y_continuous(expand = c(0,0))+
