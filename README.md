@@ -79,6 +79,8 @@ Africa
  - [Burkina Faso](https://scholar.colorado.edu/concern/datasets/9g54xj875)
  - [Niger](https://scholar.colorado.edu/concern/datasets/m039k605q)
  - [Ghana](https://scholar.colorado.edu/concern/datasets/2r36tz735)
+ - [Sudan](https://scholar.colorado.edu/concern/datasets/g158bj37v)
+ - [Nigeria](https://scholar.colorado.edu/concern/datasets/cv43nx78p)
 
 Asia
  - [China](https://scholar.colorado.edu/concern/datasets/qz20st810)
