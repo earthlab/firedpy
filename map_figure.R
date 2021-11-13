@@ -16,20 +16,21 @@ completed_countries <-c(filter(world, CONTINENT == "North America") %>% pull(NAM
                         "ivory_coast", "djibouti", "ethiopia", "somalia", "somaliland",
                         "ghana","togo", "benin", "niger","burkina_faso", "nigeria",
                         "colombia", "ecuador", "peru", "venezuela", "sudan",
+                        "equatorial_guinea", "cameroon",
                         "chile", "argentina", "uruguay", "paraguay","suriname", 
                         "bolivia", "guyana", "senegal", "morocco", "the_gambia","french guyana",
                         "turkmenistan", "people's_republic_of_china", "russia", "saudi_arabia", "jordan",
                         "lebanon", "iraq", "syria", "turkey", "oman", "yemen","tajikistan",
                         "united_arab_emirates", "india", "palestine", "israel",
                         "egypt", "iran", "kazakhstan", "kyrgyzstan")
-lut_completed <- rep("complete",length(completed_countries))
+lut_completed <- rep("Complete",length(completed_countries))
 names(lut_completed) <- completed_countries
 
 
 wrld<-world %>%
   mutate(completed = lut_completed[as.character(NAME_EN)])%>%
-  replace_na(list(completed = "coming soon")) %>%
-  mutate(completed = replace(completed, NAME_EN == "antarctica", "insufficient fire"))%>%
+  replace_na(list(completed = "Coming soon")) %>%
+  mutate(completed = replace(completed, NAME_EN == "antarctica", "Insufficient Fire"))%>%
 ggplot()+
   geom_sf(aes(fill = completed),lwd=0.10) +
   scale_fill_manual(values = c("skyblue", "red","grey95"),na.value = "grey95")+
@@ -38,7 +39,8 @@ ggplot()+
   scale_y_continuous(expand = c(0,0))+
   ggtitle("Fire Perimeter Datasets Available")+
   theme(legend.position = c(.1,.3),
-          plot.title = element_text(hjust=.5),
+        legend.title = element_blank(),
+        plot.title = element_text(hjust=.5),
         legend.justification = c(0,0));wrld
 
 ggsave(wrld, filename = "/home/a/projects/firedpy/completed_countries_plot.png",
