@@ -28,9 +28,11 @@ names(lut_completed) <- completed_countries
 
 wrld<-world %>%
   mutate(completed = lut_completed[as.character(NAME_EN)])%>%
+  replace_na(list(completed = "coming soon")) %>%
+  mutate(completed = replace(completed, NAME_EN == "antarctica", "insufficient fire"))%>%
 ggplot()+
   geom_sf(aes(fill = completed),lwd=0.10) +
-  scale_fill_manual(values = c("red", "white"),na.value = "grey95")+
+  scale_fill_manual(values = c("skyblue", "red","grey95"),na.value = "grey95")+
   theme_void()+
   scale_x_continuous(expand = c(0,0))+
   scale_y_continuous(expand = c(0,0))+

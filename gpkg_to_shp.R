@@ -18,4 +18,4 @@ gpkg_to_shp_to_zip <- function(path, file, type = "shp"){
 }
 
 gpkg_to_shp_to_zip(path="/home/a/Desktop/FIRED_stuff",
-            file="fired_sudan_to2021182_events.gpkg")
+            file="fired_equatorial_guinea_to2021182_events.gpkg")
