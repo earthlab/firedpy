@@ -30,7 +30,7 @@ names(lut_completed) <- completed_countries
 wrld<-world %>%
   mutate(completed = lut_completed[as.character(NAME_EN)])%>%
   replace_na(list(completed = "Coming soon")) %>%
-  mutate(completed = replace(completed, NAME_EN == "antarctica", "Insufficient Fire"))%>%
+  mutate(completed = replace(completed, NAME_EN == "antarctica", "Insufficient Fire\nActivity"))%>%
 ggplot()+
   geom_sf(aes(fill = completed),lwd=0.10) +
   scale_fill_manual(values = c("skyblue", "red","grey95"),na.value = "grey95")+
@@ -38,7 +38,7 @@ ggplot()+
   scale_x_continuous(expand = c(0,0))+
   scale_y_continuous(expand = c(0,0))+
   ggtitle("Fire Perimeter Datasets Available")+
-  theme(legend.position = c(.1,.3),
+  theme(legend.position = c(.05,.3),
         legend.title = element_blank(),
         plot.title = element_text(hjust=.5),
         legend.justification = c(0,0));wrld
