@@ -18,7 +18,9 @@ Sensing, 12(21), 3498; https://doi.org/10.3390/rs12213498
 
 ## Current status of created products
 
-Already-created products are housed in the CU Scholar data repository in the [Earth Lab Data collection](https://scholar.colorado.edu/collections/pz50gx05h), or [here](https://scholar.colorado.edu/catalog?f%5Bacademic_affiliation_sim%5D%5B%5D=Earth+Lab&locale=en)
+Already-created products are housed in the CU Scholar data repository in the [Earth Lab Data collection](https://scholar.colorado.edu/collections/pz50gx05h), or [here](https://scholar.colorado.edu/catalog?f%5Bacademic_affiliation_sim%5D%5B%5D=Earth+Lab&locale=en). 
+
+All of the created products have an event-level shapefile in .gpkg format. Many countries also have the daily-level shapefile, but these were not created for most countries in Africa and Asia due to computational restrictions. We are working to include each event-level product in ESRI shapefile format. This will happen by the end of 2021.
 
 ![completed countries are below](completed_countries_plot.png)
 
