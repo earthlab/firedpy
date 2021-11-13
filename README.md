@@ -16,6 +16,10 @@ and Cook, M. C. 2020. FIRED (Fire Events Delineation): An open, flexible algorit
 of U.S. fire events derived from the MODIS burned area product (2001-19). Remote
 Sensing, 12(21), 3498; https://doi.org/10.3390/rs12213498
 
+## Have you used firedpy?
+
+please take this [survey](https://docs.google.com/forms/d/e/1FAIpQLSe7ycmS0HGIze2T6TIUox8hsu8nlGsxiUMww8SCeWHDZPhB-Q/viewform?usp=sf_link) to help us improve firedpy.
+
 ## Current status of created products
 
 Already-created products are housed in the CU Scholar data repository in the [Earth Lab Data collection](https://scholar.colorado.edu/collections/pz50gx05h), or [here](https://scholar.colorado.edu/catalog?f%5Bacademic_affiliation_sim%5D%5B%5D=Earth+Lab&locale=en). 
