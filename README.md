@@ -81,6 +81,7 @@ Africa
  - [Ghana](https://scholar.colorado.edu/concern/datasets/2r36tz735)
  - [Sudan](https://scholar.colorado.edu/concern/datasets/g158bj37v)
  - [Nigeria](https://scholar.colorado.edu/concern/datasets/cv43nx78p)
+ - [Cameroon](https://scholar.colorado.edu/concern/datasets/x920fz208)
 
 Asia
  - [China](https://scholar.colorado.edu/concern/datasets/qz20st810)
