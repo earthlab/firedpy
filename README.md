@@ -87,8 +87,10 @@ We currently have fire histories from November 2000 - May 2021 for:
  - [Ghana](https://scholar.colorado.edu/concern/datasets/2r36tz735)
  - [Sudan](https://scholar.colorado.edu/concern/datasets/g158bj37v)
  - [Nigeria](https://scholar.colorado.edu/concern/datasets/cv43nx78p)
- - [Equatorial Guinea](https://scholar.colorado.edu/concern/datasets/vx021g32b)
  - [Cameroon](https://scholar.colorado.edu/concern/datasets/x920fz208)
+ - [Chad](https://scholar.colorado.edu/concern/datasets/707958762)
+ - [Gabon](https://scholar.colorado.edu/concern/datasets/2z10wr67h)
+ - [Equatorial Guinea](https://scholar.colorado.edu/concern/datasets/vx021g32b)
 
 ### Asia
  - [China](https://scholar.colorado.edu/concern/datasets/qz20st810)
