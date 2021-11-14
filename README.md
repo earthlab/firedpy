@@ -16,22 +16,28 @@ and Cook, M. C. 2020. FIRED (Fire Events Delineation): An open, flexible algorit
 of U.S. fire events derived from the MODIS burned area product (2001-19). Remote
 Sensing, 12(21), 3498; https://doi.org/10.3390/rs12213498
 
+## Have you used firedpy?
+
+please take this [survey](https://docs.google.com/forms/d/e/1FAIpQLSe7ycmS0HGIze2T6TIUox8hsu8nlGsxiUMww8SCeWHDZPhB-Q/viewform?usp=sf_link) to help us improve firedpy.
+
 ## Current status of created products
 
-Already-created products are housed in the CU Scholar data repository in the [Earth Lab Data collection](https://scholar.colorado.edu/collections/pz50gx05h), or [here](https://scholar.colorado.edu/catalog?f%5Bacademic_affiliation_sim%5D%5B%5D=Earth+Lab&locale=en)
+Already-created products are housed in the CU Scholar data repository in the [Earth Lab Data collection](https://scholar.colorado.edu/collections/pz50gx05h), or [here](https://scholar.colorado.edu/catalog?f%5Bacademic_affiliation_sim%5D%5B%5D=Earth+Lab&locale=en). 
+
+All of the created products have an event-level shapefile in .gpkg format. Many countries also have the daily-level shapefile, but these were not created for most countries in Africa and Asia due to computational restrictions. We are working to include each event-level product in ESRI shapefile format. This will happen by the end of 2021.
 
 ![completed countries are below](completed_countries_plot.png)
 
 We currently have fire histories from November 2000 - May 2021 for:
 
-North America
+### North America
  - [Coterminous USA + Alaska](https://scholar.colorado.edu/concern/datasets/d504rm74m)
  - [US plus Canada](https://scholar.colorado.edu/concern/datasets/8336h304x)
  - [Hawaii](https://scholar.colorado.edu/concern/datasets/7h149r06p)
  - [All the countries in the Carribean](https://scholar.colorado.edu/concern/datasets/x633f230f)
  - [Mexico and Central America](https://scholar.colorado.edu/concern/datasets/vd66w1102)
 
-South America
+### South America
  - [Bolivia](https://scholar.colorado.edu/concern/datasets/b2773w83t)
  - [Argentina](https://scholar.colorado.edu/concern/datasets/5t34sk58k)
  - [Northern South America (Suriname, French Guiana, Guyana)](https://scholar.colorado.edu/concern/datasets/qv33rx839)
@@ -46,7 +52,7 @@ South America
  
 [Entire Western hemisphere from Jan 2017 to March 2020, intended for use in conjunction with GOES16 active fire detections.](https://scholar.colorado.edu/concern/datasets/d217qq78g)
 
-Europe (November 2000 to July 2021)
+### Europe (November 2000 to July 2021)
  - [Northern Europe (Iceland, Sweden, Norway, and Denmark)](https://scholar.colorado.edu/concern/datasets/sb397945f)
  - [Russia](https://scholar.colorado.edu/concern/datasets/q811kk87t)
  - [Italy](https://scholar.colorado.edu/concern/datasets/v979v416g)
@@ -56,7 +62,7 @@ Europe (November 2000 to July 2021)
  - [Greece](https://scholar.colorado.edu/concern/datasets/bc386k355)
  - [UK and Ireland](https://scholar.colorado.edu/concern/datasets/pc289k33c)
 
-Africa
+### Africa
  - [Senegal](https://scholar.colorado.edu/concern/datasets/tt44pp176)
  - [The Gambia](https://scholar.colorado.edu/concern/datasets/pn89d7911)
  - [Morocco](https://scholar.colorado.edu/concern/datasets/td96k3751)
@@ -81,8 +87,10 @@ Africa
  - [Ghana](https://scholar.colorado.edu/concern/datasets/2r36tz735)
  - [Sudan](https://scholar.colorado.edu/concern/datasets/g158bj37v)
  - [Nigeria](https://scholar.colorado.edu/concern/datasets/cv43nx78p)
+ - [Equatorial Guinea](https://scholar.colorado.edu/concern/datasets/vx021g32b)
+ - [Cameroon](https://scholar.colorado.edu/concern/datasets/x920fz208)
 
-Asia
+### Asia
  - [China](https://scholar.colorado.edu/concern/datasets/qz20st810)
  - [India](https://scholar.colorado.edu/concern/datasets/ht24wk47t)
  - [Central Asia (Turkmenistan, Kazakhstan, Uzbekistan, Kyrgystan, Tajikistan, Afghanistan, and Pakistan)](https://scholar.colorado.edu/concern/datasets/47429b07v)
@@ -90,7 +98,7 @@ Asia
  - [Mongolia](https://scholar.colorado.edu/concern/datasets/4x51hk21h)
  - [Caucasus (Armenia, Azerbaijan, Georgia)](https://scholar.colorado.edu/concern/datasets/gf06g385j)
 
-Australia (state by state)
+### Australia (state by state)
  - [Tasmania](https://scholar.colorado.edu/concern/datasets/c534fq19w)
  - [Victoria](https://scholar.colorado.edu/concern/datasets/2r36tz74f)
 
