@@ -5,8 +5,6 @@ world <- st_read("/home/a/data/background/world_borders/ne_50m_admin_0_countries
   dplyr::select(NAME_EN, CONTINENT) %>%
   mutate(NAME_EN = str_to_lower(NAME_EN)%>% str_replace_all(" ","_"))
 
-
-plot()
 completed_countries <-c(filter(world, CONTINENT == "North America") %>% pull(NAME_EN),
                         filter(world, CONTINENT == "Europe") %>% pull(NAME_EN),
                         "uzbekistan", "afghanistan", "pakistan", "brazil",
@@ -16,7 +14,9 @@ completed_countries <-c(filter(world, CONTINENT == "North America") %>% pull(NAM
                         "ivory_coast", "djibouti", "ethiopia", "somalia", "somaliland",
                         "ghana","togo", "benin", "niger","burkina_faso", "nigeria",
                         "colombia", "ecuador", "peru", "venezuela", "sudan",
-                        "cameroon", "gabon", "chad",
+                        "cameroon", "gabon", "chad", "japan", "north_korea",
+                        "south_korea", "taiwan", "philippines", "papua_new_guinea",
+                        "east_timor",
                         "equatorial_guinea", "cameroon", "western_sahara",
                         "chile", "argentina", "uruguay", "paraguay","suriname", 
                         "bolivia", "guyana", "senegal", "morocco", "the_gambia","french guyana",
@@ -44,8 +44,8 @@ ggplot()+
         plot.title = element_text(hjust=.5, size=20),
         legend.justification = c(0,0));wrld
 
-ggsave(wrld, filename = "/home/a/projects/firedpy/completed_countries_plot.png",
-       bg="white",width=7, height=5, dpi=300)
+ggsave(wrld, filename = "/home/a/projects/firedpy/map_plot.png",
+       bg="white",width=7, height=5, dpi=600)
 
 # australia management
 # ge<- st_read("/home/a/projects/firedpy/ref/individual_countries/georgia.gpkg")

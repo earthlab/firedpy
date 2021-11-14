@@ -5,7 +5,7 @@ gpkg_to_shp_to_zip <- function(path, file, type = "shp"){
   require(tidyverse)
   input <- st_read(file.path(path, file))
   st_write(input, str_replace(file.path(path, file), "gpkg", type), delete_dsn=TRUE)
-  pattern = str_extract(file, "fired_[a-z]+")
+  pattern = str_split(file,"_to",simplify = T)[1,1]
   datestr = str_extract(file, "\\d{7}") %>% as.Date("%Y%j")
   datepat = paste("to",
                   lubridate::month(datestr, label=TRUE, abbr=FALSE),
@@ -18,4 +18,13 @@ gpkg_to_shp_to_zip <- function(path, file, type = "shp"){
 }
 
 gpkg_to_shp_to_zip(path="/home/a/Desktop/FIRED_stuff",
-            file="fired_gabon_to2021182_events.gpkg")
+            file="fired_east_timor_to2021182_events.gpkg")
+
+the_path <- "/home/a/Desktop/FIRED_stuff/upload_to_drive"
+to_update <- list.files(the_path, 
+                        pattern = "events.gpkg")
+
+for(f in to_update) {
+  gpkg_to_shp_to_zip(path=the_path,
+                     file=f)
+}
