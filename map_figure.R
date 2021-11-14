@@ -16,6 +16,7 @@ completed_countries <-c(filter(world, CONTINENT == "North America") %>% pull(NAM
                         "ivory_coast", "djibouti", "ethiopia", "somalia", "somaliland",
                         "ghana","togo", "benin", "niger","burkina_faso", "nigeria",
                         "colombia", "ecuador", "peru", "venezuela", "sudan",
+                        "cameroon", "gabon", "chad",
                         "equatorial_guinea", "cameroon", "western_sahara",
                         "chile", "argentina", "uruguay", "paraguay","suriname", 
                         "bolivia", "guyana", "senegal", "morocco", "the_gambia","french guyana",
@@ -37,10 +38,10 @@ ggplot()+
   theme_void()+
   scale_x_continuous(expand = c(0,0))+
   scale_y_continuous(expand = c(0,0))+
-  ggtitle("Fire Perimeter Datasets Available")+
+  ggtitle("Fire Perimeter Datasets Available"," ")+
   theme(legend.position = c(.05,.3),
         legend.title = element_blank(),
-        plot.title = element_text(hjust=.5),
+        plot.title = element_text(hjust=.5, size=20),
         legend.justification = c(0,0));wrld
 
 ggsave(wrld, filename = "/home/a/projects/firedpy/completed_countries_plot.png",
