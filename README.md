@@ -99,11 +99,20 @@ We currently have fire histories from November 2000 - May 2021 for:
  - [Middle East (Saudi Arabia, Quatar, Oman, Yemen, United Arab Emirates, Iraq, Jordan, Syria, Israel, Palestine, Lebanon, Egypt)](https://scholar.colorado.edu/concern/datasets/5d86p139h)
  - [Mongolia](https://scholar.colorado.edu/concern/datasets/4x51hk21h)
  - [Caucasus (Armenia, Azerbaijan, Georgia)](https://scholar.colorado.edu/concern/datasets/gf06g385j)
+ - [Japan](https://scholar.colorado.edu/concern/datasets/dz010r34v)
+ - [South Korea](https://scholar.colorado.edu/concern/datasets/pg15bg177)
+ - [North Korea](https://scholar.colorado.edu/concern/datasets/3j333327g)
+ - [Taiwan](https://scholar.colorado.edu/concern/datasets/df65v9276)
+ - [Sri Lanka](https://scholar.colorado.edu/concern/datasets/9z9030982)
+ - 
 
-### Australia (state by state)
+### Australia (state by state) & Oceana
  - [Tasmania](https://scholar.colorado.edu/concern/datasets/c534fq19w)
  - [Victoria](https://scholar.colorado.edu/concern/datasets/2r36tz74f)
-
+ - [Philippines](https://scholar.colorado.edu/concern/datasets/7d278v06f)
+ - [Papua New Guinea](https://scholar.colorado.edu/concern/datasets/3r074w183)
+ - [East Timor](https://scholar.colorado.edu/concern/datasets/j098zc184)
+ - [New Zealand](https://scholar.colorado.edu/concern/datasets/9g54xj88f)
 
 
 ## Installation
