@@ -18,7 +18,7 @@ Sensing, 12(21), 3498; https://doi.org/10.3390/rs12213498
 
 ## Have you used firedpy?
 
-please take this [survey](https://docs.google.com/forms/d/e/1FAIpQLSe7ycmS0HGIze2T6TIUox8hsu8nlGsxiUMww8SCeWHDZPhB-Q/viewform?usp=sf_link) to help us improve firedpy.
+Please take this [survey](https://docs.google.com/forms/d/e/1FAIpQLSe7ycmS0HGIze2T6TIUox8hsu8nlGsxiUMww8SCeWHDZPhB-Q/viewform?usp=sf_link) to help us improve firedpy.
 
 ## Current status of created products
 
