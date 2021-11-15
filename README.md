@@ -117,6 +117,8 @@ We currently have fire histories from November 2000 - May 2021 for:
  - [Papua New Guinea](https://scholar.colorado.edu/concern/datasets/3r074w183)
  - [East Timor](https://scholar.colorado.edu/concern/datasets/j098zc184)
  - [New Zealand](https://scholar.colorado.edu/concern/datasets/9g54xj88f)
+ - [Malaysia](https://scholar.colorado.edu/concern/datasets/fq977w13f)
+ - [Brunei](https://scholar.colorado.edu/concern/datasets/mp48sd92p)
 
 
 ## Installation
