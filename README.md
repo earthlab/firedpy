@@ -33,6 +33,7 @@ We currently have fire histories from November 2000 - May 2021 for:
 ### North America
  - [Coterminous USA + Alaska](https://scholar.colorado.edu/concern/datasets/d504rm74m)
  - [US plus Canada](https://scholar.colorado.edu/concern/datasets/8336h304x)
+ - [Canada](https://scholar.colorado.edu/concern/datasets/gf06g388c)
  - [Hawaii](https://scholar.colorado.edu/concern/datasets/7h149r06p)
  - [All the countries in the Carribean](https://scholar.colorado.edu/concern/datasets/x633f230f)
  - [Mexico and Central America](https://scholar.colorado.edu/concern/datasets/vd66w1102)
@@ -104,11 +105,14 @@ We currently have fire histories from November 2000 - May 2021 for:
  - [North Korea](https://scholar.colorado.edu/concern/datasets/3j333327g)
  - [Taiwan](https://scholar.colorado.edu/concern/datasets/df65v9276)
  - [Sri Lanka](https://scholar.colorado.edu/concern/datasets/9z9030982)
- - 
+ - [Nepal](https://scholar.colorado.edu/concern/datasets/mk61rj10w)
+ - [Bhutan](https://scholar.colorado.edu/concern/datasets/n009w342h)
+ - [Bangladesh](https://scholar.colorado.edu/concern/datasets/d791sh33k)
 
 ### Australia (state by state) & Oceana
  - [Tasmania](https://scholar.colorado.edu/concern/datasets/c534fq19w)
  - [Victoria](https://scholar.colorado.edu/concern/datasets/2r36tz74f)
+ - [New South Wales + Capital Territory](https://scholar.colorado.edu/concern/datasets/37720d85c)
  - [Philippines](https://scholar.colorado.edu/concern/datasets/7d278v06f)
  - [Papua New Guinea](https://scholar.colorado.edu/concern/datasets/3r074w183)
  - [East Timor](https://scholar.colorado.edu/concern/datasets/j098zc184)
