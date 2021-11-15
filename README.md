@@ -108,6 +108,7 @@ We currently have fire histories from November 2000 - May 2021 for:
  - [Nepal](https://scholar.colorado.edu/concern/datasets/mk61rj10w)
  - [Bhutan](https://scholar.colorado.edu/concern/datasets/n009w342h)
  - [Bangladesh](https://scholar.colorado.edu/concern/datasets/d791sh33k)
+ - [Vietnam](https://scholar.colorado.edu/concern/datasets/h702q7566)
 
 ### Australia (state by state) & Oceana
  - [Tasmania](https://scholar.colorado.edu/concern/datasets/c534fq19w)
