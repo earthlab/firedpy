@@ -26,7 +26,7 @@ Already-created products are housed in the CU Scholar data repository in the [Ea
 
 All of the created products have an event-level shapefile in .gpkg format. Many countries also have the daily-level shapefile, but these were not created for most countries in Africa and Asia due to computational restrictions. We are working to include each event-level product in ESRI shapefile format. This will happen by the end of 2021.
 
-![completed countries are below](map_plot.png)
+![completed countries are below](map_fig.png)
 
 We currently have fire histories from November 2000 - May 2021 for:
 
