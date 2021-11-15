@@ -17,8 +17,8 @@ gpkg_to_shp_to_zip <- function(path, file, type = "shp"){
       files = zfiles)
 }
 
-gpkg_to_shp_to_zip(path="/home/a/Desktop/FIRED_stuff/s_asia",
-            file="fired_bangladesh_to2021182_events.gpkg")
+gpkg_to_shp_to_zip(path="/home/a/Desktop/FIRED_stuff",
+            file="fired_brunei_to2021182_events.gpkg")
 
 # the_path <- "/home/a/Desktop/FIRED_stuff/upload_to_drive"
 # to_update <- list.files(the_path, 
