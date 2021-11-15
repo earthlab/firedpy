@@ -92,6 +92,8 @@ We currently have fire histories from November 2000 - May 2021 for:
  - [Chad](https://scholar.colorado.edu/concern/datasets/707958762)
  - [Gabon](https://scholar.colorado.edu/concern/datasets/2z10wr67h)
  - [Equatorial Guinea](https://scholar.colorado.edu/concern/datasets/vx021g32b)
+ - [South Africa](https://scholar.colorado.edu/concern/datasets/rf55z8833)
+ - [Lesotho](https://scholar.colorado.edu/concern/datasets/cr56n229w)
 
 ### Asia
  - [China](https://scholar.colorado.edu/concern/datasets/qz20st810)
@@ -109,6 +111,9 @@ We currently have fire histories from November 2000 - May 2021 for:
  - [Bhutan](https://scholar.colorado.edu/concern/datasets/n009w342h)
  - [Bangladesh](https://scholar.colorado.edu/concern/datasets/d791sh33k)
  - [Vietnam](https://scholar.colorado.edu/concern/datasets/h702q7566)
+ - [Thailand](https://scholar.colorado.edu/concern/datasets/xs55md39h)
+ - [Laos](https://scholar.colorado.edu/concern/datasets/bz60cx389)
+ - [Myanmar](https://scholar.colorado.edu/concern/datasets/pk02cb86p)
 
 ### Australia (state by state) & Oceana
  - [Tasmania](https://scholar.colorado.edu/concern/datasets/c534fq19w)
