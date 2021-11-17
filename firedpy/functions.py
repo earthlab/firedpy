@@ -1460,6 +1460,7 @@ class ModelBuilder:
                 plist = [(p.get_event_id(), p.coords) for p in perims]
 
                 # Identify edge cases, so either x or y is within 5 cells
+                # make in if statement to not do this if there's only one tile
                 maxys = builder.data_set["y"].data[:builder.spatial_param]
                 minys = builder.data_set["y"].data[-builder.spatial_param:]
                 maxxs = builder.data_set["x"].data[-builder.spatial_param:]
@@ -1477,8 +1478,9 @@ class ModelBuilder:
                 dates = []
                 for p in plist:
                     coord = [list(c) for c in p[1]]
-                    edge = [edgeCheck(yedges, xedges, c, self.sp_buf) for
-                            c in coord]
+                    # if(len(tile_list>1)): edge = [edgeCheck(yedges, xedges, c, self.sp_buf) for c in coord]
+                    #     else: edge = 0
+                    edge = [edgeCheck(yedges, xedges, c, self.sp_buf) for c in coord]
                     if any(edge):
                         edge = [True for e in edge]
                     event = list(np.repeat(p[0], len(coord)))
