@@ -94,6 +94,8 @@ We currently have fire histories from November 2000 - May 2021 for:
  - [Equatorial Guinea](https://scholar.colorado.edu/concern/datasets/vx021g32b)
  - [South Africa](https://scholar.colorado.edu/concern/datasets/rf55z8833)
  - [Lesotho](https://scholar.colorado.edu/concern/datasets/cr56n229w)
+ - [Uganda](https://scholar.colorado.edu/concern/datasets/hh63sx004)
+ - [Kenya](https://scholar.colorado.edu/concern/datasets/1j92g871c)
 
 ### Asia
  - [China](https://scholar.colorado.edu/concern/datasets/qz20st810)
@@ -115,16 +117,20 @@ We currently have fire histories from November 2000 - May 2021 for:
  - [Laos](https://scholar.colorado.edu/concern/datasets/bz60cx389)
  - [Myanmar](https://scholar.colorado.edu/concern/datasets/pk02cb86p)
 
-### Australia (state by state) & Oceana
+### Australia (state by state)
  - [Tasmania](https://scholar.colorado.edu/concern/datasets/c534fq19w)
  - [Victoria](https://scholar.colorado.edu/concern/datasets/2r36tz74f)
  - [New South Wales + Capital Territory](https://scholar.colorado.edu/concern/datasets/37720d85c)
+ - [Queensland](https://scholar.colorado.edu/concern/datasets/cr56n230n)
+
+### Oceana
  - [Philippines](https://scholar.colorado.edu/concern/datasets/7d278v06f)
  - [Papua New Guinea](https://scholar.colorado.edu/concern/datasets/3r074w183)
  - [East Timor](https://scholar.colorado.edu/concern/datasets/j098zc184)
  - [New Zealand](https://scholar.colorado.edu/concern/datasets/9g54xj88f)
  - [Malaysia](https://scholar.colorado.edu/concern/datasets/fq977w13f)
  - [Brunei](https://scholar.colorado.edu/concern/datasets/mp48sd92p)
+ - [Indonesia](https://scholar.colorado.edu/concern/datasets/p2676w918)
 
 
 ## Installation
