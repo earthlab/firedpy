@@ -98,6 +98,7 @@ We currently have fire histories from November 2000 - May 2021 for:
  - [Uganda](https://scholar.colorado.edu/concern/datasets/hh63sx004)
  - [Kenya](https://scholar.colorado.edu/concern/datasets/1j92g871c)
  - [Burundi](https://scholar.colorado.edu/concern/datasets/3f462659h)
+ - [Rwanda](https://scholar.colorado.edu/concern/datasets/st74cr782)
 
 ### Asia
 
