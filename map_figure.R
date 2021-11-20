@@ -15,6 +15,7 @@ completed_countries <-c(filter(world, CONTINENT == "North America") %>% pull(NAM
                         "ivory_coast", "djibouti", "ethiopia", "somalia", "somaliland",
                         "ghana","togo", "benin", "niger","burkina_faso", "nigeria",
                         "colombia", "ecuador", "peru", "venezuela", "sudan",
+                        "south_sudan",
                         "cameroon", "gabon", "chad", "japan", "north_korea",
                         "uganda", "kenya", "burundi","australia", "malawi", "eswatini",
                         "malaysia", "brunei", "vietnam", "thailand", "indonesia",
