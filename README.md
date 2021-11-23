@@ -28,7 +28,7 @@ All of the created products have an event-level shapefile in .gpkg format. Many 
 
 ![completed countries are below](map_fig.png)
 
-We currently have fire histories from November 2000 - May 2021 for:
+Below is a list of countries or regions for which we have created fire perimeter datasets:
 
 ### North America
  - [Coterminous USA + Alaska](https://scholar.colorado.edu/concern/datasets/d504rm74m)
