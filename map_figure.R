@@ -14,7 +14,7 @@ completed_countries <-c(filter(world, CONTINENT == "North America") %>% pull(NAM
                         "south_africa", "lesotho", "myanmar","laos", "cambodia",
                         "ivory_coast", "djibouti", "ethiopia", "somalia", "somaliland",
                         "ghana","togo", "benin", "niger","burkina_faso", "nigeria",
-                        "colombia", "ecuador", "peru", "venezuela", "sudan",
+                        "colombia", "ecuador", "peru", "venezuela", "sudan","rwanda",
                         "south_sudan","central_african_republic", "namibia",
                         "cameroon", "gabon", "chad", "japan", "north_korea",
                         "uganda", "kenya", "burundi","australia", "malawi", "eswatini",
@@ -48,7 +48,7 @@ ggplot()+
         plot.title = element_text(hjust=.5, size=20),
         legend.justification = c(0,0));wrld
 
-ggsave(wrld, filename = "/home/a/projects/firedpy/map_fig.png",
+ggsave(wrld, filename = "/home/a/projects/firedpy/map_figure.png",
        bg="white",width=7, height=5, dpi=600)
 
 # australia management
