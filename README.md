@@ -53,7 +53,7 @@ We currently have fire histories from November 2000 - May 2021 for:
  
 [Entire Western hemisphere from Jan 2017 to March 2020, intended for use in conjunction with GOES16 active fire detections.](https://scholar.colorado.edu/concern/datasets/d217qq78g)
 
-### Europe (November 2000 to July 2021)
+### Europe
  - [Northern Europe (Iceland, Sweden, Norway, and Denmark)](https://scholar.colorado.edu/concern/datasets/sb397945f)
  - [Russia](https://scholar.colorado.edu/concern/datasets/q811kk87t)
  - [Italy](https://scholar.colorado.edu/concern/datasets/v979v416g)
