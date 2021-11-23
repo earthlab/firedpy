@@ -102,6 +102,8 @@ We currently have fire histories from November 2000 - May 2021 for:
  - [eSwatini](https://scholar.colorado.edu/concern/datasets/9w0324116)
  - [Malawi](https://scholar.colorado.edu/concern/datasets/5999n464m)
  - [South Sudan](https://scholar.colorado.edu/concern/datasets/b2773w89g)
+ - [Namibia](https://scholar.colorado.edu/concern/datasets/db78td244)
+ - [Central African Republic](https://scholar.colorado.edu/concern/datasets/pv63g1576)
 
 ### Asia
 
@@ -132,6 +134,7 @@ We currently have fire histories from November 2000 - May 2021 for:
  - [Queensland](https://scholar.colorado.edu/concern/datasets/cr56n230n)
  - [South Australia](https://scholar.colorado.edu/concern/datasets/fn107015p)
  - [Western Australia](https://scholar.colorado.edu/concern/datasets/k35695559)
+ - [Northern Territory](https://scholar.colorado.edu/concern/datasets/bn9997900)
 
 ### Oceania
 
