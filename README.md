@@ -104,6 +104,7 @@ We currently have fire histories from November 2000 - May 2021 for:
  - [South Sudan](https://scholar.colorado.edu/concern/datasets/b2773w89g)
  - [Namibia](https://scholar.colorado.edu/concern/datasets/db78td244)
  - [Central African Republic](https://scholar.colorado.edu/concern/datasets/pv63g1576)
+ - [Zimbabwe](https://scholar.colorado.edu/concern/datasets/f7623d95c)
 
 ### Asia
 

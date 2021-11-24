@@ -7,7 +7,7 @@ world <- st_read("/home/a/data/background/world_borders/ne_50m_admin_0_countries
 
 completed_countries <-c(filter(world, CONTINENT == "North America") %>% pull(NAME_EN),
                         filter(world, CONTINENT == "Europe") %>% pull(NAME_EN),
-                        "uzbekistan", "afghanistan", "pakistan", "brazil",
+                        "uzbekistan", "afghanistan", "pakistan", "brazil", "zimbabwe",
                         "armenia", "georgia", "azerbaijan","mongolia", "eritrea",
                         "mali", "mauritania","guinea", "guinea-bissau", "sierra_leone",
                         "libya", "algeria", "tunisia","madagascar", "liberia",
@@ -35,7 +35,7 @@ names(lut_completed) <- completed_countries
 wrld<-world %>%
   mutate(completed = lut_completed[as.character(NAME_EN)])%>%
   replace_na(list(completed = "Coming soon")) %>%
-  mutate(completed = replace(completed, NAME_EN == "antarctica", "Insufficient Fire\nActivity"))%>%
+  mutate(completed = replace(completed, NAME_EN == "antarctica" | NAME_EN == "greenland", "Insufficient Fire\nActivity"))%>%
 ggplot()+
   geom_sf(aes(fill = completed),lwd=0.10) +
   scale_fill_manual(values = c("skyblue", "red","grey95"),na.value = "grey95")+
@@ -48,7 +48,7 @@ ggplot()+
         plot.title = element_text(hjust=.5, size=20),
         legend.justification = c(0,0));wrld
 
-ggsave(wrld, filename = "/home/a/projects/firedpy/map_figure.png",
+ggsave(wrld, filename = "/home/a/projects/firedpy/map_fig.png",
        bg="white",width=7, height=5, dpi=600)
 
 # australia management
