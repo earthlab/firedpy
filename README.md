@@ -28,7 +28,7 @@ All of the created products have an event-level shapefile in .gpkg format. Many 
 
 ![completed countries are below](map_fig.png)
 
-Below is a list of countries or regions for which we have created fire perimeter datasets:
+## Click on a link below to download a fire perimeter dataset for your favorite country
 
 ### North America
  - [Coterminous USA + Alaska](https://scholar.colorado.edu/concern/datasets/d504rm74m)
