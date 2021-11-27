@@ -275,6 +275,6 @@ After creating a new fire product, it might be useful to get it out of the docke
  - Continent boundaries are in **ref/continents**
  - United States state boundaries for the United States of America are in **ref/us_states**
  - Australian state boundaries are in **ref/australian_states**
- - For example `firedpy -tiles ref/us_states/colorado.gpkg`, and so on. Every space is a '_'. 
+ - For example `firedpy -tiles ~/ref/us_states/colorado.gpkg`, and so on. Every space is a '_'. 
  - If using the user input option, when prompted for the name of the continent, country, or state use "_" for spaces. 
  - **Ensure that the input shapefiles are in the modis sinusiodal projection**
