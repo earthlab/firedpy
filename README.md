@@ -105,6 +105,9 @@ All of the created products have an event-level shapefile in .gpkg format. Many 
  - [Namibia](https://scholar.colorado.edu/concern/datasets/db78td244)
  - [Central African Republic](https://scholar.colorado.edu/concern/datasets/pv63g1576)
  - [Zimbabwe](https://scholar.colorado.edu/concern/datasets/f7623d95c)
+ - [Mozambique](https://scholar.colorado.edu/concern/datasets/1n79h5504)
+ - [Republic of the Congo](https://scholar.colorado.edu/concern/datasets/nk322f305)
+ - [Botswana](https://scholar.colorado.edu/concern/datasets/b8515p69g)
 
 ### Asia
 

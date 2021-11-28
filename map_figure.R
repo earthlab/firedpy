@@ -27,7 +27,8 @@ completed_countries <-c(filter(world, CONTINENT == "North America") %>% pull(NAM
                         "turkmenistan", "people's_republic_of_china", "russia", "saudi_arabia", "jordan",
                         "lebanon", "iraq", "syria", "turkey", "oman", "yemen","tajikistan",
                         "united_arab_emirates", "india", "palestine", "israel",
-                        "egypt", "iran", "kazakhstan", "kyrgyzstan")
+                        "egypt", "iran", "kazakhstan", "kyrgyzstan", "botswana",
+                        "mozambique", "republic_of_the_congo")
 lut_completed <- rep("Complete",length(completed_countries))
 names(lut_completed) <- completed_countries
 

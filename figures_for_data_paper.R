@@ -1,3 +1,5 @@
+library(tidyverse)
+library(sf)
 modis_tiles <- st_read("/home/a/data/background/modis_grid/modis_sinusoidal_grid_world.shp")
 
 wb<- st_read("/home/a/data/background/world_borders/ne_50m_admin_0_countries.shp") %>%
@@ -16,8 +18,16 @@ ggsave(p1, filename="/home/a/Desktop/modis_tile_plot.png",
        width = 7.5, 
        height=4)
 
+xx<-st_read("/home/a/projects/firedpy/fired_italy_to2021182_events.gpkg")
+yy<-st_read("/home/a/projects/firedpy/fired_italy_to2021182_daily.gpkg")
+
+
 p2<-bind_rows(
-  yy %>% filter(id == 192) %>% dplyr::select(id, Date=date) %>% mutate(product = "A. Daily"),
+  yy %>% filter(id == 192) %>%
+    dplyr::select(id, Date=date) %>% 
+    group_by(Date) %>%
+    summarise() %>%
+    mutate(product = "A. Daily"),
   xx %>% filter(id == 192) %>% dplyr::select(id, Date=ig_date)%>%  
   mutate(product = "B. Event"))%>%
   ggplot() +
@@ -30,4 +40,4 @@ p2<-bind_rows(
         plot.background = element_rect(color="black"),
         panel.background = element_rect(color="black"))
 
-ggsave(p2, filename="/home/a/Desktop/daily_example.png", dpi=300, height=3.5, width=4.5)
+ggsave(p2, filename="/home/a/projects/firedpy/daily_example.png", dpi=300, height=3.5, width=4.5)
