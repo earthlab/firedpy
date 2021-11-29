@@ -18,7 +18,7 @@ gpkg_to_shp_to_zip <- function(path, file, type = "shp"){
 }
 
 gpkg_to_shp_to_zip(path="/home/a/Desktop/FIRED_stuff",
-            file="fired_mozambique_to2021182_events.gpkg")
+            file="fired_tanzania_to2021182_events.gpkg")
 
 
 # the_path <- "/home/a/Desktop/FIRED_stuff/upload_to_drive"
