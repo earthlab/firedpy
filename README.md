@@ -35,7 +35,7 @@ All of the created products have an event-level shapefile in .gpkg format. Many 
  - [US plus Canada](https://scholar.colorado.edu/concern/datasets/8336h304x)
  - [Canada](https://scholar.colorado.edu/concern/datasets/gf06g388c)
  - [Hawaii](https://scholar.colorado.edu/concern/datasets/7h149r06p)
- - [All the countries in the Carribean](https://scholar.colorado.edu/concern/datasets/x633f230f)
+ - [Carribean (Barbados, Bahamas, Cayman Islands, Cuba, Dominican Republic, Haiti, Jamaica, Montserrat, Puerto Rico, Saint Kitts And Nevis, Trinidad And Tobago, British Virgin Islands, Guadeloupe, Saint Barthelemy)](https://scholar.colorado.edu/concern/datasets/x633f230f)
  - [Mexico and Central America (Belize, Guatemala, Honduras, El Salvador, Nicaragua, Costa Rica, Panama)](https://scholar.colorado.edu/concern/datasets/vd66w1102)
 
 ### South America
