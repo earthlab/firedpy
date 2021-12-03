@@ -36,7 +36,7 @@ All of the created products have an event-level shapefile in .gpkg format. Many 
  - [Canada](https://scholar.colorado.edu/concern/datasets/gf06g388c)
  - [Hawaii](https://scholar.colorado.edu/concern/datasets/7h149r06p)
  - [All the countries in the Carribean](https://scholar.colorado.edu/concern/datasets/x633f230f)
- - [Mexico and Central America](https://scholar.colorado.edu/concern/datasets/vd66w1102)
+ - [Mexico and Central America (Belize, Guatemala, Honduras, El Salvador, Nicaragua, Costa Rica, Panama)](https://scholar.colorado.edu/concern/datasets/vd66w1102)
 
 ### South America
  - [Bolivia](https://scholar.colorado.edu/concern/datasets/b2773w83t)
@@ -116,7 +116,7 @@ All of the created products have an event-level shapefile in .gpkg format. Many 
  - [China](https://scholar.colorado.edu/concern/datasets/qz20st810)
  - [India](https://scholar.colorado.edu/concern/datasets/ht24wk47t)
  - [Central Asia (Turkmenistan, Kazakhstan, Uzbekistan, Kyrgystan, Tajikistan, Afghanistan, and Pakistan)](https://scholar.colorado.edu/concern/datasets/47429b07v)
- - [Middle East (Saudi Arabia, Quatar, Oman, Yemen, United Arab Emirates, Iraq, Jordan, Syria, Israel, Palestine, Lebanon, Egypt)](https://scholar.colorado.edu/concern/datasets/5d86p139h)
+ - [Middle East (Saudi Arabia, Qatar, Oman, Yemen, United Arab Emirates, Iraq, Jordan, Syria, Israel, Palestine, Lebanon, Egypt)](https://scholar.colorado.edu/concern/datasets/5d86p139h)
  - [Mongolia](https://scholar.colorado.edu/concern/datasets/4x51hk21h)
  - [Caucasus (Armenia, Azerbaijan, Georgia)](https://scholar.colorado.edu/concern/datasets/gf06g385j)
  - [Japan](https://scholar.colorado.edu/concern/datasets/dz010r34v)
