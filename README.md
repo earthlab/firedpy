@@ -110,6 +110,7 @@ All of the created products have an event-level shapefile in .gpkg format. Many 
  - [Botswana](https://scholar.colorado.edu/concern/datasets/b8515p69g)
  - [Tanzania](https://scholar.colorado.edu/concern/datasets/7w62f947x)
  - [Angola](https://scholar.colorado.edu/concern/datasets/t435gf21z)
+ - [Zambia](https://scholar.colorado.edu/concern/datasets/6108vc441)
 
 ### Asia
 
