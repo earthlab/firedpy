@@ -74,6 +74,7 @@ All of the created products have an event-level shapefile in .gpkg format. Many 
  - [Central North Africa (Libya, Algeria, Tunisia)](https://scholar.colorado.edu/concern/datasets/8910jv77j)
  - [Chad](https://scholar.colorado.edu/concern/datasets/707958762)
  - [Central African Republic](https://scholar.colorado.edu/concern/datasets/pv63g1576)
+ - [Democratic Republic of the Congo](https://scholar.colorado.edu/concern/datasets/5425kb88g)
  - [Djibouti](https://scholar.colorado.edu/concern/datasets/1831cm01x)
  - [Equatorial Guinea](https://scholar.colorado.edu/concern/datasets/vx021g32b)
  - [Eritrea](https://scholar.colorado.edu/concern/datasets/5m60qt182)
