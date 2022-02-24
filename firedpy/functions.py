@@ -1895,7 +1895,7 @@ class ModelBuilder:
         gdf = self.buildPoints()
         # gdf.to_crs(crs, inplace=True)
         raw_csv = gdf[["x", "y", "id", "date"]]
-        gdf.to_csv(str(self.file_name)[:-4]+"_events"+".csv", index=False)
+        raw_csv.to_csv(str(self.file_name)[:-4]+"_events"+".csv", index=False)
         
 
         # Create a circle buffer
