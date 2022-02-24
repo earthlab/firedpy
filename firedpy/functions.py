@@ -1951,8 +1951,8 @@ class ModelBuilder:
             print("No shapefile for clipping found ...")
 
         # Remove left columns from spatial join
-        gdf = gdf.loc[:, ~gdfd.columns.str.contains('_left')]
-        gdf = gdf.loc[:, ~gdfd.columns.str.contains('_right')]
+        gdf = gdf.loc[:, ~gdf.columns.str.contains('_left')]
+        gdf = gdf.loc[:, ~gdf.columns.str.contains('_right')]
 
 
         # Calculate perimeter length
