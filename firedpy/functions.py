@@ -1664,6 +1664,10 @@ class ModelBuilder:
 
         # gdf["did"] = gdf["id"].astype(str) + "-" + gdf["date"].astype(str)
         gdf['pixels'] = gdf.groupby(['id', 'date'])['id'].transform('count')
+        
+        gdf['ig_utm_x'] = gdf.groupby(['id', 'date'])['x'].transform('nth', 0)
+
+        gdf['ig_utm_y'] = gdf.groupby(['id', 'date'])['y'].transform('nth', 0)
 
         group = gdf.groupby('id')
 
@@ -1718,7 +1722,7 @@ class ModelBuilder:
                    'fsr_px_dy', 'fsr_km2_dy',
                    'mx_grw_px', 'mn_grw_px', 'mu_grw_px',
                    'mx_grw_km2', 'mn_grw_km2', 'mu_grw_km2', 'mx_grw_dte',
-                   'x', 'y', 'geometry']]
+                   'x', 'y', 'geometry', 'ig_utm_x', 'ig_utm_y']]
 
         gdf = gdf.reset_index(drop=True)
 
@@ -1877,7 +1881,7 @@ class ModelBuilder:
         print("Overwriting data frame at " + self.file_name + "...")
         gdf.to_csv(self.file_name, index=False)
 
-    def buildPolygons(self, daily_shp_path, event_shp_path, daily_shp_path_shp , event_shp_path_shp ):
+  def buildPolygons(self, daily_shp_path, event_shp_path, daily_shp_path_shp , event_shp_path_shp ):
 
         # Make sure we have the target folders
         if not(os.path.exists(os.path.dirname(event_shp_path))):
@@ -1898,70 +1902,64 @@ class ModelBuilder:
         # Then create a square envelope around the circle
         gdf["geometry"] = gdf.envelope
 
-        # Now add the first date of each event and merge daily event detections
+        # Save the daily before dissolving into event level
+        # Only save the daily polygons if user specified to do so
+        if self.daily == "yes":
+            if not(os.path.exists(os.path.dirname(daily_shp_path))):
+                os.makedirs(os.path.dirname(daily_shp_path))
+            # Now add the first date of each event and merge daily event detections
+            print("Dissolving polygons...")
+            gdfd = gdf.dissolve(by="did", as_index=False)
+            # Cast as multipolygon for each geometry
+            print("Converting polygons to multipolygons...")
+            gdfd["geometry"] = gdfd["geometry"].apply(asMultiPolygon)
+            print("Saving daily file to " + daily_shp_path)
+
+            gdfd.to_csv(str(self.file_name)[:-4]+"_daily"+".csv", index=False)
+            if self.shapefile:
+                # gdf.to_crs(outCRS, inplace=True)
+                # gdf.to_crs(outCRS, inplace=True)
+                if self.shp_type == "gpkg":
+                    gdfd.to_file(daily_shp_path, driver="GPKG")
+                    print("Saving event-level file to " + daily_shp_path)
+                elif self.shp_type == "shp":
+                    gdfd.to_file(daily_shp_path_shp)
+                    print("Saving event-level file to " + daily_shp_path_shp)
+                elif self.shp_type == "both":
+                    print("Saving event-level file to " + daily_shp_path_shp)
+                    print("Saving event-level file to " + daily_shp_path)
+                    gdfd.to_file(daily_shp_path_shp)
+                    gdfd.to_file(daily_shp_path, driver="GPKG")
+
+        # Drop the daily attributes before exporting event-level
+        ####### Do we need these to be calculated above?
+            gdf = gdfd.drop(['did', 'pixels', 'date', 'event_day',
+                        'dy_ar_km2'], axis=1)
+
+        # Dissolve by ID to create event-level
         print("Dissolving polygons...")
-        gdfd = gdf.dissolve(by="did", as_index=False)
-
-        # Add the ignition coords, convert to lat/long
-        gdfd_x = pd.DataFrame(gdfd.groupby('id')['x'].nth(0))
-        gdfd_y = pd.DataFrame(gdfd.groupby('id')['y'].nth(0))
-        gdfd_xy = gdfd_x.merge(gdfd_y, on='id')
-        gdfd = gdfd.merge(gdfd_xy, on='id')
-        gdfd = gdfd.rename(columns={"x_x": "x", "y_x": "y",
-                                    "x_y": "ig_utm_x",
-                                    "y_y": "ig_utm_y"})
-        gdfd = gdfd.drop(['x', 'y'], axis=1)
-
-        # Cast as multipolygon for each geometry
-        print("Converting polygons to multipolygons...")
-        gdfd["geometry"] = gdfd["geometry"].apply(asMultiPolygon)
+        gdf = gdf.dissolve(by="id", as_index=False)
 
         # Clip to AOI if specified
         if [i for i in [".shp", ".gpkg"] if(i in self.shp)]:
             print("Extracting events which intersect: ", self.shp)
             shp = gpd.read_file(self.shp)
             shp.to_crs(gdf.crs, inplace=True)
-            gdfd = gpd.sjoin(gdfd, shp, how="inner", op="intersects")
+            gdf = gpd.sjoin(gdf, shp, how="inner", op="intersects")
         else:
             print("No shapefile for clipping found ...")
 
         # Remove left columns from spatial join
-        gdfd = gdfd.loc[:, ~gdfd.columns.str.contains('_left')]
-        gdfd = gdfd.loc[:, ~gdfd.columns.str.contains('_right')]
+        gdf = gdf.loc[:, ~gdfd.columns.str.contains('_left')]
+        gdf = gdf.loc[:, ~gdfd.columns.str.contains('_right')]
 
-        # Save the daily before dissolving into event level
-        # Only save the daily polygons if user specified to do so
-        if self.daily == "yes":
-            print("Saving daily file to " + daily_shp_path)
-            gdfd.to_csv(str(self.file_name)[:-4]+"_daily"+".csv", index=False)
-            if self.shapefile:
-                # gdf.to_crs(outCRS, inplace=True)
-                # gdf.to_crs(outCRS, inplace=True)
-                if self.shp_type == "gpkg":
-                    gdf.to_file(daily_shp_path, driver="GPKG")
-                    print("Saving event-level file to " + daily_shp_path)
-                elif self.shp_type == "shp":
-                    gdf.to_file(daily_shp_path_shp)
-                    print("Saving event-level file to " + daily_shp_path_shp)
-                elif self.shp_type == "both":
-                    print("Saving event-level file to " + daily_shp_path_shp)
-                    print("Saving event-level file to " + daily_shp_path)
-                    gdf.to_file(daily_shp_path_shp)
-                    gdf.to_file(daily_shp_path, driver="GPKG")
-
-        # Drop the daily attributes before exporting event-level
-        gdf = gdfd.drop(['did', 'pixels', 'date', 'event_day',
-                        'dy_ar_km2'], axis=1)
-
-        # Dissolve by ID to create event-level
-        gdf = gdf.dissolve(by="id", as_index=False)
 
         # Calculate perimeter length
         print("Calculating perimeter lengths...")
         gdf["tot_perim"] = gdf["geometry"].length
 
         # We still can't have multiple polygon types
-        # print("Converting polygons to multipolygons...")
+        print("Converting polygons to multipolygons...")
         gdf["geometry"] = gdf["geometry"].apply(asMultiPolygon)
 
         # Export event-level to CSV
