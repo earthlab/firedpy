@@ -1963,7 +1963,9 @@ class ModelBuilder:
         gdf["geometry"] = gdf["geometry"].apply(asMultiPolygon)
 
         # Export event-level to CSV
-        gdf.to_csv(str(self.file_name)[:-4]+"_events"+".csv", index=False)
+        raw_csv = gdf["x", "y", "id, "date"]
+        #gdf.to_csv(str(self.file_name)[:-4]+"_events"+".csv", index=False)
+        raw_csv.to_csv(str(self.file_name)[:-4]+"_events"+".csv", index=False)
         # Save as gpkg if specified
         if self.shapefile:
             # Now save as a geopackage and csv
