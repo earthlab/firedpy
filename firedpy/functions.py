@@ -1880,10 +1880,11 @@ class ModelBuilder:
         # Save event level attributes
         print("Overwriting data frame at " + self.file_name + "...")
         gdf.to_csv(self.file_name, index=False)
-
-  def buildPolygons(self, daily_shp_path, event_shp_path, daily_shp_path_shp , event_shp_path_shp ):
+        
+    def buildPolygons(self, daily_shp_path, event_shp_path, daily_shp_path_shp , event_shp_path_shp ):
 
         # Make sure we have the target folders
+        
         if not(os.path.exists(os.path.dirname(event_shp_path))):
             os.makedirs(os.path.dirname(event_shp_path))
 
