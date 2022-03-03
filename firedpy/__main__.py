@@ -81,7 +81,7 @@ def main():
         with either a ".shp" or ".gpkg" extension to use intersecting MODIS
         tiles. In the firedpy directory, you can access any of the 50 states by specifying ref/us_states/state_name.gpkg,
         all 7 continents by specifying ref/continents/continent_name.gpkg, and a country by ref/individual_countries/country_name.gpkg.
-        A list of all avalible countries can be found in the ReadMe. 
+        A list of all avalible countries can be found in the ReadMe.
         """)
     tmp_help = ("""
         The number of days to search for neighboring burn detections. Defaults
@@ -93,6 +93,10 @@ def main():
     end_yr = ("""
         The last year of fired events.
         """)
+
+    full_csv = ("""
+        If included full attribute table will exported to csv. If not included only x and y coordinates, event date, and
+        event id will be exported to a csv.""" )
 
     # Provide arguments
     parser = argparse.ArgumentParser()
@@ -124,6 +128,7 @@ def main():
     parser.add_argument("-daily", dest="daily", default="no", help=daily_help)
     parser.add_argument("-start_yr", dest="start_yr", type=int, default=None, help=start_yr)
     parser.add_argument("-end_yr", dest="end_yr", type=int, default=None, help=end_yr)
+    parser.add_argument("--full_csv", action='store_true', help=full_csv)
 
 
     if len(sys.argv) == 1:
@@ -262,6 +267,7 @@ def main():
             start_yr = None
             end_yr = None
         temp = 1
+        full_csv = input("Enter "True" if you want a full csv. Enter "False" if you want a raw csv. ")
     else:
 
         # Parse argument responses
@@ -278,6 +284,7 @@ def main():
         shp_type = args.shp_type
         start_yr = args.start_yr
         end_yr = args.end_yr
+        full_csv = args.full_csv
         if shp_type != 'none':
             shapefile = True
         elif shp_type == 'none':
@@ -510,7 +517,8 @@ def main():
     models.buildPolygons(daily_shp_path=daily_shp_path,
                          event_shp_path=event_shp_path,
                          daily_shp_path_shp = daily_shp_path_shp ,
-                         event_shp_path_shp =daily_shp_path_shp )
+                         event_shp_path_shp =daily_shp_path_shp,
+                         full_csv=full_csv )
     makeReadMe(proj_dir, tilename, file_base, temp, first_date, last_date, ecoregion_type, ecoregion_level, landcover_type, daily, spatial_param, temporal_param, shapefile, shp_type)
     # Print the time it took
     end = time.perf_counter()

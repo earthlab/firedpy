@@ -1664,7 +1664,7 @@ class ModelBuilder:
 
         # gdf["did"] = gdf["id"].astype(str) + "-" + gdf["date"].astype(str)
         gdf['pixels'] = gdf.groupby(['id', 'date'])['id'].transform('count')
-        
+
         gdf['ig_utm_x'] = gdf.groupby(['id', 'date'])['x'].transform('nth', 0)
 
         gdf['ig_utm_y'] = gdf.groupby(['id', 'date'])['y'].transform('nth', 0)
@@ -1880,23 +1880,20 @@ class ModelBuilder:
         # Save event level attributes
         print("Overwriting data frame at " + self.file_name + "...")
         gdf.to_csv(self.file_name, index=False)
-        
-    def buildPolygons(self, daily_shp_path, event_shp_path, daily_shp_path_shp , event_shp_path_shp ):
+
+    def buildPolygons(self, daily_shp_path, event_shp_path, daily_shp_path_shp , event_shp_path_shp, full_csv ):
 
         # Make sure we have the target folders
-        
+
         if not(os.path.exists(os.path.dirname(event_shp_path))):
             os.makedirs(os.path.dirname(event_shp_path))
 
         # grab the modis crs and space
         res = self.res
-        
+
         # Create a spatial points object
         gdf = self.buildPoints()
         # gdf.to_crs(crs, inplace=True)
-        raw_csv = gdf[["x", "y", "id", "date"]]
-        raw_csv.to_csv(str(self.file_name)[:-4]+"_events"+".csv", index=False)
-        
 
         # Create a circle buffer
         print("Creating buffer...")
@@ -1917,6 +1914,20 @@ class ModelBuilder:
             # Cast as multipolygon for each geometry
             print("Converting polygons to multipolygons...")
             gdfd["geometry"] = gdfd["geometry"].apply(asMultiPolygon)
+
+            # Clip to AOI if specified
+            if [i for i in [".shp", ".gpkg"] if(i in self.shp)]:
+                print("Extracting events which intersect: ", self.shp)
+                shp = gpd.read_file(self.shp)
+                shp.to_crs(gdf.crs, inplace=True)
+                gdfd = gpd.sjoin(gdfd, shp, how="inner", op="intersects")
+            else:
+                print("No shapefile for clipping found ...")
+
+            # Remove left columns from spatial join
+            gdfd = gdfd.loc[:, ~gdf.columns.str.contains('_left')]
+            gdfd = gdfd.loc[:, ~gdf.columns.str.contains('_right')]
+
             print("Saving daily file to " + daily_shp_path)
 
             gdfd.to_csv(str(self.file_name)[:-4]+"_daily"+".csv", index=False)
@@ -1935,41 +1946,62 @@ class ModelBuilder:
                     gdfd.to_file(daily_shp_path_shp)
                     gdfd.to_file(daily_shp_path, driver="GPKG")
 
-        # Drop the daily attributes before exporting event-level
-        ####### Do we need these to be calculated above?
+            # Drop the daily attributes before exporting event-level
             gdf = gdfd.drop(['did', 'pixels', 'date', 'event_day',
-                        'dy_ar_km2'], axis=1)
+                            'dy_ar_km2'], axis=1)
+            # Dissolve by ID to create event-level
+            gdf = gdf.dissolve(by="id", as_index=False)
+            # Calculate perimeter length
+            print("Calculating perimeter lengths...")
+            gdf["tot_perim"] = gdf["geometry"].length
 
-        # Dissolve by ID to create event-level
-        print("Dissolving polygons...")
-        gdf = gdf.dissolve(by="id", as_index=False)
-
-        # Clip to AOI if specified
-        if [i for i in [".shp", ".gpkg"] if(i in self.shp)]:
-            print("Extracting events which intersect: ", self.shp)
-            shp = gpd.read_file(self.shp)
-            shp.to_crs(gdf.crs, inplace=True)
-            gdf = gpd.sjoin(gdf, shp, how="inner", op="intersects")
-        else:
-            print("No shapefile for clipping found ...")
-
-        # Remove left columns from spatial join
-        gdf = gdf.loc[:, ~gdf.columns.str.contains('_left')]
-        gdf = gdf.loc[:, ~gdf.columns.str.contains('_right')]
+            # We still can't have multiple polygon types
+            gdf["geometry"] = gdf["geometry"].apply(asMultiPolygon)
 
 
-        # Calculate perimeter length
-        print("Calculating perimeter lengths...")
-        gdf["tot_perim"] = gdf["geometry"].length
 
-        # We still can't have multiple polygon types
-        print("Converting polygons to multipolygons...")
-        gdf["geometry"] = gdf["geometry"].apply(asMultiPolygon)
+
+        if self.daily == "no":
+            #Drop daily attributes
+            gdf = gdf.drop(['did', 'pixels', 'date', 'event_day',
+                            'dy_ar_km2'], axis=1)
+
+            # Dissolve by ID to create event-level
+            print("Dissolving polygons...")
+            gdf = gdf.dissolve(by="id", as_index=False)
+            # Calculate perimeter length
+            print("Calculating perimeter lengths...")
+            gdf["tot_perim"] = gdf["geometry"].length
+
+            # We have multiple polygon types
+            print("Converting polygons to multipolygons...")
+            gdf["geometry"] = gdf["geometry"].apply(asMultiPolygon)
+
+
+            # Clip to AOI if specified
+            if [i for i in [".shp", ".gpkg"] if(i in self.shp)]:
+                print("Extracting events which intersect: ", self.shp)
+                shp = gpd.read_file(self.shp)
+                shp.to_crs(gdf.crs, inplace=True)
+                gdf = gpd.sjoin(gdf, shp, how="inner", op="intersects")
+            else:
+                print("No shapefile for clipping found ...")
+
+            # Remove left columns from spatial join
+            gdf = gdf.loc[:, ~gdf.columns.str.contains('_left')]
+            gdf = gdf.loc[:, ~gdf.columns.str.contains('_right')]
+
+
+
+
 
         # Export event-level to CSV
-        
-        
-        #raw_csv.to_csv(str(self.file_name)[:-4]+"_events"+".csv", index=False)
+
+        if full_csv:
+            gdf.to_csv(str(self.file_name)[:-4]+"_events"+".csv", index=False)
+        else:
+            to_raw_csv = gdf[["x", "y", "id", "ig_date", "last_date"]]
+            to_raw_csv.to_csv(str(self.file_name)[:-4]+"_events"+".csv", index=False)
         # Save as gpkg if specified
         if self.shapefile:
             # Now save as a geopackage and csv
