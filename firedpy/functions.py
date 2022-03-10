@@ -1633,7 +1633,7 @@ class ModelBuilder:
         if [i for i in [".shp", ".gpkg"] if(i in self.shp)]:
             shp = gpd.read_file(self.shp)
             shp.to_crs(gdf.crs, inplace=True)
-            shp['geometry'] = shp.geometry.buffer(200000)  # Wide buffer to start
+            shp['geometry'] = shp.geometry.buffer(100000)  # Wide buffer to start
             gdf = gpd.sjoin(gdf, shp, how="inner", op="intersects", rsuffix='_join_')
         else:
             print("No AOI for clipping found ...")
