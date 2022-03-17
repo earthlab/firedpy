@@ -138,6 +138,7 @@ def main():
         if not os.path.exists(proj_dir):
             proj_dir=os.path.join(os.getcwd(), 'proj')
             os.makedirs(proj_dir)
+        full_csv = input("Enter True if you want a full csv. Enter False if you want a raw csv. ")
         tilechoice = input("Would you like the fired product on a) continent, b) country, c) US state, or d)speific MODIS tiles?[a/b/c/d]: ")
         while True:
             if tilechoice not in ['a','b','c','d']:
@@ -267,7 +268,7 @@ def main():
             start_yr = None
             end_yr = None
         temp = 1
-        full_csv = input("Enter "True" if you want a full csv. Enter "False" if you want a raw csv. ")
+        
     else:
 
         # Parse argument responses
