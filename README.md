@@ -55,6 +55,7 @@ All of the created products have an event-level shapefile in .gpkg format. Many 
 
 ### Europe
  - [Northern Europe (Iceland, Sweden, Norway, and Denmark)](https://scholar.colorado.edu/concern/datasets/sb397945f)
+ - [Finland](https://scholar.colorado.edu/concern/datasets/6395w836j)
  - [Russia](https://scholar.colorado.edu/concern/datasets/q811kk87t)
  - [Italy](https://scholar.colorado.edu/concern/datasets/v979v416g)
  - [Spain & Portugal](https://scholar.colorado.edu/concern/datasets/gb19f7006)
