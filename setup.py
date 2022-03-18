@@ -9,7 +9,7 @@ print('find packages ', setuptools.find_packages())
 setuptools.setup(
     name="firedpy",
     version="0.0.2",
-    author="Travis Williams, Lise St. Denis, Adam Mahood, Maxwell C. Cook, Maxwell B. Joseph, Joseph McGlinchy",
+    author="Travis Williams, Lise St. Denis, Adam Mahood, Maxwell C. Cook, Maxwell B. Joseph, Joseph McGlinchy, Estelle Lindrooth",
     author_email="adam.mahood@colorado.edu",
     description="A command line interface for classifying fires using a MODIS Burnt Area Product",
     license="MIT License",
