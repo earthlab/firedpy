@@ -1623,6 +1623,7 @@ class ModelBuilder:
 
         # Each entry gets a point object from the x and y coordinates.
         print("Converting data frame to spatial object...")
+
         df["geometry"] = df[["x", "y"]].apply(lambda x: Point(tuple(x)),
                                               axis=1)
 
@@ -1917,16 +1918,18 @@ class ModelBuilder:
 
             # Clip to AOI if specified
             if [i for i in [".shp", ".gpkg"] if(i in self.shp)]:
-                print("Extracting events which intersect: ", self.shp)
+                print("Extracting events which intersect:", self.shp)
+                print(os.getcwd())
                 shp = gpd.read_file(self.shp)
                 shp.to_crs(gdf.crs, inplace=True)
                 gdfd = gpd.sjoin(gdfd, shp, how="inner", op="intersects")
             else:
                 print("No shapefile for clipping found ...")
 
-            # Remove left columns from spatial join
-            gdfd = gdfd.loc[:, ~gdf.columns.str.contains('_left')]
-            gdfd = gdfd.loc[:, ~gdf.columns.str.contains('_right')]
+             # Remove left columns from spatial join
+            gdfd = gdfd.loc[:, ~gdfd.columns.str.contains('_left')]
+            gdfd = gdfd.loc[:, ~gdfd.columns.str.contains('_right')]
+
 
             print("Saving daily file to " + daily_shp_path)
 
@@ -1936,13 +1939,13 @@ class ModelBuilder:
                 # gdf.to_crs(outCRS, inplace=True)
                 if self.shp_type == "gpkg":
                     gdfd.to_file(daily_shp_path, driver="GPKG")
-                    print("Saving event-level file to " + daily_shp_path)
+                    print("Saving daily file to " + daily_shp_path)
                 elif self.shp_type == "shp":
                     gdfd.to_file(daily_shp_path_shp)
-                    print("Saving event-level file to " + daily_shp_path_shp)
+                    print("Saving daily file to " + daily_shp_path_shp)
                 elif self.shp_type == "both":
-                    print("Saving event-level file to " + daily_shp_path_shp)
-                    print("Saving event-level file to " + daily_shp_path)
+                    print("Saving daily file to " + daily_shp_path_shp)
+                    print("Saving daily file to " + daily_shp_path)
                     gdfd.to_file(daily_shp_path_shp)
                     gdfd.to_file(daily_shp_path, driver="GPKG")
 
