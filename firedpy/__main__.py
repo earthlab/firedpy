@@ -268,11 +268,7 @@ def main():
             start_yr = None
             end_yr = None
         temp = 1
-<<<<<<< Updated upstream
-        
-=======
         full_csv = input("Enter True if you want a full csv. Enter False if you want a raw csv. ")
->>>>>>> Stashed changes
     else:
 
         # Parse argument responses
