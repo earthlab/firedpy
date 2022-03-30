@@ -268,7 +268,11 @@ def main():
             start_yr = None
             end_yr = None
         temp = 1
+<<<<<<< Updated upstream
         
+=======
+        full_csv = input("Enter True if you want a full csv. Enter False if you want a raw csv. ")
+>>>>>>> Stashed changes
     else:
 
         # Parse argument responses
@@ -518,7 +522,7 @@ def main():
     models.buildPolygons(daily_shp_path=daily_shp_path,
                          event_shp_path=event_shp_path,
                          daily_shp_path_shp = daily_shp_path_shp ,
-                         event_shp_path_shp =daily_shp_path_shp,
+                         event_shp_path_shp =event_shp_path_shp,
                          full_csv=full_csv )
     makeReadMe(proj_dir, tilename, file_base, temp, first_date, last_date, ecoregion_type, ecoregion_level, landcover_type, daily, spatial_param, temporal_param, shapefile, shp_type)
     # Print the time it took
