@@ -285,3 +285,23 @@ After creating a new fire product, it might be useful to get it out of the docke
  - For example `firedpy -aoi /home/firedpy/ref/us_states/colorado.gpkg`, and so on. Every space is a '_'. 
  - If using the user input option, when prompted for the name of the continent, country, or state use "_" for spaces. 
  - **Ensure that the input shapefiles are in the modis sinusiodal projection**
+
+
+## How to update the docker container
+
+### step 0.1. install docker (go to the docker website for OS-specific instructions)
+
+### step 0.2. get a dockerhub account
+
+### step 1. login to docker hub via the command line
+
+`docker login` or `sudo docker login`
+
+### step 2. build the docker container
+
+`docker build -t earthlab/firedpy:latest .`
+
+### step 3. push it up to dockerhub
+
+`docker push earthlab/firedpy:latest`
+
