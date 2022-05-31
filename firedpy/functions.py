@@ -1893,7 +1893,28 @@ class ModelBuilder:
         res = self.res
 
         # Create a spatial points object
-        gdf = self.buildPoints()
+        # Read in the event table
+        print("Reading classified fire event table...")
+        df = pd.read_csv(self.file_name, low_memory=False)
+
+        # Go ahead and create daily id (did) for later
+        df["did"] = df["id"].astype(str) + "-" + df["date"].astype(str)
+
+        # Get geometries
+        crs = self.crs
+        geom = self.geom
+        proj4 = crs.proj4
+
+        # Each entry gets a point object from the x and y coordinates.
+        print("Converting data frame to spatial object...")
+
+        df["geometry"] = df[["x", "y"]].apply(lambda x: Point(tuple(x)),
+                                              axis=1)
+
+        gdf = gpd.GeoDataFrame(df, crs=proj4, geometry=df["geometry"])
+
+
+
         # gdf.to_crs(crs, inplace=True)
 
         # Create a circle buffer
