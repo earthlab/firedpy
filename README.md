@@ -303,6 +303,3 @@ After creating a new fire product, it might be useful to get it out of the docke
    - `firedpy -aoi /home/firedpy/ref/individual_countries/samoa.gpkg`
 - step 6. push it up to dockerhub
    - `docker push earthlab/firedpy:latest`
-
-### OR, it may be necessary to 
-
