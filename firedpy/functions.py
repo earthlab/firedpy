@@ -17,7 +17,7 @@ import rasterio
 from rasterio import logging
 from rasterio.merge import merge
 import xarray as xr
-import rioxarray as rxr
+#import rioxarray as rxr
 from shapely.geometry import Point, Polygon, MultiPolygon
 import sys
 from tqdm import tqdm
@@ -1631,7 +1631,7 @@ class ModelBuilder:
 
         # Extract points to AOI if specified
         # Clip to AOI if specified
-        if [i for i in [".shp", ".gpkg"] if(i in self.shp)]:
+        if os.path.splitext(self.shp[0])[1] in [".shp", ".gpkg"]:
             shp = gpd.read_file(self.shp)
             shp.to_crs(gdf.crs, inplace=True)
             shp['geometry'] = shp.geometry.buffer(100000)  # Wide buffer to start
@@ -1938,7 +1938,7 @@ class ModelBuilder:
             gdfd["geometry"] = gdfd["geometry"].apply(asMultiPolygon)
 
             # Clip to AOI if specified
-            if [i for i in [".shp", ".gpkg"] if(i in self.shp)]:
+            if os.path.splitext(self.shp[0])[1] in [".shp", ".gpkg"]:
                 print("Extracting events which intersect:", self.shp)
                 print(os.getcwd())
                 shp = gpd.read_file(self.shp)
@@ -2003,7 +2003,7 @@ class ModelBuilder:
 
 
             # Clip to AOI if specified
-            if [i for i in [".shp", ".gpkg"] if(i in self.shp)]:
+            if os.path.splitext(self.shp[0])[1] in [".shp", ".gpkg"]:
                 print("Extracting events which intersect: ", self.shp)
                 shp = gpd.read_file(self.shp)
                 shp.to_crs(gdf.crs, inplace=True)

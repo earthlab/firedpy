@@ -293,8 +293,13 @@ After creating a new fire product, it might be useful to get it out of the docke
 - step 0.2. get a dockerhub account
 - step 1. login to docker hub via the command line
    - `docker login` or `sudo docker login`
-- step 2. build the docker container
+- step 2. get the existing docker image set up
+   - docker run -t -d earthlab/firedpy
+- step 3. update from github
+   - git pull 
+- step 4. build the docker container
    - `docker build -t earthlab/firedpy:latest .`
-- step 3. push it up to dockerhub
+- step 5. **ENSURE THE SOFTWARE STILL WORKS BEFORE PUSHING**
+   - `firedpy -aoi /home/firedpy/ref/individual_countries/samoa.gpkg`
+- step 6. push it up to dockerhub
    - `docker push earthlab/firedpy:latest`
-
