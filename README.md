@@ -24,7 +24,13 @@ The algorithm and derived data products are under active development. Please tak
 
 Already-created products are housed in the CU Scholar data repository in the [Earth Lab Data collection](https://scholar.colorado.edu/collections/pz50gx05h), or [here](https://scholar.colorado.edu/catalog?f%5Bacademic_affiliation_sim%5D%5B%5D=Earth+Lab&locale=en). 
 
-All of the created products have an event-level shapefile in .gpkg format. Many countries also have the daily-level shapefile, but these were not created for most countries in Africa and Asia due to computational restrictions. We are working to include each event-level product in ESRI shapefile format. This will happen by the end of 2021.
+All of the created products have an event-level shapefile in .gpkg and .shp formats. Many countries also have the daily-level shapefile, but these were not created for most countries in Africa and Asia due to computational restrictions. 
+
+### BUG ALERT: 
+
+Many of the data products created in Fall 2021 may be shifted by a half pixel, and may lack a coordinate reference system. 
+
+We created a script, R/posthoc_fixes.R that contains a function to fix either or both of these problems.
 
 ![completed countries are below](map_fig.png)
 
