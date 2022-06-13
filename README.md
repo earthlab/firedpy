@@ -210,6 +210,12 @@ After creating a new fire product, it might be useful to get it out of the docke
     `git clone https://github.com/earthlab/firedpy.git`
 
     `cd firedpy`
+    
+  - Ensure your anaconda setup has **conda-forge**, **channel_priority** set to **strict**, and **update your conda**.
+
+    `conda update conda --yes`
+    `conda config --add channels conda-forge`
+    `conda config --set channel_priority strict`
 
   - Create and activate a conda environment:
 
