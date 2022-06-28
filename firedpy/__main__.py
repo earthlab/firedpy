@@ -112,7 +112,7 @@ def main():
                         default=None, help=eco_help)
     parser.add_argument("-landcover_type", dest="landcover_type",
                         default=None, help=lc_help)
-    parser.add_argument("-shp_type", dest = "shp_type", help=shp_help, default = None)
+    parser.add_argument("-shp_type", dest = "shp_type", help=shp_help, default = "gpkg")
     #parser.add_argument("--shpfile", action='store_true', help=shpf_help)
     parser.add_argument("-spatial", dest="spatial_param", default=5,
                         type=int, help=sp_help)
