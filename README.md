@@ -216,6 +216,8 @@ After creating a new fire product, it might be useful to get it out of the docke
     `conda update conda --yes`
     `conda config --add channels conda-forge`
     `conda config --set channel_priority strict`
+    
+  - You must have all packages listed in the environment.yaml installed using 'conda install -c conda-forge <package_name>'
 
   - Create and activate a conda environment:
 
