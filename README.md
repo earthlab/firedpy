@@ -16,6 +16,15 @@ and Cook, M. C. 2020. FIRED (Fire Events Delineation): An open, flexible algorit
 of U.S. fire events derived from the MODIS burned area product (2001-19). Remote
 Sensing, 12(21), 3498; https://doi.org/10.3390/rs12213498
 
+
+### BUG ALERT: 
+
+Many of the data products created in Fall 2021 may be shifted by a half pixel, and may lack a coordinate reference system. 
+
+The problem is now fixed, so this will not affect new iterations of firedpy. We created a script, R/posthoc_fixes.R that contains a function to fix either or both of these problems.
+
+Sometimes the server that houses the MCD64A1 (fuoco.geog.umd.edu) is down. If this happens, you just need to wait until it comes back up.
+
 ## Have you used firedpy?
 
 The algorithm and derived data products are under active development. Please take this [survey](https://docs.google.com/forms/d/e/1FAIpQLSe7ycmS0HGIze2T6TIUox8hsu8nlGsxiUMww8SCeWHDZPhB-Q/viewform?usp=sf_link) to help us improve firedpy.
@@ -25,12 +34,6 @@ The algorithm and derived data products are under active development. Please tak
 Already-created products are linked below. They are housed in the CU Scholar data repository in the [Earth Lab Data collection](https://scholar.colorado.edu/collections/pz50gx05h), or [here](https://scholar.colorado.edu/catalog?f%5Bacademic_affiliation_sim%5D%5B%5D=Earth+Lab&locale=en). 
 
 All of the created products have an event-level shapefile in .gpkg and .shp formats. Many countries also have the daily-level shapefile, but these were not created for most countries in Africa and Asia due to computational restrictions. 
-
-### BUG ALERT: 
-
-Many of the data products created in Fall 2021 may be shifted by a half pixel, and may lack a coordinate reference system. 
-
-The problem is now fixed, so this will not affect new iterations of firedpy. We created a script, R/posthoc_fixes.R that contains a function to fix either or both of these problems.
 
 ![completed countries are below](map_fig.png)
 
