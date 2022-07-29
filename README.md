@@ -23,7 +23,7 @@ Many of the data products created in Fall 2021 may be shifted by a half pixel, a
 
 The problem is now fixed, so this will not affect new iterations of firedpy. We created a script, R/posthoc_fixes.R that contains a function to fix either or both of these problems.
 
-Sometimes the server that houses the MCD64A1 (fuoco.geog.umd.edu) is down. If this happens, you just need to wait until it comes back up.
+Sometimes the server (fuoco.geog.umd.edu) that houses the MCD64A1 product used by firedpy is down. If this happens, you just need to wait until it comes back up.
 
 See the issues tab for more bugs, or to report a new bug!
 
