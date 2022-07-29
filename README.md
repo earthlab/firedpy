@@ -25,6 +25,8 @@ The problem is now fixed, so this will not affect new iterations of firedpy. We 
 
 Sometimes the server that houses the MCD64A1 (fuoco.geog.umd.edu) is down. If this happens, you just need to wait until it comes back up.
 
+See the issues tab for more bugs, or to report a new bug!
+
 ## Have you used firedpy?
 
 The algorithm and derived data products are under active development. Please take this [survey](https://docs.google.com/forms/d/e/1FAIpQLSe7ycmS0HGIze2T6TIUox8hsu8nlGsxiUMww8SCeWHDZPhB-Q/viewform?usp=sf_link) to help us improve firedpy.
