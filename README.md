@@ -30,7 +30,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 
 Many of the data products created in Fall 2021 may be shifted by a half pixel, and may lack a coordinate reference system. 
 
-We created a script, R/posthoc_fixes.R that contains a function to fix either or both of these problems.
+The problem is now fixed, so this will not affect new iterations of firedpy. We created a script, R/posthoc_fixes.R that contains a function to fix either or both of these problems.
 
 ![completed countries are below](map_fig.png)
 
