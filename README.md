@@ -16,6 +16,11 @@ and Cook, M. C. 2020. FIRED (Fire Events Delineation): An open, flexible algorit
 of U.S. fire events derived from the MODIS burned area product (2001-19). Remote
 Sensing, 12(21), 3498; https://doi.org/10.3390/rs12213498
 
+Description of the country-level data sets is at: 
+
+Mahood, A.L. Lindrooth, E.J., Cook, M.C. and Balch, J.K. Country-level fire perimeter datasets (2001-2021). 2022. Nature Scientific Data, 9(458). https://doi.org/10.1038/s41597-022-01572-3
+
+
 
 ### BUG ALERT: 
 
