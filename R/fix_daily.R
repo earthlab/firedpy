@@ -44,6 +44,8 @@ registerDoParallel(corz)
 dfile <-"/home/a/data/fire/fired/fired_uscan_to_May_2021_gpkg_shp/fired_uscan_to2021121_daily.gpkg"
 dfile_out <- paste0(str_split(dfile, "\\.")[[1]][1], "_fixed.gpkg")
 
+system(paste0("aws s3 cp ", dfile_out, "s3://earthlab-amahood/", dfile_out))
+
 ids <- st_read(dfile, query="SELECT id FROM fired_uscan_to2021121_daily", quiet=TRUE) %>%
   pull(id) %>%
   unique()
