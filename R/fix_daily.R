@@ -3,51 +3,69 @@ library(sf)
 library(tidyverse)
 # devtools::install_github("hadley/multidplyr")
 library(multidplyr)
-dfile <-"/home/a/data/fire/fired/wa_or_ca/fired_wa_or_ca_to2021305_daily.gpkg"
-
-dsf <- st_read(dfile) %>%
-  mutate(date = as.Date(date)) %>%
-  filter(date > as.Date("2021-07-01"))
-
-# Creating 4-core cluster
-cl <- new_cluster(4)
-# cl <- default_cluster()
-cluster_library(cl, "dplyr")
-
 library(doParallel)
-
 library(foreach)
-corz<-4
-registerDoParallel(corz)
 
-
-
-fix_daily <- function(dsf, cl){
+# functions =======================
+fix_daily <- function(dsf, cl=4){
 
     att<- dsf %>%
       st_set_geometry(NULL) %>%
       group_by(id, date) %>%
       summarise_all(first) %>%
       dplyr::select(-did, -x, -y)
-    
+
     ids<-unique(dsf$id)
-    ns <- seq(1, length(ids), by=100)
-    
+    ns <- seq(1, length(ids), by=10)
+
     geom <- foreach(i = ns, .combine = bind_rows)%dopar%{
       system(paste("echo", i, "/", length(ids)))
-      
-      idsub <- ids[i:(i+99)]
-      
+
+      idsub <- ids[i:(i+9)]
+
       dsf %>%
         filter(id %in% ids) %>%
-        dplyr::select(id, date) %>%   
+        dplyr::select(id, date) %>%
         group_by(id, date) %>%
         summarise() %>%
         ungroup()
                   }
-    
+
     left_join(geom,att, by = c("id", "date"))->x
     return(x)
 }
+# Creating 4-core cluster
+cl <- new_cluster(4)
+# cl <- default_cluster()
+cluster_library(cl, "dplyr")
+corz<-4
+registerDoParallel(corz)
 
-st_write(x,"/home/a/data/fire/fired/wa_or_ca/fired_wa_or_ca_to2021305_daily_fixed.gpkg" )
+dfile <-"/home/a/data/fire/fired/fired_uscan_to_May_2021_gpkg_shp/fired_uscan_to2021121_daily.gpkg"
+dfile_out <- paste0(str_split(dfile, "\\.")[[1]][1], "_fixed.gpkg")
+
+ids <- st_read(dfile, query="SELECT id FROM fired_uscan_to2021121_daily", quiet=TRUE) %>%
+  pull(id) %>%
+  unique()
+gc()
+
+iterators <- seq(1, length(ids), by = 100)
+
+result <- list()
+for(Z in 1:length(iterators)){
+  print(paste("chunk", Z, "of", length(iterators)))
+
+id_subset <- ids[iterators[Z]:(iterators[Z+1]-1)]
+  query <- paste("SELECT * FROM fired_uscan_to2021121_daily WHERE id >=",
+                 min(id_subset),
+                 "AND id <=", max(id_subset))
+
+  dsf <- st_read(dfile, query=query) %>%
+    mutate(date = as.Date(date))
+
+  result[[Z]] <- fix_daily(dsf, cl)
+  gc()
+}
+
+bind_rows(result) %>%
+ st_write(dfile_out)
