@@ -2,7 +2,7 @@
 library(sf)
 library(tidyverse)
 # devtools::install_github("hadley/multidplyr")
-library(multidplyr)
+# library(multidplyr)
 library(doParallel)
 library(foreach)
 
@@ -34,17 +34,13 @@ fix_daily <- function(dsf, cl=4){
     left_join(geom,att, by = c("id", "date"))->x
     return(x)
 }
-# Creating 4-core cluster
-cl <- new_cluster(4)
-# cl <- default_cluster()
-cluster_library(cl, "dplyr")
-corz<-4
+
+corz<-detectCores()-1
 registerDoParallel(corz)
 
-dfile <-"/home/a/data/fire/fired/fired_uscan_to_May_2021_gpkg_shp/fired_uscan_to2021121_daily.gpkg"
+dfile <-"fired_uscan_to2021121_daily.gpkg"
 dfile_out <- paste0(str_split(dfile, "\\.")[[1]][1], "_fixed.gpkg")
 
-system(paste0("aws s3 cp ", dfile_out, "s3://earthlab-amahood/", dfile_out))
 
 ids <- st_read(dfile, query="SELECT id FROM fired_uscan_to2021121_daily", quiet=TRUE) %>%
   pull(id) %>%
@@ -71,3 +67,5 @@ id_subset <- ids[iterators[Z]:(iterators[Z+1]-1)]
 
 bind_rows(result) %>%
  st_write(dfile_out)
+
+system(paste0("aws s3 cp ", dfile_out, " s3://earthlab-amahood/", dfile_out))
