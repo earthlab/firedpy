@@ -55,18 +55,20 @@ for(Z in 1:length(iterators)){
   tmpfl <- paste0("tmp/tmp",Z,".gpkg")
   print(paste("chunk", Z, "of", length(iterators)))
 
-  id_subset <- ids[iterators[Z]:(iterators[Z+1]-1)]
-  query <- paste("SELECT * FROM fired_uscan_to2021121_daily WHERE id >=",
-                 min(id_subset),
-                 "AND id <=", max(id_subset))
-
-  dsf <- st_read(dfile, query=query) %>%
-    mutate(date = as.Date(date))
-
-  fix_daily(dsf, cl) %>%
-    st_write(tmpfl)
-  gc()
-  system(paste0("aws s3 cp ", tmpfl, " s3://earthlab-amahood/", tmpfl))
+  if(!file.exists(tmpfl)){
+    id_subset <- ids[iterators[Z]:(iterators[Z+1]-1)]
+    query <- paste("SELECT * FROM fired_uscan_to2021121_daily WHERE id >=",
+                   min(id_subset),
+                   "AND id <=", max(id_subset))
+  
+    dsf <- st_read(dfile, query=query) %>%
+      mutate(date = as.Date(date))
+  
+    fix_daily(dsf, cl) %>%
+      st_write(tmpfl)
+    gc()
+    system(paste0("aws s3 cp ", tmpfl, " s3://earthlab-amahood/", tmpfl))
+  }
   
 }
 
