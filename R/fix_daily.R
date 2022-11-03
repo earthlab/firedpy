@@ -71,13 +71,15 @@ for(Z in 1:length(iterators)){
       mutate(date = as.Date(date))
   
     fix_daily(dsf, cl) %>%
-      st_write(tmpfl)
+      st_write(tmpfl, delete_dsn=T)
     gc()
     system(paste0("aws s3 cp ", tmpfl, " s3://earthlab-amahood/", tmpfl))
   }
 }
 
-# bind_rows(result) %>%
-#  st_write(dfile_out)
-# 
-# system(paste0("aws s3 cp ", dfile_out, " s3://earthlab-amahood/", dfile_out))
+fl <- list.files("tmp", full.names=T)
+
+lapply(fl, st_read) %>%
+  bind_rows() %>%
+  st_write(dfile_out)
+system(paste0("aws s3 cp ", dfile_out, " s3://earthlab-amahood/", dfile_out))
