@@ -44,7 +44,9 @@ dfile_out <- paste0(str_split(dfile, "\\.")[[1]][1], "_fixed.gpkg")
 
 ids <- st_read(dfile, query="SELECT id FROM fired_uscan_to2021121_daily", quiet=TRUE) %>%
   pull(id) %>%
-  unique()
+  unique() %>%
+  sort()
+
 gc()
 
 iterators <- seq(1, length(ids), by = 100)
@@ -56,7 +58,11 @@ for(Z in 1:length(iterators)){
   print(paste("chunk", Z, "of", length(iterators)))
 
   if(!file.exists(tmpfl)){
-    id_subset <- ids[iterators[Z]:(iterators[Z+1]-1)]
+    
+    if(Z != length(iterators)){
+      id_subset <- ids[iterators[Z]:(iterators[Z+1]-1)]
+    }else{id_subset <- ids[iterators[Z]:length(ids)]}
+    
     query <- paste("SELECT * FROM fired_uscan_to2021121_daily WHERE id >=",
                    min(id_subset),
                    "AND id <=", max(id_subset))
@@ -69,7 +75,6 @@ for(Z in 1:length(iterators)){
     gc()
     system(paste0("aws s3 cp ", tmpfl, " s3://earthlab-amahood/", tmpfl))
   }
-  
 }
 
 # bind_rows(result) %>%
