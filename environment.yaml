@@ -1,6 +1,7 @@
 name: firedpy
 channels:
   - defaults
+  - conda-forge
 dependencies:
   - beautifulsoup4
   - dask
