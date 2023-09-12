@@ -21,6 +21,6 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    entry_points = {'console_scripts': ['firedpy = firedpy.__main__:main']},
+    entry_points={'console_scripts': ['firedpy = firedpy.__main__:main']},
     packages=setuptools.find_packages()
 )
