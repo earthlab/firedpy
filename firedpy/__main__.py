@@ -343,7 +343,7 @@ def main():
     if landcover_type:
         # Earthdata Login
         #test url for correct user/password
-        url = "https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.006/2019.01.01/MCD12Q1.A2019001.h13v12.006.2020212130349.hdf"
+        url = "https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.061/2019.01.01/MCD12Q1.A2019001.h13v12.006.2020212130349.hdf"
 
         password_manager = urllib.request.HTTPPasswordMgrWithDefaultRealm()
         password_manager.add_password(None, "https://urs.earthdata.nasa.gov", username, password)

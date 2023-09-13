@@ -725,7 +725,7 @@ class DataGetter:
             lc_type = "type" + str(landcover_type)
 
             # Get available years
-            r = requestIO("https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.006/")
+            r = requestIO("https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.061/")
             soup = BeautifulSoup(r, 'html.parser')
             links = [link["href"] for link in soup.find_all("a", href=True)]
             years = [ll[:4] for ll in links if '01.01' in ll]
@@ -789,7 +789,7 @@ class DataGetter:
                     year_tiles = needed_tiles[yr]
 
                     # Retrieve list of links to hdf files
-                    url = ("https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.006/" + yr + ".01.01/")
+                    url = ("https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.061/" + yr + ".01.01/")
                     r = requestIO(url)
                     soup = BeautifulSoup(r, 'html.parser')
                     names = [link["href"] for link in soup.find_all("a", href=True)]
