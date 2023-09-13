@@ -380,7 +380,7 @@ class DataGetter:
         if self.tiles[0].lower() != "all":
             tiles = self.tiles
         else:
-            sftp_client.chdir('/data/MODIS/C6/MCD64A1/HDF')
+            sftp_client.chdir('/data/MODIS/C61/MCD64A1/HDF')
             dirs = sftp_client.listdir()
             tiles = dirs
 
@@ -389,7 +389,7 @@ class DataGetter:
         # Download the available files and catch failed downloads
         for tile in tiles:
             # Find remote folder for the tile
-            sftp_folder = '/data/MODIS/C6/MCD64A1/HDF/' + tile
+            sftp_folder = '/data/MODIS/C61/MCD64A1/HDF/' + tile
 
             # Check if remote folder exists and if not, continue to next tile
             try:
@@ -485,7 +485,7 @@ class DataGetter:
 
                 for m in missings:
                     tile = m.split("/")[-2]
-                    sftp_folder = "/MCD64A1/C6/HDF/" + tile
+                    sftp_folder = "/MCD64A1/C61/HDF/" + tile
                     sftp_client.chdir(sftp_folder)
                     file = os.path.basename(m)
                     localpath = os.path.join(self.hdf_path, tile)
@@ -711,7 +711,7 @@ class DataGetter:
             print("Connected to 'fuoco.geog.umd.edu' ...")
             # Open the connection to the SFTP
             sftp_client = ssh_client.open_sftp()
-            sftp_client.chdir('/data/MODIS/C6/MCD64A1/HDF')
+            sftp_client.chdir('/data/MODIS/C61/MCD64A1/HDF')
             tiles = sftp_client.listdir()
             ssh_client.close()
             sftp_client.close()
