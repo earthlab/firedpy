@@ -96,6 +96,7 @@ class BurnData(Base):
         super().__init__(out_dir, start_year, end_year, username, password, tiles)
         self._base_sftp_folder = os.path.join('data', 'MODIS', 'C61', 'MCD64A1', 'HDF')
         self._modis_template_path = os.path.join(out_dir, 'rasters', 'mosaic_template.tif')
+        self._hdf_regex = r'MCD64A1\.A(?P<year>\d{4})(?P<julien_day>\d{3})\.h(?P<horizontal_tile>\d{2})\.v(?P<vertical_tile>\d{2})\.061\.(?P<prod_year>\d{4})(?P<prod_month>\d{2})(?P<prod_day>\d{2})(?P<prod_hour>\d{2})(?P<prod_minute>\d{2})(?P<prod_second>\d{2}).hdf$'
 
     @staticmethod
     # TODO: Actually look at the files in the sftp dir and build the file names from there
@@ -161,6 +162,9 @@ class BurnData(Base):
     def _generate_remote_hdf_path(self, tile: str, hdf_name: str) -> str:
         return os.path.join(self._base_sftp_folder, tile, hdf_name)
 
+    def _generate_remote_hdf_dir(self, tile: str) -> str:
+        return os.path.join(self._base_sftp_folder, tile)
+
     def _generate_local_nc_path(self, tile: str) -> str:
         return os.path.join(self._out_dir, 'rasters', 'burn_area', 'netcdfs', f"{tile}.nc")
 
@@ -217,8 +221,8 @@ class BurnData(Base):
                 continue
 
             print(f"Downloading/Checking HDF files for: {tile}")
-            sftp_client.chdir(os.path.join(self._base_sftp_folder, tile))
-            hdfs = [h for h in sftp_client.listdir() if ".hdf" in h]
+            hdfs = [self._generate_remote_hdf_path(tile, h) for h in
+                    sftp_client.listdir(self._generate_remote_hdf_dir(tile)) if ".hdf" in h]
             if not hdfs:
                 print(f"No MCD64A1 Product for tile: {tile}, skipping...")
 
