@@ -1,5 +1,6 @@
 import datetime as dt
 import os
+import re
 import shutil
 import sys
 from datetime import datetime
@@ -29,47 +30,49 @@ class Base:
                      "h13v04", "h08v05", "h09v05", "h10v05", "h11v05",
                      "h12v05", "h08v06", "h09v06", "h10v06", "h11v06"]
 
-    def __init__(self, out_dir: str, start_year: Union[None, int], end_year: Union[None, int], username: str,
-                 password: str, tiles: List[str] = None):
+    def __init__(self, out_dir: str):
+        os.makedirs(out_dir, exist_ok=True)
+
         self._out_dir = out_dir
-        self._start_year = start_year
-        self._end_year = end_year
-        self._username = username
-        self._password = password
         self._date = datetime.today().strftime('%m-%d-%Y')
         self._cpus = os.cpu_count()
-        self._land_cover_save_dir = os.path.join(out_dir, 'rasters', 'landcover')
-        self._land_cover_file_root = 'lc_mosaic_'
-        self._nc_save_dir = os.path.join(out_dir, 'rasters', 'burn_area', 'netcdfs')
-        self._hdf_save_dir = os.path.join(out_dir, 'rasters', 'burn_area', 'hdfs')
-        # self._tiles = self.DEFAULT_TILES if tiles is None else tiles
+
+        self._raster_dir = os.path.join(out_dir, 'rasters')
+        self._shape_file_dir = os.path.join(self._out_dir, "shape_files")
+        self._burn_area_dir = os.path.join(self._raster_dir, 'burn_area')
+        self._land_cover_dir = os.path.join(self._raster_dir, 'land_cover')
+        self._eco_region_raster_dir = os.path.join(self._raster_dir, 'eco_region')
+        self._eco_region_shapefile_dir = os.path.join(self._raster_dir, 'eco_region')
+        self._tables_dir = os.path.join(out_dir, 'tables')
+
+        self._mosaics_dir = os.path.join(self._land_cover_dir, 'mosaics')
+        self._nc_dir = os.path.join(self._burn_area_dir, 'netcdfs')
+        self._hdf_dir = os.path.join(self._burn_area_dir, 'hdfs')
 
         # Initialize output directory folders and files
-        self._create_paths()
+        self._initialize_save_dirs()
         self._get_shape_files()
         print("Project Folder: " + out_dir)
 
-    def _create_paths(self):
-        sub_folders = [
-            os.path.join('rasters', 'burn_area'),
-            self._nc_save_dir,
-            self._hdf_save_dir,
-            os.path.join('rasters', 'ecoregion'),
-            self._land_cover_save_dir,
-            os.path.join('rasters', 'landcover', 'mosaics'),
-            os.path.join('shapefiles', 'ecoregion'),
-            os.path.join('tables')
-        ]
-
-        for f in [os.path.join(self._out_dir, sf) for sf in sub_folders]:
+    def _initialize_save_dirs(self):
+        for f in [
+            self._raster_dir,
+            self._shape_file_dir,
+            self._burn_area_dir,
+            self._land_cover_dir,
+            self._eco_region_raster_dir,
+            self._eco_region_shapefile_dir,
+            self._tables_dir,
+            self._mosaics_dir,
+            self._nc_dir,
+            self._hdf_dir
+        ]:
             os.makedirs(f, exist_ok=True)
 
     def _get_shape_files(self):
         """
         Just to grab some basic shapefiles needed for calculating statistics.
         """
-        shape_dir = os.path.join(self._out_dir, "shapefiles")
-        os.makedirs(shape_dir, exist_ok=True)
 
         files_to_copy = {
             'modis_sinusoidal_grid_world.shp': self.MODIS_SINUSOIDAL_PATH,
@@ -77,33 +80,18 @@ class Base:
         }
 
         for dest_name, source_path in files_to_copy.items():
-            dest_path = os.path.join(shape_dir, dest_name)
+            dest_path = os.path.join(self._shape_file_dir, dest_name)
             if not os.path.exists(dest_path):
                 shutil.copy(source_path, dest_path)
 
-        run_conus_modis_path = os.path.join(shape_dir, 'conus_modis.shp')
-        if not os.path.exists(run_conus_modis_path):
-            print("Reprojecting state shapefile to MODIS Sinusoidal...")
-            conus_path = os.path.join(shape_dir, 'conus.shp')
-            conus = gpd.read_file(conus_path)
-            modis_conus = conus.to_crs(self.MODIS_CRS)
-            modis_conus.to_file(run_conus_modis_path)
-
 
 class BurnData(Base):
-    def __init__(self, out_dir: str, start_year: Union[None, int], end_year: Union[None, int], username: str,
-                 password: str, tiles: List[str] = None):
-        super().__init__(out_dir, start_year, end_year, username, password, tiles)
+    def __init__(self, out_dir: str, tiles: List[str] = None):
+        super().__init__(out_dir)
         self._base_sftp_folder = os.path.join('data', 'MODIS', 'C61', 'MCD64A1', 'HDF')
         self._modis_template_path = os.path.join(out_dir, 'rasters', 'mosaic_template.tif')
+        self._record_start_year = 2000
         self._hdf_regex = r'MCD64A1\.A(?P<year>\d{4})(?P<julien_day>\d{3})\.h(?P<horizontal_tile>\d{2})\.v(?P<vertical_tile>\d{2})\.061\.(?P<prod_year>\d{4})(?P<prod_month>\d{2})(?P<prod_day>\d{2})(?P<prod_hour>\d{2})(?P<prod_minute>\d{2})(?P<prod_second>\d{2}).hdf$'
-
-    @staticmethod
-    # TODO: Actually look at the files in the sftp dir and build the file names from there
-    def _get_tile_range(start_year, end_year):
-        if start_year is None or end_year is None:
-            return []
-        return ["MCD64A1.A" + str(yr) for yr in range(start_year, end_year + 1)]
 
     @staticmethod
     def _verify_hdf_file(file_path) -> bool:
@@ -186,7 +174,7 @@ class BurnData(Base):
         print("trying again...")
         self._download_files(sftp_client, tile, missing_files)
 
-    def get_burns(self, tiles: List[str], start_data: datetime, end_date: datetime):
+    def get_burns(self, tiles: List[str], start_year: int = None, end_year: int = None):
         """
         This will download the MODIS burn event data set tiles and create a
         singular mosaic to use as a template file for coordinate reference
@@ -211,6 +199,9 @@ class BurnData(Base):
         ssh_client.connect(hostname="fuoco.geog.umd.edu", username="fire", password="burnt")
         print("Connected to 'fuoco.geog.umd.edu' ...")
 
+        year_range = np.arange(start_year if start_year is not None else self._record_start_year,
+                               end_year if end_year is not None else datetime.now().year + 1, 1)
+
         # Open the connection to the SFTP
         sftp_client = ssh_client.open_sftp()
 
@@ -221,13 +212,17 @@ class BurnData(Base):
                 continue
 
             print(f"Downloading/Checking HDF files for: {tile}")
-            hdfs = [self._generate_remote_hdf_path(tile, h) for h in
-                    sftp_client.listdir(self._generate_remote_hdf_dir(tile)) if ".hdf" in h]
-            if not hdfs:
+            hdf_files = []
+            for hdf_file in sftp_client.listdir(self._generate_remote_hdf_dir(tile)):
+                match = re.match(self._hdf_regex, hdf_file)
+                if match is not None and match.groupdict()['year'] in year_range:
+                    hdf_files.append(hdf_file)
+
+            if not hdf_files:
                 print(f"No MCD64A1 Product for tile: {tile}, skipping...")
 
-            self._download_files(sftp_client, tile, hdfs)
-            self._check_and_download_missing_files(sftp_client, tile, hdfs)
+            self._download_files(sftp_client, tile, hdf_files)
+            self._check_and_download_missing_files(sftp_client, tile, hdf_files)
 
         # Close new SFTP connection
         ssh_client.close()
@@ -266,7 +261,8 @@ class BurnData(Base):
         """
         # Build the net cdfs here
         for tile_id in tiles:
-            files = glob(os.path.join(self._hdf_save_dir, tile_id, "*hdf")).sort()
+            # TODO: Should there be key for sorting the files here?
+            files = sorted(glob(os.path.join(self._hdf_save_dir, tile_id, "*hdf")))
             # try:
             # Set file names
             # TODO: Definitely need a regex or file class here
