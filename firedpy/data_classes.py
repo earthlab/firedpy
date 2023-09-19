@@ -52,7 +52,6 @@ class Base:
         # Initialize output directory folders and files
         self._initialize_save_dirs()
         self._get_shape_files()
-        print("Project Folder: " + out_dir)
 
     def _initialize_save_dirs(self):
         for f in [
@@ -84,14 +83,35 @@ class Base:
             if not os.path.exists(dest_path):
                 shutil.copy(source_path, dest_path)
 
+    @staticmethod
+    def _convert_julian_date(julien_day: int, year: int):
+        base = dt.datetime(1970, 1, 1)
+        date = dt.datetime(year, 1, 1) + dt.timedelta(int(julien_day - 1))
+        days = date - base
+        return days.days
+
+    def _convert_dates(self, array, year):
+        """Convert every day in an array to days since Jan 1 1970"""
+        # Loop through each position with data and convert
+        locs = np.where(array > 0)
+        ys = locs[0]
+        xs = locs[1]
+        locs = [[ys[i], xs[i]] for i in range(len(xs))]
+        for loc in locs:
+            y = loc[0]
+            x = loc[1]
+            array[y, x] = self._convert_julian_date(array[y, x], year)
+
+        return array
+
 
 class BurnData(Base):
-    def __init__(self, out_dir: str, tiles: List[str] = None):
+    def __init__(self, out_dir: str):
         super().__init__(out_dir)
         self._base_sftp_folder = os.path.join('data', 'MODIS', 'C61', 'MCD64A1', 'HDF')
         self._modis_template_path = os.path.join(out_dir, 'rasters', 'mosaic_template.tif')
         self._record_start_year = 2000
-        self._hdf_regex = r'MCD64A1\.A(?P<year>\d{4})(?P<julien_day>\d{3})\.h(?P<horizontal_tile>\d{2})\.v(?P<vertical_tile>\d{2})\.061\.(?P<prod_year>\d{4})(?P<prod_month>\d{2})(?P<prod_day>\d{2})(?P<prod_hour>\d{2})(?P<prod_minute>\d{2})(?P<prod_second>\d{2}).hdf$'
+        self._hdf_regex = r'MCD64A1\.A(?P<year>\d{4})(?P<julian_day>\d{3})\.h(?P<horizontal_tile>\d{2})v(?P<vertical_tile>\d{2})\.061\.(?P<prod_year>\d{4})(?P<prod_julian_day>\d{3})(?P<prod_hourminute>\d{4})(?P<prod_second>\d{2})\.hdf$'
 
     @staticmethod
     def _verify_hdf_file(file_path) -> bool:
@@ -111,41 +131,8 @@ class BurnData(Base):
 
         return True
 
-    @staticmethod
-    def _convert_julien_date(julien_day, year):
-        base = dt.datetime(1970, 1, 1)
-        date = dt.datetime(year, 1, 1) + dt.timedelta(int(julien_day))
-        days = date - base
-        return days.days
-
-    def _convert_dates(self, array, year):
-        """Convert every day in an array to days since Jan 1 1970"""
-        # Loop through each position with data and convert
-        locs = np.where(array > 0)
-        ys = locs[0]
-        xs = locs[1]
-        locs = [[ys[i], xs[i]] for i in range(len(xs))]
-        for loc in locs:
-            y = loc[0]
-            x = loc[1]
-            array[y, x] = self._convert_julien_date(array[y, x], year)
-
-        return array
-
-    def _download_files(self, sftp_client, tile: str, hdfs: List[str]) -> None:
-        for hdf_file in tqdm(hdfs):
-            #try:
-            remote_path = self._generate_remote_hdf_path(tile, hdf_file)
-            local_path = self._generate_local_hdf_path(tile, hdf_file)
-            os.makedirs(os.path.dirname(local_path), exist_ok=True)
-
-            sftp_client.get(remote_path, local_path)
-            # TODO: Need more specific exception handling here
-            # except Exception as e:
-            #    print(e)
-
     def _generate_local_hdf_path(self, tile: str, hdf_name: str) -> str:
-        return os.path.join(self._base_sftp_folder, tile, hdf_name)
+        return os.path.join(self._hdf_dir, tile, hdf_name)
 
     def _generate_remote_hdf_path(self, tile: str, hdf_name: str) -> str:
         return os.path.join(self._base_sftp_folder, tile, hdf_name)
@@ -154,25 +141,31 @@ class BurnData(Base):
         return os.path.join(self._base_sftp_folder, tile)
 
     def _generate_local_nc_path(self, tile: str) -> str:
-        return os.path.join(self._out_dir, 'rasters', 'burn_area', 'netcdfs', f"{tile}.nc")
+        return os.path.join(self._nc_dir, f"{tile}.nc")
 
-    def _check_and_download_missing_files(self, sftp_client, tile: str, hdfs: List[str]) -> None:
-        missing_files = []
-        for hdf_file in hdfs:
-            local_hdf_path = self._generate_local_hdf_path(tile, hdf_file)
-            remote_hdf_path = self._generate_remote_hdf_path(tile, hdf_file)
-            if not os.path.exists(local_hdf_path):
-                missing_files.append(remote_hdf_path)
-            elif not self._verify_hdf_file(local_hdf_path):
-                os.remove(local_hdf_path)
-                missing_files.append(remote_hdf_path)
+    def _download_files(self, sftp_client: paramiko.SFTPClient, tile: str, hdfs: List[str],
+                        max_retries: int = 3) -> None:
+        attempt = 0
+        retries = hdfs.copy()
+        while attempt < max_retries and retries:
+            next_retries = []
+            for hdf_file in tqdm(retries):
+                remote_path = self._generate_remote_hdf_path(tile, hdf_file)
+                local_path = self._generate_local_hdf_path(tile, hdf_file)
+                os.makedirs(os.path.dirname(local_path), exist_ok=True)
+                try:
+                    sftp_client.get(remote_path, local_path)
+                    if not self._verify_hdf_file(local_path):
+                        next_retries.append(hdf_file)
+                except Exception as e:
+                    next_retries.append(hdf_file)
 
-        if not missing_files:
-            return
+            retries = next_retries
+            attempt += 1
 
-        print(f"Missed Files: {missing_files}")
-        print("trying again...")
-        self._download_files(sftp_client, tile, missing_files)
+        if attempt == max_retries and retries:
+            print('Raising exception')
+            raise IOError(f'Error downloading burn data: max retries exceeded ({max_retries}). Files not downloaded: {retries}')
 
     def get_burns(self, tiles: List[str], start_year: int = None, end_year: int = None):
         """
@@ -215,14 +208,13 @@ class BurnData(Base):
             hdf_files = []
             for hdf_file in sftp_client.listdir(self._generate_remote_hdf_dir(tile)):
                 match = re.match(self._hdf_regex, hdf_file)
-                if match is not None and match.groupdict()['year'] in year_range:
+                if match is not None and int(match.groupdict()['year']) in year_range:
                     hdf_files.append(hdf_file)
 
             if not hdf_files:
                 print(f"No MCD64A1 Product for tile: {tile}, skipping...")
 
             self._download_files(sftp_client, tile, hdf_files)
-            self._check_and_download_missing_files(sftp_client, tile, hdf_files)
 
         # Close new SFTP connection
         ssh_client.close()
@@ -237,7 +229,7 @@ class BurnData(Base):
     def _write_modis_template_file(self):
         # Merge one year into a reference mosaic
         print("Creating reference mosaic ...")
-        folders = glob(os.path.join(self._hdf_save_dir, "*"))
+        folders = glob(os.path.join(self._hdf_dir, "*"))
         file_groups = [glob(os.path.join(f, "*hdf")) for f in folders]
         for f in file_groups:
             f.sort()
@@ -262,14 +254,14 @@ class BurnData(Base):
         # Build the net cdfs here
         for tile_id in tiles:
             # TODO: Should there be key for sorting the files here?
-            files = sorted(glob(os.path.join(self._hdf_save_dir, tile_id, "*hdf")))
+            files = sorted(glob(os.path.join(self._hdf_dir, tile_id, "*hdf")))
             # try:
             # Set file names
             # TODO: Definitely need a regex or file class here
             names = [os.path.split(f)[-1] for f in files]
             names = [f.split(".")[2] + "_" + f.split(".")[1][1:] for f in names]
             tile_id = names[0].split("_")[0]
-            file_name = os.path.join(self._nc_save_dir, tile_id + ".nc")
+            file_name = os.path.join(self._nc_dir, tile_id + ".nc")
 
             # Skip if it exists already
             if os.path.exists(file_name):
