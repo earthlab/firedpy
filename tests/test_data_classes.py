@@ -92,22 +92,22 @@ class TestBase(unittest.TestCase):
 
     def test_convert_julian_date(self):
         # For January 1, 1970
-        days = Base._convert_julian_date(1, 1970)
+        days = Base._convert_julian_date(1970, 1)
         self.assertEqual(days, 0)  # Expected 0 days since it's the base date
 
         # For January 2, 1970
-        days = Base._convert_julian_date(2, 1970)
+        days = Base._convert_julian_date(1970, 2)
         self.assertEqual(days, 1)  # Expected 1 day since January 1, 1970
 
         # For January 1, 1971
-        days = Base._convert_julian_date(1, 1971)
+        days = Base._convert_julian_date(1971, 1)
         self.assertEqual(days, 365)  # Expected 365 days (since 1970 was not a leap year)
 
         # For a random date like April 3, 1980
         date_1980 = datetime(1980, 4, 3)
         base_date = datetime(1970, 1, 1)
         expected_days = (date_1980 - base_date).days
-        days = Base._convert_julian_date(94, 1980)
+        days = Base._convert_julian_date(1980, 94)
         self.assertEqual(days, expected_days)
 
 
@@ -247,6 +247,20 @@ class TestBurnData(unittest.TestCase):
 
         self.assertTrue(f'Error downloading burn data: max retries exceeded (3). Files not downloaded: {self.hdfs}'
                         in str(context.exception))
+
+    def test_extract_date_parts_valid(self):
+        filename = "MCD64A1.A2022123.h12v34.061.2023123123456.hdf"
+        result = self.burn_data._extract_date_parts(filename)
+        self.assertEqual(result, (2022, 123))
+
+    def test_extract_date_parts_invalid(self):
+        filename = "MCD64X1.A2022123.h12v34.061.20231231234567.hdf"  # Intentionally changed A to X
+        result = self.burn_data._extract_date_parts(filename)
+        self.assertIsNone(result)
+
+    def test_write_ncs(self):
+        # TODO: Use actual hdf files here to create the nc4 file, and check its attributes
+        pass
 
 
 if __name__ == '__main__':
