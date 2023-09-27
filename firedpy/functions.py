@@ -64,7 +64,7 @@ def convertDates(array, year):
 
     def convertDate(julien_day, year):
         base = dt.datetime(1970, 1, 1)
-        date = dt.datetime(year, 1, 1) + dt.timedelta(int(julien_day))
+        date = dt.datetime(year, 1, 1) + dt.timedelta(int(julien_day) - 1)
         days = date - base
         return days.days
 
@@ -87,7 +87,7 @@ def dateRange(perimeter):
     if len(perimeter.coords) > 0:
         base = dt.datetime(1970, 1, 1)
         days = [p[2] for p in perimeter.coords]
-        day1 = (base + dt.timedelta(days=int(min(days)))).strftime("%Y-%m-%d")
+        day1 = (base + dt.timedelta(days=int(min(days)) - 1)).strftime("%Y-%m-%d")
     else:
         day1 = "N/A"
     return day1
@@ -418,23 +418,24 @@ class DataGetter:
                         for yr in yrs:
                             tile_range.append("MCD64A1.A"+str(yr))
                     # Attempt file download
-                        try:
-                            for h in tqdm(hdfs):
-                                remote = sftp_folder+"/"+h
-                                for name in tile_range:
-                                    if name in h:
-                                        os.chdir(folder)
+                        for h in tqdm(hdfs):
+                            remote = sftp_folder+"/"+h
+                            for name in tile_range:
+                                if name in h:
+                                    os.chdir(folder)
+                                    try:
                                         sftp_client.get(remote, h)
-                        except Exception as e:
-                            print(e)
+                                    except Exception as e:
+                                        print(e)
                     elif self.start_yr==None and self.end_yr==None:
-                        try:
-                            for h in tqdm(hdfs):
-                                remote = sftp_folder+"/"+h
-                                os.chdir(folder)
+
+                        for h in tqdm(hdfs):
+                            remote = sftp_folder+"/"+h
+                            os.chdir(folder)
+                            try:
                                 sftp_client.get(remote, h)
-                        except Exception as e:
-                            print(e)
+                            except Exception as e:
+                                print(e)
 
             except Exception:
                 print("No MCD64A1 Product for tile: "+str(tile)+", skipping...")
@@ -492,13 +493,14 @@ class DataGetter:
                     trgt = os.path.join(self.hdf_path, tile, file)
 
                     # Attempt re-download
-                    try:
-                        for h in tqdm(hdfs):
-                            remote = sftp_folder+"/"+h
-                            os.chdir(localpath)
+
+                    for h in tqdm(hdfs):
+                        remote = sftp_folder+"/"+h
+                        os.chdir(localpath)
+                        try:
                             sftp_client.get(remote, localpath)
-                    except Exception as e:
-                        print(e)
+                        except Exception as e:
+                            print(e)
 
                     # Check the downloaded file
                     try:
