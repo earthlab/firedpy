@@ -92,31 +92,31 @@ class TestBase(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(self._test_data_dir, "shape_files",
                                                     'conus.shp')))
 
-    def test_convert_julian_date(self):
+    def test_convert_ordinal_date(self):
         # For January 1, 1970
-        days = Base._convert_julian_date(1970, 1)
+        days = Base._convert_ordinal_to_unix_day(1970, 1)
         self.assertEqual(days, 0)  # Expected 0 days since it's the base date
 
         # For January 2, 1970
-        days = Base._convert_julian_date(1970, 2)
+        days = Base._convert_ordinal_to_unix_day(1970, 2)
         self.assertEqual(days, 1)  # Expected 1 day since January 1, 1970
 
         # For January 1, 1971
-        days = Base._convert_julian_date(1971, 1)
+        days = Base._convert_ordinal_to_unix_day(1971, 1)
         self.assertEqual(days, 365)  # Expected 365 days (since 1970 was not a leap year)
 
         # For a random date like April 3, 1980
         date_1980 = datetime(1980, 4, 3)
         base_date = datetime(1970, 1, 1)
         expected_days = (date_1980 - base_date).days
-        days = Base._convert_julian_date(1980, 94)
+        days = Base._convert_ordinal_to_unix_day(1980, 94)
         self.assertEqual(days, expected_days)
 
     def test_convert_dates(self):
         base_class = Base(self._test_data_dir)
         arr = np.array([[0, 0], [0, 365], [1, 0]])
         year = 1971
-        expected = np.array([[0, 0], [0, 365 + 365], [366, 0]])
+        expected = np.array([[0, 0], [0, 365 + 364], [365, 0]])
         result = base_class._convert_dates(arr, year)
         np.testing.assert_array_equal(result, expected)
 
@@ -129,6 +129,8 @@ class TestBurnData(unittest.TestCase):
             shutil.rmtree(self._test_data_dir)
 
     def setUp(self) -> None:
+        if os.path.exists(self._test_data_dir):
+            shutil.rmtree(self._test_data_dir)
         self.burn_data = BurnData(self._test_data_dir)
         self.hdfs = ["file1.hdf", "file2.hdf", "file3.hdf"]
         self.tile = "tile1"
@@ -219,7 +221,7 @@ class TestBurnData(unittest.TestCase):
         expected = os.path.join(self.burn_data._nc_dir, 'tile1.nc')
         self.assertEqual(result, expected)
 
-    @patch("os.path.exists", return_value=True)
+    @patch("os.path.exists", return_value=False)
     @patch.object(BurnData, "_verify_hdf_file", return_value=True)
     def test_all_files_successful(self, mock_verify, mock_exists):
         mock_sftp_client = MagicMock()
@@ -228,7 +230,7 @@ class TestBurnData(unittest.TestCase):
         self.burn_data._download_files(mock_sftp_client, self.tile, self.hdfs)
         self.assertEqual(mock_sftp_client.get.call_count, len(self.hdfs))
 
-    @patch("os.path.exists", return_value=True)
+    @patch("os.path.exists", return_value=False)
     @patch.object(BurnData, "_verify_hdf_file", return_value=True)
     def test_some_files_fail_download(self, mock_verify, mock_exists):
         mock_sftp_client = MagicMock()
@@ -239,7 +241,7 @@ class TestBurnData(unittest.TestCase):
         self.assertEqual(mock_sftp_client.get.call_count, len(self.hdfs) + 1)  # One additional call due to one retry
 
     @patch.object(paramiko.SFTPClient, 'get')
-    @patch("os.path.exists", return_value=True)
+    @patch("os.path.exists", return_value=False)
     @patch.object(BurnData, "_verify_hdf_file", side_effect=[False, True, True, True])
     def test_some_files_fail_verify(self, mock_verify, mock_exists, mock_sftp_get):
         mock_sftp_client = MagicMock()
