@@ -265,8 +265,8 @@ class BurnData(Base):
             #try:
             hdf_dir = self._generate_local_hdf_dir(tile_id)
 
-            files = sorted([f for f in os.listdir(hdf_dir) if self._extract_date_parts(f) is not None],
-                           key=self._extract_date_parts)
+            files = sorted([os.path.join(hdf_dir, f) for f in os.listdir(hdf_dir) if self._extract_date_parts(f)
+                            is not None], key=self._extract_date_parts)
 
             nc_file_name = self._generate_local_nc_path(tile_id)
 
