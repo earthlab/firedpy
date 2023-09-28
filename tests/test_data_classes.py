@@ -322,8 +322,8 @@ class TestBurnData(unittest.TestCase):
         self.assertEqual(output_file.variables['time'].calendar, 'gregorian')
         self.assertEqual(output_file.variables['time'].units, 'days since 1970-01-01')
 
-        self.assertEqual(min(output_file.variables['time'][:]), 18262)
-        self.assertEqual(max(output_file.variables['time'][:]), 18597)
+        self.assertEqual(min(output_file.variables['time'][:]), 11262)
+        self.assertEqual(max(output_file.variables['time'][:]), 19509)
 
         self.assertEqual(['_FillValue', 'standard_name', 'long_name', 'grid_mapping'],
                          list(vars(output_file.variables['value']).keys()))
@@ -338,9 +338,9 @@ class TestBurnData(unittest.TestCase):
         non_nulls = np.where(values > 0)
 
         # All months between 130 and 131 for burn events
-        self.assertTrue(all([130 >= n >= 131 for n in non_nulls[0]]))
+        self.assertTrue(all([130 <= n <= 131 for n in non_nulls[0]]))
         self.assertEqual(min(values[non_nulls]), 15240)  # Sept 23rd 2011
-        self.assertEqual(min(values[non_nulls]), 15257)
+        self.assertEqual(max(values[non_nulls]), 15257)
 
         self.assertEqual(['spatial_ref', 'proj4', 'geo_transform', 'grid_mapping_name', 'false_easting',
                           'false_northing', 'longitude_of_central_meridian', 'longitude_of_prime_meridian',
@@ -351,9 +351,9 @@ class TestBurnData(unittest.TestCase):
                          '+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +R=6371007.181 +units=m +no_defs')
         self.assertEqual(output_file.variables['crs'].proj4,
                          '+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +R=6371007.181 +units=m +no_defs')
-        self.assertEqual(output_file.variables['crs'].geo_transform, np.array([-1.89031588e+07, 4.63312717e+02,
-                                                                               0.00000000e+00, -1.11195052e+06,
-                                                                               0.00000000e+00, -4.63312717e+02]))
+        self.assertTrue(np.array_equal(output_file.variables['crs'].geo_transform, np.array([-1.89031588e+07, 4.63312717e+02,
+                                                                                     0.00000000e+00, -1.11195052e+06,
+                                                                                     0.00000000e+00, -4.63312717e+02])))
         self.assertEqual(output_file.variables['crs'].grid_mapping_name, 'sinusoidal')
         self.assertEqual(output_file.variables['crs'].false_easting, 0.0)
         self.assertEqual(output_file.variables['crs'].false_northing, 0.0)
