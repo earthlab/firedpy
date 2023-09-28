@@ -258,7 +258,6 @@ class TestBurnData(unittest.TestCase):
         with self.assertRaises(IOError) as context:
             self.burn_data._download_files(mock_sftp_client, self.tile, self.hdfs)
 
-
         print(str(context.exception))
 
         self.assertTrue(f'Error downloading burn data: max retries exceeded (3). Files not downloaded or not able to '
@@ -293,7 +292,7 @@ class TestBurnData(unittest.TestCase):
         self.assertEqual(output_file.subtitle, 'Burn Days Detection by MODIS since 1970.')
         self.assertEqual(output_file.description, 'The day that a fire is detected.')
         self.assertEqual(output_file.date, datetime.today().strftime('%Y-%m-%d')
-)
+                         )
         self.assertEqual(output_file.projection, 'MODIS Sinusoidal')
         self.assertEqual(output_file.Conventions, 'CF-1.6')
 
@@ -301,27 +300,27 @@ class TestBurnData(unittest.TestCase):
 
         self.assertEqual(['standard_name', 'long_name', 'units'], list(vars(output_file.variables['y']).keys()))
 
-        self.assertEqual(output_file.variables['y']['standard_name'], 'projection_y_coordinate')
-        self.assertEqual(output_file.variables['y']['long_name'], 'y coordinate of projection')
-        self.assertEqual(output_file.variables['y']['units'], 'm')
+        self.assertEqual(output_file.variables['y'].standard_name, 'projection_y_coordinate')
+        self.assertEqual(output_file.variables['y'].long_name, 'y coordinate of projection')
+        self.assertEqual(output_file.variables['y'].units, 'm')
 
         self.assertAlmostEquals(min(output_file.variables['y'][:]), -2223437.7266224716)
         self.assertAlmostEquals(max(output_file.variables['y'][:]), -1111950.519672)
 
         self.assertEqual(['standard_name', 'long_name', 'units'], list(vars(output_file.variables['x']).keys()))
 
-        self.assertEqual(output_file.variables['x']['standard_name'], 'projection_x_coordinate')
-        self.assertEqual(output_file.variables['x']['long_name'], 'x coordinate of projection')
-        self.assertEqual(output_file.variables['x']['units'], 'm')
+        self.assertEqual(output_file.variables['x'].standard_name, 'projection_x_coordinate')
+        self.assertEqual(output_file.variables['x'].long_name, 'x coordinate of projection')
+        self.assertEqual(output_file.variables['x'].units, 'm')
 
         self.assertAlmostEquals(min(output_file.variables['x'][:]), -18903158.834333)
         self.assertAlmostEquals(max(output_file.variables['x'][:]), -17791671.627382528)
 
         self.assertEqual(['units', 'standard_name', 'calendar'], list(vars(output_file.variables['time']).keys()))
 
-        self.assertEqual(output_file.variables['time']['standard_name'], 'time')
-        self.assertEqual(output_file.variables['time']['calendar'], 'gregorian')
-        self.assertEqual(output_file.variables['time']['units'], 'days since 1970-01-01')
+        self.assertEqual(output_file.variables['time'].standard_name, 'time')
+        self.assertEqual(output_file.variables['time'].calendar, 'gregorian')
+        self.assertEqual(output_file.variables['time'].units, 'days since 1970-01-01')
 
         self.assertEqual(min(output_file.variables['time'][:]), 18262)
         self.assertEqual(max(output_file.variables['time'][:]), 18597)
@@ -329,10 +328,10 @@ class TestBurnData(unittest.TestCase):
         self.assertEqual(['_FillValue', 'standard_name', 'long_name', 'grid_mapping'],
                          list(vars(output_file.variables['value']).keys()))
 
-        self.assertEqual(output_file.variables['value']['standard_name'], 'day')
-        self.assertEqual(output_file.variables['value']['_FillValue'], -9999)
-        self.assertEqual(output_file.variables['value']['long_name'], 'Burn Days')
-        self.assertEqual(output_file.variables['value']['grid_mapping'], 'crs')
+        self.assertEqual(output_file.variables['value'].standard_name, 'day')
+        self.assertEqual(output_file.variables['value']._FillValue, -9999)
+        self.assertEqual(output_file.variables['value'].long_name, 'Burn Days')
+        self.assertEqual(output_file.variables['value'].grid_mapping, 'crs')
 
         self.assertEqual(output_file.variables['value'][:].shape, (272, 2400, 2400))
         values = output_file.variables['value'][:]
@@ -348,20 +347,20 @@ class TestBurnData(unittest.TestCase):
                           'semi_major_axis', 'inverse_flattening'],
                          list(vars(output_file.variables['crs']).keys()))
 
-        self.assertEqual(output_file.variables['crs']['spatial_ref'],
+        self.assertEqual(output_file.variables['crs'].spatial_ref,
                          '+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +R=6371007.181 +units=m +no_defs')
-        self.assertEqual(output_file.variables['crs']['proj4'],
+        self.assertEqual(output_file.variables['crs'].proj4,
                          '+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +R=6371007.181 +units=m +no_defs')
-        self.assertEqual(output_file.variables['crs']['geo_transform'], np.array([-1.89031588e+07,  4.63312717e+02,
-                                                                                  0.00000000e+00, -1.11195052e+06,
-                                                                                  0.00000000e+00, -4.63312717e+02]))
-        self.assertEqual(output_file.variables['crs']['grid_mapping_name'], 'sinusoidal')
-        self.assertEqual(output_file.variables['crs']['false_easting'], 0.0)
-        self.assertEqual(output_file.variables['crs']['false_northing'], 0.0)
-        self.assertEqual(output_file.variables['crs']['longitude_of_central_meridian'], 0.0)
-        self.assertEqual(output_file.variables['crs']['longitude_of_prime_meridian'], 0.0)
-        self.assertEqual(output_file.variables['crs']['semi_major_axis'], 6371007.181)
-        self.assertEqual(output_file.variables['crs']['inverse_flattening'], 0.0)
+        self.assertEqual(output_file.variables['crs'].geo_transform, np.array([-1.89031588e+07, 4.63312717e+02,
+                                                                               0.00000000e+00, -1.11195052e+06,
+                                                                               0.00000000e+00, -4.63312717e+02]))
+        self.assertEqual(output_file.variables['crs'].grid_mapping_name, 'sinusoidal')
+        self.assertEqual(output_file.variables['crs'].false_easting, 0.0)
+        self.assertEqual(output_file.variables['crs'].false_northing, 0.0)
+        self.assertEqual(output_file.variables['crs'].longitude_of_central_meridian, 0.0)
+        self.assertEqual(output_file.variables['crs'].longitude_of_prime_meridian, 0.0)
+        self.assertEqual(output_file.variables['crs'].semi_major_axis, 6371007.181)
+        self.assertEqual(output_file.variables['crs'].inverse_flattening, 0.0)
 
 
 if __name__ == '__main__':
