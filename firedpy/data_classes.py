@@ -263,7 +263,7 @@ class BurnData(Base):
         # Build the net cdfs here
         for tile_id in tiles:
             #try:
-            hdf_dir = os.path.dirname(self._generate_local_hdf_dir(tile_id))
+            hdf_dir = self._generate_local_hdf_dir(tile_id)
 
             files = sorted([f for f in os.listdir(hdf_dir) if self._extract_date_parts(f) is not None],
                            key=self._extract_date_parts)
