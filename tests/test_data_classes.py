@@ -326,11 +326,34 @@ class TestBurnData(unittest.TestCase):
         self.assertEqual(output_file.variables['value']['long_name'], 'Burn Days')
         self.assertEqual(output_file.variables['value']['grid_mapping'], 'crs')
 
-        self.assertEqual(output_file.variables['value'][:].shape, (12, 2400, 2400))
+        self.assertEqual(output_file.variables['value'][:].shape, (272, 2400, 2400))
+        values = output_file.variables['value'][:]
+        non_nulls = np.where(values > 0)
 
+        # All months between 130 and 131 for burn events
+        self.assertTrue(all([130 >= n >= 131 for n in non_nulls[0]]))
+        self.assertEqual(min(values[non_nulls]), 15240)  # Sept 23rd 2011
+        self.assertEqual(min(values[non_nulls]), 15257)
 
+        self.assertEqual(['spatial_ref', 'proj4', 'geo_transform', 'grid_mapping_name', 'false_easting',
+                          'false_northing', 'longitude_of_central_meridian', 'longitude_of_prime_meridian',
+                          'semi_major_axis', 'inverse_flattening'],
+                         list(vars(output_file.variables['crs']).keys()))
 
-
+        self.assertEqual(output_file.variables['crs']['spatial_ref'],
+                         '+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +R=6371007.181 +units=m +no_defs')
+        self.assertEqual(output_file.variables['crs']['proj4'],
+                         '+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +R=6371007.181 +units=m +no_defs')
+        self.assertEqual(output_file.variables['crs']['geo_transform'], np.array([-1.89031588e+07,  4.63312717e+02,
+                                                                                  0.00000000e+00, -1.11195052e+06,
+                                                                                  0.00000000e+00, -4.63312717e+02]))
+        self.assertEqual(output_file.variables['crs']['grid_mapping_name'], 'sinusoidal')
+        self.assertEqual(output_file.variables['crs']['false_easting'], 0.0)
+        self.assertEqual(output_file.variables['crs']['false_northing'], 0.0)
+        self.assertEqual(output_file.variables['crs']['longitude_of_central_meridian'], 0.0)
+        self.assertEqual(output_file.variables['crs']['longitude_of_prime_meridian'], 0.0)
+        self.assertEqual(output_file.variables['crs']['semi_major_axis'], 6371007.181)
+        self.assertEqual(output_file.variables['crs']['inverse_flattening'], 0.0)
 
 
 if __name__ == '__main__':

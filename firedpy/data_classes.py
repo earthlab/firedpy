@@ -88,9 +88,9 @@ class Base:
                 shutil.copy(source_path, dest_path)
 
     @staticmethod
-    def _convert_julian_date(year: int, julian_day: int) -> int:
+    def _convert_ordinal_to_unix_day(year: int, ordinal_day: int) -> int:
         base = dt.datetime(1970, 1, 1)
-        date = dt.datetime(year, 1, 1) + dt.timedelta(int(julian_day - 1))
+        date = dt.datetime(year, 1, 1) + dt.timedelta(int(ordinal_day - 1))
         return (date - base).days
 
     def _convert_dates(self, array, year) -> np.array:
@@ -99,8 +99,7 @@ class Base:
         ys, xs = np.where(array > 0)
 
         for y, x in zip(ys, xs):
-            print(array[y, x])
-            array[y, x] = self._convert_julian_date(year, array[y, x])
+            array[y, x] = self._convert_ordinal_to_unix_day(year, array[y, x])
 
         return array
 
@@ -363,7 +362,8 @@ class BurnData(Base):
                     times.standard_name = "time"
                     times.calendar = "gregorian"
                     days = np.array([
-                        self._convert_julian_date(d[0], d[1]) for d in [self._extract_date_parts(f) for f in files]
+                        self._convert_ordinal_to_unix_day(d[0], d[1]) for d in [self._extract_date_parts(f) for f in
+                                                                                files]
                     ])
 
                     # Write dimension data
@@ -375,7 +375,6 @@ class BurnData(Base):
                     for tile_index, f in tqdm(enumerate(files), position=0, file=sys.stdout):
                         match = re.match(self._hdf_regex, os.path.basename(f))
                         if match is None:
-                            print('match is none')
                             continue
 
                         regex_group_dict = match.groupdict()
@@ -385,22 +384,22 @@ class BurnData(Base):
                             hdf = gdal.Open(ds)
                         except Exception as e:
                             print(f'Could not open {f} for building ncdf: {str(e)}')
-                            variable[tile_index, :, :] = np.zeros((ny, nx))
+                            variable[tile_index, :, :] = np.full((ny, nx), fill_value)
                             continue
 
                         data = hdf.GetRasterBand(1)
                         array = data.ReadAsArray()
                         year = int(regex_group_dict['year'])
-                        print(year)
                         array = self._convert_dates(array, year)
+
+                        nulls = np.where(array < 0)
+                        array[nulls] = fill_value
+
                         if array.shape == (ny, nx):
                             variable[tile_index, :, :] = array
                         else:
                             print(f + ": failed, had wrong dimensions, inserting a blank array in its place.")
-                            variable[tile_index, :, :] = np.zeros((ny, nx))
-
-                    nulls = np.where(variable <= 0)
-                    variable[nulls] = fill_value
+                            variable[tile_index, :, :] = np.full((ny, nx), fill_value)
 
                     # Done
                     nco.close()
