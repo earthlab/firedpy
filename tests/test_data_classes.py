@@ -258,6 +258,9 @@ class TestBurnData(unittest.TestCase):
         with self.assertRaises(IOError) as context:
             self.burn_data._download_files(mock_sftp_client, self.tile, self.hdfs)
 
+
+        print(str(context.exception))
+
         self.assertTrue(f'Error downloading burn data: max retries exceeded (3). Files not downloaded: {self.hdfs}'
                         in str(context.exception))
 
@@ -275,7 +278,7 @@ class TestBurnData(unittest.TestCase):
         burn_data = BurnData(self._test_data_dir)
         tile = 'h01v10'
         shutil.copytree(os.path.join(PROJECT_DIR, 'tests', 'data', 'burn_data', tile),
-                        burn_data._generate_remote_hdf_dir(tile))
+                        burn_data._generate_local_hdf_dir(tile))
 
         output_nc = os.path.join(self._test_data_dir, burn_data._generate_local_nc_path(tile))
         self.assertFalse(os.path.exists(output_nc))
