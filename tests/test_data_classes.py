@@ -6,6 +6,8 @@ from datetime import datetime
 from unittest.mock import patch, Mock, MagicMock
 
 import paramiko
+import numpy as np
+from netCDF4 import Dataset
 
 from firedpy.data_classes import Base, BurnData
 
@@ -109,6 +111,14 @@ class TestBase(unittest.TestCase):
         expected_days = (date_1980 - base_date).days
         days = Base._convert_julian_date(1980, 94)
         self.assertEqual(days, expected_days)
+
+    def test_convert_dates(self):
+        base_class = Base(self._test_data_dir)
+        arr = np.array([[0, 0], [0, 365], [1, 0]])
+        year = 1971
+        expected = np.array([[0, 0], [0, 365 + 365], [366, 0]])
+        result = base_class._convert_dates(arr, year)
+        np.testing.assert_array_equal(result, expected)
 
 
 class TestBurnData(unittest.TestCase):
@@ -258,9 +268,69 @@ class TestBurnData(unittest.TestCase):
         result = self.burn_data._extract_date_parts(filename)
         self.assertIsNone(result)
 
-    def test_write_ncs(self):
-        # TODO: Use actual hdf files here to create the nc4 file, and check its attributes
-        pass
+    def test_write_nc_nominal(self):
+        burn_data = BurnData(self._test_data_dir)
+        tile = 'h01v10'
+        shutil.copytree(os.path.join(PROJECT_DIR, 'tests', 'burn_data', tile), burn_data._hdf_dir)
+
+        output_nc = os.path.join(self._test_data_dir, burn_data._generate_local_nc_path(tile))
+        self.assertFalse(os.path.exists(output_nc))
+        burn_data._write_ncs([tile])
+        self.assertTrue(os.path.exists(output_nc))
+
+        output_file = Dataset(output_nc)
+        self.assertTrue(
+            all(s in vars(output_file).keys() for s in ['title', 'subtitle', 'description', 'date', 'projection',
+                                                        'Conventions']))
+        self.assertEqual(output_file.title, 'Burn Days')
+        self.assertEqual(output_file.subtitle, 'Burn Days Detection by MODIS since 1970.')
+        self.assertEqual(output_file.description, 'The day that a fire is detected.')
+        self.assertEqual(output_file.date, datetime.today().strftime('YYYY-mm-dd'))
+        self.assertEqual(output_file.projection, 'MODIS Sinusoidal')
+        self.assertEqual(output_file.Conventions, 'CF-1.6')
+
+        self.assertEqual(['y', 'x', 'time', 'value', 'crs'], list(output_file.variables.keys()))
+
+        self.assertEqual(['standard_name', 'long_name', 'units'], list(vars(output_file.variables['y']).keys()))
+
+        self.assertEqual(output_file.variables['y']['standard_name'], 'projection_y_coordinate')
+        self.assertEqual(output_file.variables['y']['long_name'], 'y coordinate of projection')
+        self.assertEqual(output_file.variables['y']['units'], 'm')
+
+        self.assertAlmostEquals(min(output_file.variables['y'][:]), -2223437.7266224716)
+        self.assertAlmostEquals(max(output_file.variables['y'][:]), -1111950.519672)
+
+        self.assertEqual(['standard_name', 'long_name', 'units'], list(vars(output_file.variables['x']).keys()))
+
+        self.assertEqual(output_file.variables['x']['standard_name'], 'projection_x_coordinate')
+        self.assertEqual(output_file.variables['x']['long_name'], 'x coordinate of projection')
+        self.assertEqual(output_file.variables['x']['units'], 'm')
+
+        self.assertAlmostEquals(min(output_file.variables['x'][:]), -18903158.834333)
+        self.assertAlmostEquals(max(output_file.variables['x'][:]), -17791671.627382528)
+
+        self.assertEqual(['units', 'standard_name', 'calendar'], list(vars(output_file.variables['time']).keys()))
+
+        self.assertEqual(output_file.variables['time']['standard_name'], 'time')
+        self.assertEqual(output_file.variables['time']['calendar'], 'gregorian')
+        self.assertEqual(output_file.variables['time']['units'], 'days since 1970-01-01')
+
+        self.assertEqual(min(output_file.variables['time'][:]), 18262)
+        self.assertEqual(max(output_file.variables['time'][:]), 18597)
+
+        self.assertEqual(['_FillValue', 'standard_name', 'long_name', 'grid_mapping'],
+                         list(vars(output_file.variables['value']).keys()))
+
+        self.assertEqual(output_file.variables['value']['standard_name'], 'day')
+        self.assertEqual(output_file.variables['value']['_FillValue'], -9999)
+        self.assertEqual(output_file.variables['value']['long_name'], 'Burn Days')
+        self.assertEqual(output_file.variables['value']['grid_mapping'], 'crs')
+
+        self.assertEqual(output_file.variables['value'][:].shape, (12, 2400, 2400))
+
+
+
+
 
 
 if __name__ == '__main__':

@@ -6,6 +6,7 @@ import sys
 from datetime import datetime
 from glob import glob
 from typing import List, Union
+import logging
 
 import geopandas as gpd
 import numpy as np
@@ -18,6 +19,9 @@ from rasterio.merge import merge
 from tqdm import tqdm
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(__file__))
+
+logging.basicConfig(filename='app.log', level=logging.ERROR,
+                    format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 class Base:
@@ -84,23 +88,19 @@ class Base:
                 shutil.copy(source_path, dest_path)
 
     @staticmethod
-    def _convert_julian_date(year: int, julian_day: int,):
+    def _convert_julian_date(year: int, julian_day: int) -> int:
         base = dt.datetime(1970, 1, 1)
         date = dt.datetime(year, 1, 1) + dt.timedelta(int(julian_day - 1))
         days = date - base
         return days.days
 
-    def _convert_dates(self, array, year):
+    def _convert_dates(self, array, year) -> np.array:
         """Convert every day in an array to days since Jan 1 1970"""
         # Loop through each position with data and convert
-        locs = np.where(array > 0)
-        ys = locs[0]
-        xs = locs[1]
-        locs = [[ys[i], xs[i]] for i in range(len(xs))]
-        for loc in locs:
-            y = loc[0]
-            x = loc[1]
-            array[y, x] = self._convert_julian_date(array[y, x], year)
+        ys, xs = np.where(array > 0)
+
+        for y, x in zip(ys, xs):
+            array[y, x] = self._convert_julian_date(year, array[y, x])
 
         return array
 
@@ -263,134 +263,130 @@ class BurnData(Base):
         """
         # Build the net cdfs here
         for tile_id in tiles:
-            #try:
-            hdf_dir = self._generate_local_hdf_dir(tile_id)
+            try:
+                hdf_dir = self._generate_local_hdf_dir(tile_id)
 
-            files = sorted([os.path.join(hdf_dir, f) for f in os.listdir(hdf_dir) if self._extract_date_parts(f)
-                            is not None], key=self._extract_date_parts)
+                files = sorted([os.path.join(hdf_dir, f) for f in os.listdir(hdf_dir) if self._extract_date_parts(f)
+                                is not None], key=self._extract_date_parts)
 
-            nc_file_name = self._generate_local_nc_path(tile_id)
+                if not files:
+                    print(f'No hdf files for tile {tile_id} in {hdf_dir}')
 
-            # Skip if it exists already
-            if os.path.exists(nc_file_name):
-                print(tile_id + " netCDF file exists, skipping...")
-            else:
-                # Use a sample to get geography information and geometries
-                print("Building netcdf for tile " + tile_id)
-                sample = files[0]
-                ds = gdal.Open(sample).GetSubDatasets()[0][0]
-                hdf = gdal.Open(ds)
-                geom = hdf.GetGeoTransform()
-                proj = hdf.GetProjection()
-                data = hdf.GetRasterBand(1)
-                crs = osr.SpatialReference()
+                nc_file_name = self._generate_local_nc_path(tile_id)
 
-                # Get the proj4 string using the WKT
-                crs.ImportFromWkt(proj)
-                proj4 = crs.ExportToProj4()
+                # Skip if it exists already
+                if os.path.exists(nc_file_name):
+                    print(tile_id + " netCDF file exists, skipping...")
+                else:
+                    # Use a sample to get geography information and geometries
+                    print("Building netcdf for tile " + tile_id)
+                    sample = files[0]
+                    ds = gdal.Open(sample).GetSubDatasets()[0][0]
+                    hdf = gdal.Open(ds)
+                    geom = hdf.GetGeoTransform()
+                    proj = hdf.GetProjection()
+                    data = hdf.GetRasterBand(1)
+                    crs = osr.SpatialReference()
 
-                # Use one tif (one array) for spatial attributes
-                array = data.ReadAsArray()
-                ny, nx = array.shape
-                xs = np.arange(nx) * geom[1] + geom[0]
-                ys = np.arange(ny) * geom[5] + geom[3]
+                    # Get the proj4 string using the WKT
+                    crs.ImportFromWkt(proj)
+                    proj4 = crs.ExportToProj4()
 
-                # Todays date for attributes
-                todays_date = dt.datetime.today()
-                today = np.datetime64(todays_date)
+                    # Use one tif (one array) for spatial attributes
+                    array = data.ReadAsArray()
+                    ny, nx = array.shape
+                    xs = np.arange(nx) * geom[1] + geom[0]
+                    ys = np.arange(ny) * geom[5] + geom[3]
 
-                # Create Dataset
-                nco = Dataset(nc_file_name, mode="w", format="NETCDF4", clobber=True)
+                    # Today's date for attributes
+                    todays_date = dt.datetime.today()
+                    today = np.datetime64(todays_date)
 
-                # Dimensions
-                nco.createDimension("y", ny)
-                nco.createDimension("x", nx)
-                nco.createDimension("time", None)
+                    # Create Dataset
+                    nco = Dataset(nc_file_name, mode="w", format="NETCDF4", clobber=True)
 
-                # Variables
-                y = nco.createVariable("y", np.float64, ("y",))
-                x = nco.createVariable("x", np.float64, ("x",))
-                times = nco.createVariable("time", np.int64, ("time",))
-                variable = nco.createVariable("value", np.int16,
-                                              ("time", "y", "x"),
-                                              fill_value=-9999, zlib=True)
-                variable.standard_name = "day"
-                variable.long_name = "Burn Days"
+                    # Dimensions
+                    nco.createDimension("y", ny)
+                    nco.createDimension("x", nx)
+                    nco.createDimension("time", None)
 
-                # Appending the CRS information
-                # Check "https://cf-trac.llnl.gov/trac/ticket/77"
-                crs = nco.createVariable("crs", "c")
-                variable.setncattr("grid_mapping", "crs")
-                crs.spatial_ref = proj4
-                crs.proj4 = proj4
-                crs.geo_transform = geom
-                crs.grid_mapping_name = "sinusoidal"
-                crs.false_easting = 0.0
-                crs.false_northing = 0.0
-                crs.longitude_of_central_meridian = 0.0
-                crs.longitude_of_prime_meridian = 0.0
-                crs.semi_major_axis = 6371007.181
-                crs.inverse_flattening = 0.0
+                    # Variables
+                    y = nco.createVariable("y", np.float64, ("y",))
+                    x = nco.createVariable("x", np.float64, ("x",))
+                    times = nco.createVariable("time", np.int64, ("time",))
+                    variable = nco.createVariable("value", np.int16,
+                                                  ("time", "y", "x"),
+                                                  fill_value=-9999, zlib=True)
+                    variable.standard_name = "day"
+                    variable.long_name = "Burn Days"
 
-                # Coordinate attributes
-                x.standard_name = "projection_x_coordinate"
-                x.long_name = "x coordinate of projection"
-                x.units = "m"
-                y.standard_name = "projection_y_coordinate"
-                y.long_name = "y coordinate of projection"
-                y.units = "m"
+                    # Appending the CRS information
+                    # Check "https://cf-trac.llnl.gov/trac/ticket/77"
+                    crs = nco.createVariable("crs", "c")
+                    variable.setncattr("grid_mapping", "crs")
+                    crs.spatial_ref = proj4
+                    crs.proj4 = proj4
+                    crs.geo_transform = geom
+                    crs.grid_mapping_name = "sinusoidal"
+                    crs.false_easting = 0.0
+                    crs.false_northing = 0.0
+                    crs.longitude_of_central_meridian = 0.0
+                    crs.longitude_of_prime_meridian = 0.0
+                    crs.semi_major_axis = 6371007.181
+                    crs.inverse_flattening = 0.0
 
-                # Other attributes
-                nco.title = "Burn Days"
-                nco.subtitle = "Burn Days Detection by MODIS since 1970."
-                nco.description = "The day that a fire is detected."
-                nco.date = pd.to_datetime(str(today)).strftime("%Y-%m-%d")
-                nco.projection = "MODIS Sinusoidal"
-                nco.Conventions = "CF-1.6"
+                    # Coordinate attributes
+                    x.standard_name = "projection_x_coordinate"
+                    x.long_name = "x coordinate of projection"
+                    x.units = "m"
+                    y.standard_name = "projection_y_coordinate"
+                    y.long_name = "y coordinate of projection"
+                    y.units = "m"
 
-                # Variable Attrs
-                times.units = "days since 1970-01-01"
-                times.standard_name = "time"
-                times.calendar = "gregorian"
-                days = np.array([
-                    self._convert_julian_date(d[0], d[1]) for d in [self._extract_date_parts(f) for f in files]
+                    # Other attributes
+                    nco.title = "Burn Days"
+                    nco.subtitle = "Burn Days Detection by MODIS since 1970."
+                    nco.description = "The day that a fire is detected."
+                    nco.date = pd.to_datetime(str(today)).strftime("%Y-%m-%d")
+                    nco.projection = "MODIS Sinusoidal"
+                    nco.Conventions = "CF-1.6"
+
+                    # Variable Attrs
+                    times.units = "days since 1970-01-01"
+                    times.standard_name = "time"
+                    times.calendar = "gregorian"
+                    days = np.array([
+                        self._convert_julian_date(d[0], d[1]) for d in [self._extract_date_parts(f) for f in files]
                     ])
 
-                # Write dimension data
-                x[:] = xs
-                y[:] = ys
-                times[:] = days
+                    # Write dimension data
+                    x[:] = xs
+                    y[:] = ys
+                    times[:] = days
 
-                # One file a time, write the arrays
-                tidx = 0
-                for f in tqdm(files, position=0, file=sys.stdout):
-                    match = re.match(self._hdf_regex, f)
-                    if match is None:
-                        continue
+                    # One file a time, write the arrays
+                    for tile_index, f in tqdm(enumerate(files), position=0, file=sys.stdout):
+                        match = re.match(self._hdf_regex, f)
+                        if match is None:
+                            continue
 
-                    regex_group_dict = match.groupdict()
+                        regex_group_dict = match.groupdict()
 
-                    ds = gdal.Open(f).GetSubDatasets()[0][0]
-                    hdf = gdal.Open(ds)
-                    data = hdf.GetRasterBand(1)
-                    array = data.ReadAsArray()
-                    year = int(regex_group_dict['year'])
-                    array = self._convert_dates(array, year)
-                    try:
-                        variable[tidx, :, :] = array
-                    except ValueError:  # TODO: Need more explicit exception handling here
-                        print(f + ": failed, probably had wrong dimensions, " + "inserting a blank array in its place.")
-                        blank = np.zeros((ny, nx))
-                        variable[tidx, :, :] = blank
-                    tidx += 1
+                        ds = gdal.Open(f).GetSubDatasets()[0][0]
+                        hdf = gdal.Open(ds)
+                        data = hdf.GetRasterBand(1)
+                        array = data.ReadAsArray()
+                        year = int(regex_group_dict['year'])
+                        array = self._convert_dates(array, year)
+                        if array.shape == (ny, nx):
+                            variable[tile_index, :, :] = array
+                        else:
+                            print(f + ": failed, had wrong dimensions, inserting a blank array in its place.")
+                            variable[tile_index, :, :] = np.zeros((ny, nx))
 
-                # Done
-                nco.close()
+                    # Done
+                    nco.close()
 
-            # except Exception as e:  # TODO: More explicit exception handling
-            #     nc_file_name = self._generate_local_nc_path(tile_id)
-            #     print("Error on tile " + tile_id + ": " + str(e))
-            #     print("Removing " + nc_file_name + " and moving on.")
-            #     if os.path.exists(nc_file_name):
-            #         os.remove(nc_file_name)
-
+            except Exception as e:
+                # Log the error and move on to the next tile
+                logging.error(f"Error processing tile {tile_id}: {str(e)}")
