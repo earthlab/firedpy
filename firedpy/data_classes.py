@@ -169,8 +169,9 @@ class BurnData(Base):
             attempt += 1
 
         if attempt == max_retries and retries:
-            print('Raising exception')
-            raise IOError(f'Error downloading burn data: max retries exceeded ({max_retries}). Files not downloaded: {retries}')
+            raise IOError(f'Error downloading burn data: max retries exceeded ({max_retries}). Files not downloaded or '
+                          f'not able to open: {retries}')
+
 
     def get_burns(self, tiles: List[str], start_year: int = None, end_year: int = None):
         """
@@ -373,12 +374,19 @@ class BurnData(Base):
                     for tile_index, f in tqdm(enumerate(files), position=0, file=sys.stdout):
                         match = re.match(self._hdf_regex, os.path.basename(f))
                         if match is None:
+                            print('match is none')
                             continue
 
                         regex_group_dict = match.groupdict()
 
-                        ds = gdal.Open(f).GetSubDatasets()[0][0]
-                        hdf = gdal.Open(ds)
+                        try:
+                            ds = gdal.Open(f).GetSubDatasets()[0][0]
+                            hdf = gdal.Open(ds)
+                        except Exception as e:
+                            print(f'Could not open {f} for building ncdf: {str(e)}')
+                            variable[tile_index, :, :] = np.zeros((ny, nx))
+                            continue
+
                         data = hdf.GetRasterBand(1)
                         array = data.ReadAsArray()
                         year = int(regex_group_dict['year'])
