@@ -268,6 +268,7 @@ class BurnData(Base):
         create a singular netcdf file.
         """
         # Build the net cdfs here
+        fill_value = -9999
         for tile_id in tiles:
             try:
                 hdf_dir = self._generate_local_hdf_dir(tile_id)
@@ -320,9 +321,9 @@ class BurnData(Base):
                     y = nco.createVariable("y", np.float64, ("y",))
                     x = nco.createVariable("x", np.float64, ("x",))
                     times = nco.createVariable("time", np.int64, ("time",))
-                    variable = nco.createVariable("value", np.int16,
+                    variable = nco.createVariable("value", np.int32,
                                                   ("time", "y", "x"),
-                                                  fill_value=-9999, zlib=True)
+                                                  fill_value=fill_value, zlib=True)
                     variable.standard_name = "day"
                     variable.long_name = "Burn Days"
 
@@ -397,6 +398,9 @@ class BurnData(Base):
                         else:
                             print(f + ": failed, had wrong dimensions, inserting a blank array in its place.")
                             variable[tile_index, :, :] = np.zeros((ny, nx))
+
+                    nulls = np.where(variable <= 0)
+                    variable[nulls] = fill_value
 
                     # Done
                     nco.close()
