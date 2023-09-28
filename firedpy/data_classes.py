@@ -371,7 +371,7 @@ class BurnData(Base):
 
                     # One file a time, write the arrays
                     for tile_index, f in tqdm(enumerate(files), position=0, file=sys.stdout):
-                        match = re.match(self._hdf_regex, f)
+                        match = re.match(self._hdf_regex, os.path.basename(f))
                         if match is None:
                             continue
 
