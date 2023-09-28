@@ -250,7 +250,7 @@ class TestBurnData(unittest.TestCase):
         self.assertEqual(mock_verify.call_count, len(self.hdfs) + 1)  # One additional call due to one retry
 
     @patch("os.path.exists", return_value=False)
-    def test_never_succeed(self):
+    def test_never_succeed(self, mock_os):
         mock_sftp_client = MagicMock()
         mock_sftp_client.get = MagicMock()
         mock_sftp_client.get.side_effect = Exception("Failed download")
