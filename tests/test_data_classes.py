@@ -249,6 +249,7 @@ class TestBurnData(unittest.TestCase):
         self.burn_data._download_files(mock_sftp_client, self.tile, self.hdfs)
         self.assertEqual(mock_verify.call_count, len(self.hdfs) + 1)  # One additional call due to one retry
 
+    @patch("os.path.exists", return_value=False)
     def test_never_succeed(self):
         mock_sftp_client = MagicMock()
         mock_sftp_client.get = MagicMock()
@@ -273,7 +274,8 @@ class TestBurnData(unittest.TestCase):
     def test_write_nc_nominal(self):
         burn_data = BurnData(self._test_data_dir)
         tile = 'h01v10'
-        shutil.copytree(os.path.join(PROJECT_DIR, 'tests', 'burn_data', tile), burn_data._hdf_dir)
+        shutil.copytree(os.path.join(PROJECT_DIR, 'tests', 'data', 'burn_data', tile),
+                        burn_data._generate_remote_hdf_dir(tile))
 
         output_nc = os.path.join(self._test_data_dir, burn_data._generate_local_nc_path(tile))
         self.assertFalse(os.path.exists(output_nc))
