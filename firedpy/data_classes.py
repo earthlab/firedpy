@@ -171,7 +171,6 @@ class BurnData(Base):
             raise IOError(f'Error downloading burn data: max retries exceeded ({max_retries}). Files not downloaded or '
                           f'not able to open: {retries}')
 
-
     def get_burns(self, tiles: List[str], start_year: int = None, end_year: int = None):
         """
         This will download the MODIS burn event data set tiles and create a

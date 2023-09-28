@@ -261,8 +261,8 @@ class TestBurnData(unittest.TestCase):
 
         print(str(context.exception))
 
-        self.assertTrue(f'Error downloading burn data: max retries exceeded (3). Files not downloaded: {self.hdfs}'
-                        in str(context.exception))
+        self.assertTrue(f'Error downloading burn data: max retries exceeded (3). Files not downloaded or not able to '
+                        f'open: {self.hdfs}' in str(context.exception))
 
     def test_extract_date_parts_valid(self):
         filename = "MCD64A1.A2022123.h12v34.061.2023123123456.hdf"
@@ -292,7 +292,8 @@ class TestBurnData(unittest.TestCase):
         self.assertEqual(output_file.title, 'Burn Days')
         self.assertEqual(output_file.subtitle, 'Burn Days Detection by MODIS since 1970.')
         self.assertEqual(output_file.description, 'The day that a fire is detected.')
-        self.assertEqual(output_file.date, datetime.today().strftime('YYYY-mm-dd'))
+        self.assertEqual(output_file.date, datetime.today().strftime('%Y-%m-%d')
+)
         self.assertEqual(output_file.projection, 'MODIS Sinusoidal')
         self.assertEqual(output_file.Conventions, 'CF-1.6')
 
