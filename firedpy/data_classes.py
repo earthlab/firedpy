@@ -91,8 +91,7 @@ class Base:
     def _convert_julian_date(year: int, julian_day: int) -> int:
         base = dt.datetime(1970, 1, 1)
         date = dt.datetime(year, 1, 1) + dt.timedelta(int(julian_day - 1))
-        days = date - base
-        return days.days
+        return (date - base).days
 
     def _convert_dates(self, array, year) -> np.array:
         """Convert every day in an array to days since Jan 1 1970"""
@@ -100,6 +99,7 @@ class Base:
         ys, xs = np.where(array > 0)
 
         for y, x in zip(ys, xs):
+            print(array[y, x])
             array[y, x] = self._convert_julian_date(year, array[y, x])
 
         return array
@@ -382,6 +382,7 @@ class BurnData(Base):
                         data = hdf.GetRasterBand(1)
                         array = data.ReadAsArray()
                         year = int(regex_group_dict['year'])
+                        print(year)
                         array = self._convert_dates(array, year)
                         if array.shape == (ny, nx):
                             variable[tile_index, :, :] = array
