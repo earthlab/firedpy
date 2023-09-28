@@ -351,9 +351,10 @@ class TestBurnData(unittest.TestCase):
                          '+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +R=6371007.181 +units=m +no_defs')
         self.assertEqual(output_file.variables['crs'].proj4,
                          '+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +R=6371007.181 +units=m +no_defs')
-        self.assertTrue(np.array_equal(output_file.variables['crs'].geo_transform, np.array([-1.89031588e+07, 4.63312717e+02,
-                                                                                     0.00000000e+00, -1.11195052e+06,
-                                                                                     0.00000000e+00, -4.63312717e+02])))
+        self.assertTrue(np.testing.assert_array_equal(output_file.variables['crs'].geo_transform,
+                                                      np.array([-1.89031588e+07, 4.63312717e+02,
+                                                                0.00000000e+00, -1.11195052e+06,
+                                                                0.00000000e+00, -4.63312717e+02])))
         self.assertEqual(output_file.variables['crs'].grid_mapping_name, 'sinusoidal')
         self.assertEqual(output_file.variables['crs'].false_easting, 0.0)
         self.assertEqual(output_file.variables['crs'].false_northing, 0.0)
