@@ -217,7 +217,10 @@ class BurnData(Base):
             if not hdf_files:
                 print(f"No MCD64A1 Product for tile: {tile}, skipping...")
 
-            self._download_files(sftp_client, tile, hdf_files)
+            try:
+                self._download_files(sftp_client, tile, hdf_files)
+            except IOError as e:
+                continue
 
         # Close new SFTP connection
         ssh_client.close()
