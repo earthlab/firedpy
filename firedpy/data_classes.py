@@ -155,6 +155,8 @@ class BurnData(Base):
             for hdf_file in tqdm(retries):
                 remote_path = self._generate_remote_hdf_path(tile, hdf_file)
                 local_path = self._generate_local_hdf_path(tile, hdf_file)
+                if os.path.exists(local_path):
+                    continue
                 os.makedirs(os.path.dirname(local_path), exist_ok=True)
                 try:
                     sftp_client.get(remote_path, local_path)
