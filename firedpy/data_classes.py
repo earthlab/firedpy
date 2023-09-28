@@ -250,6 +250,7 @@ class BurnData(Base):
             dst.write(mosaic)
 
     def _extract_date_parts(self, filename):
+        filename = os.path.basename(filename)
         match = re.match(self._hdf_regex, filename)
         if match:
             return int(match.groupdict()['year']), int(match.groupdict()['julian_day'])
