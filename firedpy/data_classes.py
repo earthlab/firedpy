@@ -5,8 +5,11 @@ import shutil
 import sys
 from datetime import datetime
 from glob import glob
-from typing import List, Union
+from typing import List, Union, Tuple
 import logging
+import urllib
+from http.cookiejar import CookieJar
+from multiprocessing import Pool
 
 import geopandas as gpd
 import numpy as np
@@ -17,6 +20,8 @@ from netCDF4 import Dataset
 from osgeo import gdal, osr
 from rasterio.merge import merge
 from tqdm import tqdm
+import requests
+from bs4 import BeautifulSoup
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(__file__))
 
@@ -110,7 +115,7 @@ class BurnData(Base):
         self._base_sftp_folder = os.path.join('data', 'MODIS', 'C61', 'MCD64A1', 'HDF')
         self._modis_template_path = os.path.join(out_dir, 'rasters', 'mosaic_template.tif')
         self._record_start_year = 2000
-        self._hdf_regex = r'MCD64A1\.A(?P<year>\d{4})(?P<julian_day>\d{3})\.h(?P<horizontal_tile>\d{2})v(?P<vertical_tile>\d{2})\.061\.(?P<prod_year>\d{4})(?P<prod_julian_day>\d{3})(?P<prod_hourminute>\d{4})(?P<prod_second>\d{2})\.hdf$'
+        self._hdf_regex = r'MCD64A1\.A(?P<year>\d{4})(?P<ordinal_day>\d{3})\.h(?P<horizontal_tile>\d{2})v(?P<vertical_tile>\d{2})\.061\.(?P<prod_year>\d{4})(?P<prod_ordinal_day>\d{3})(?P<prod_hourminute>\d{4})(?P<prod_second>\d{2})\.hdf$'
 
     @staticmethod
     def _verify_hdf_file(file_path) -> bool:
@@ -257,7 +262,7 @@ class BurnData(Base):
         filename = os.path.basename(filename)
         match = re.match(self._hdf_regex, filename)
         if match:
-            return int(match.groupdict()['year']), int(match.groupdict()['julian_day'])
+            return int(match.groupdict()['year']), int(match.groupdict()['ordinal_day'])
         return None
 
     def _write_ncs(self, tiles: List[str]):
@@ -406,3 +411,192 @@ class BurnData(Base):
             except Exception as e:
                 # Log the error and move on to the next tile
                 logging.error(f"Error processing tile {tile_id}: {str(e)}")
+
+
+class LandCover(Base):
+    def __init__(self, out_dir: str):
+        super().__init__(out_dir)
+        self._lp_daac_url = 'https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.061/'
+        self._date_regex = r'(?P<year>\d{4})\.(?P<month>\d{2})\.(?P<day>\d{2})\/'
+        self._hdf_regex = r'MCD12Q1\.A(?P<year>\d{4})(?P<ordinal_day>\d{3})\.h(?P<horizontal_tile>\d{2})v(?P<vertical_tile>\d{2})\.061\.(?P<prod_year>\d{4})(?P<prod_ordinal_day>\d{3})(?P<prod_hourminute>\d{4})(?P<prod_second>\d{2})\.hdf$'
+        self._core_count = os.cpu_count()
+
+    @staticmethod
+    def get_all_available_tiles() -> List[str]:
+        with paramiko.SSHClient() as ssh_client:
+            ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh_client.connect(hostname="fuoco.geog.umd.edu",
+                               username="fire", password="burnt")
+            print("Connected to 'fuoco.geog.umd.edu' ...")
+            # Open the connection to the SFTP
+            with ssh_client.open_sftp() as sftp_client:
+                sftp_client.chdir('/data/MODIS/C61/MCD64A1/HDF')
+                return sftp_client.listdir()
+
+    @staticmethod
+    def _is_file_valid(in_file: str) -> bool:
+        try:
+            rasterio.open(in_file, 'w+', driver='HDF4Image')
+            return True
+        except Exception as _:
+            return False
+
+    def _get_available_year_paths(self) -> List[str]:
+        # Get available years
+        request = requests.get(self._lp_daac_url)
+        soup = BeautifulSoup(request.text, 'html.parser')
+        year_paths = []
+        for link in [link["href"] for link in soup.find_all("a", href=True)]:
+            match = re.match(self._date_regex, link)
+            if match is not None:
+                year_paths.append(link)
+
+        return year_paths
+
+    def _get_available_files(self, year_path: str, tiles: List[str] = None):
+        request = requests.get(urllib.parse.urljoin(self._lp_daac_url, year_path))
+        soup = BeautifulSoup(request.text, 'html.parser')
+        files = []
+        for link in [link["href"] for link in soup.find_all("a", href=True)]:
+            match = re.match(self._hdf_regex, link)
+            if match is not None:
+
+                if tiles is not None:
+                    group_dict = match.groupdict()
+                    tile = f"h{group_dict['horizontal_tile']}v{group_dict['vertical_tile']}"
+                    if tile not in tiles:
+                        continue
+
+                files.append(link)
+
+        return files
+
+    def _generate_local_hdf_path(self, year: str, remote_name: str) -> str:
+        return os.path.join(self._land_cover_dir, year, remote_name)
+
+    def _generate_local_hdf_dir(self, year: str) -> str:
+        return os.path.join(self._land_cover_dir, year)
+
+    def _download_task(self, request: Tuple[str, str]):
+        link = request[0]
+        dest = request[1]
+
+        if os.path.exists(dest):
+            return
+
+        pm = urllib.request.HTTPPasswordMgrWithDefaultRealm()
+        pm.add_password(None, "https://urs.earthdata.nasa.gov", self._username, self._password)
+        cookie_jar = CookieJar()
+        opener = urllib.request.build_opener(
+            urllib.request.HTTPBasicAuthHandler(pm),
+            urllib.request.HTTPCookieProcessor(cookie_jar)
+        )
+        urllib.request.install_opener(opener)
+        myrequest = urllib.request.Request(link)
+        response = urllib.request.urlopen(myrequest)
+        response.begin()
+        with open(dest, 'wb') as fd:
+            while True:
+                chunk = response.read()
+                if chunk:
+                    fd.write(chunk)
+                else:
+                    break
+
+    def _download_files(self, download_requests):
+        try:
+            with Pool(int(self._core_count / 2)) as pool:
+                for _ in tqdm(pool.imap_unordered(self._download_task, download_requests),
+                              total=len(download_requests)):
+                    pass
+
+        except Exception as pe:
+            try:
+                _ = [self._download_task(q) for q in tqdm(download_requests, position=0, file=sys.stdout)]
+            except Exception as e:
+                template = "Download failed: error type {0}:\n{1!r}"
+                message = template.format(type(e).__name__, e.args)
+                print(message)
+
+    def _create_annual_mosaic(self, year: str, land_cover_type: int = 1):
+        output_file = f"lc_mosaic_{land_cover_type}_{year}.tif"
+        if os.path.exists(output_file):
+            return
+
+        # Filter available files for the requested tiles
+        lc_files = [self._generate_local_hdf_path(year, f) for f in os.listdir(self._generate_local_hdf_dir(year))
+                    if re.match(self._hdf_regex, f) is not None]
+
+        # Use the sub-dataset name to get the right land cover type
+        datasets = []
+        for lc_file_path in lc_files:
+            with rasterio.open(lc_file_path) as lc_file:
+                datasets.append([sd for sd in lc_file.subdatasets if land_cover_type in sd.lower()][0])
+
+        # Create pointers to the chosen land cover type
+        tiles = [rasterio.open(ds) for ds in datasets]
+
+        # Mosaic them together
+        mosaic, transform = merge(tiles)
+
+        # Get coordinate reference information
+        crs = tiles[0].meta.copy()
+        crs.update({"driver": "GTIFF",
+                    "height": mosaic.shape[1],
+                    "width": mosaic.shape[2],
+                    "transform": transform})
+
+        # Save mosaic file
+        with rasterio.open(os.path.join(self._mosaics_dir, output_file), "w+", **crs) as dst:
+            dst.write(mosaic)
+
+    def get_land_cover(self, tiles: List[str] = None, land_cover_type: int = 1):
+        """
+        A method to download and process land cover data from  NASA's Land
+        Processes Distributed Active Archive Center, which is an Earthdata
+        thing. You"ll need register for a username and password, but that"s
+        free. Fortunately, there is a tutorial on how to get this data:
+
+        https://wiki.earthdata.nasa.gov/display/EL/How+To+Access+Data+With+Python
+
+        sample citation for later:
+           ASTER Mount Gariwang image from 2018 was retrieved from
+           https://lpdaac.usgs.gov, maintained by the NASA EOSDIS Land
+           Processes Distributed Active Archive Center (LP DAAC) at the USGS
+           Earth Resources Observation and Science (EROS) Center, Sioux Falls,
+           South Dakota. 2018, https://lpdaac.usgs.gov/resources/data-action/
+           aster-ultimate-2018-winter-olympics-observer/.
+
+        Update 10/2020: Python workflow updated to 3.X specific per documentation
+
+        """
+        if tiles is None:
+            tiles = self.get_all_available_tiles()
+
+        available_year_paths = self._get_available_year_paths()
+
+        download_requests = []
+        for year_path in available_year_paths:
+            year = re.match(self._date_regex, year_path).groupdict()['year']
+
+            available_files = self._get_available_files(year_path, tiles=tiles)
+            for file in available_files:
+                local_file_path = self._generate_local_hdf_path(year, file)
+                if os.path.exists(local_file_path):
+                    if not self._is_file_valid(local_file_path):
+                        os.remove(local_file_path)
+                    else:
+                        continue
+                download_requests.append(
+                    (urllib.parse.urljoin(urllib.parse.urljoin(self._lp_daac_url, year_path), file), local_file_path)
+                )
+
+        self._download_files(download_requests)
+
+        print("Mosaicking/remosaicking land cover tiles...")
+        for year_path in tqdm(available_year_paths, position=0, file=sys.stdout):
+            year = re.match(self._date_regex, year_path).groupdict()['year']
+            self._create_annual_mosaic(year, land_cover_type)
+
+        # Print location
+        print(f"Land cover data saved to {self._mosaics_dir}")
