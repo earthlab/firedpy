@@ -105,7 +105,6 @@ class Base:
     @staticmethod
     def _rasterize_vector_data(src, dst, attribute, resolution, crs, extent, all_touch=False, na=-9999):
         """Rasterizes input vector data"""
-
         # Open shapefile, retrieve the layer
         src_data = ogr.Open(src)
         layer = src_data.GetLayer()
@@ -140,7 +139,6 @@ class Base:
 
         # Finally rasterize
         gdal.RasterizeLayer(trgt, [1], layer, options=ops)
-
         # Close target an source rasters
         del trgt
         del src_data
@@ -654,7 +652,7 @@ class EcoRegion(Base):
 
         self._eco_region_ftp_url = 'ftp://newftp.epa.gov/EPADataCommons/ORD/Ecoregions/cec_na/NA_CEC_Eco_Level3.zip'
         self._project_eco_region_path = os.path.join(PROJECT_DIR, "ref", "us_eco", "NA_CEC_Eco_Level3.shp")
-        self._eco_region_path = os.path.join(self._eco_region_shapefile_dir, 'NA_CEC_Eco_Level3.gpkg')
+        self._eco_region_shape_path = os.path.join(self._eco_region_shapefile_dir, 'NA_CEC_Eco_Level3.gpkg')
         self._eco_region_csv_path = os.path.join(self._tables_dir, 'eco_refs.csv')
         self._eco_region_raster_path = os.path.join(self._eco_region_raster_dir, 'NA_CEC_Eco_Level3_modis.tif')
 
@@ -667,12 +665,15 @@ class EcoRegion(Base):
         """
         # Character cases are inconsistent between I,II and III,IV levels
         """
+
         def capitalize_special(s):
             """Handles capitalization for special characters within a string."""
             if "/" in s:
-                s = "/".join([segment.capitalize() for segment in s.split("/")])
+                s = "/".join([segment.capitalize() if segment.upper() != 'USA' else segment.upper() for segment in
+                              s.split("/")])
             if "-" in s:
-                s = "-".join([segment.title() for segment in s.split("-")])
+                s = "-".join([segment.title() if segment.upper() != 'USA' else segment.upper() for segment in
+                              s.split("-")])
             return s
 
         # Split string into words
@@ -699,16 +700,16 @@ class EcoRegion(Base):
        Update 02/2021: EPA FTP site is glitchy, adding local file in "ref"
        If download fails, use local file
        """
-        if not os.path.exists(self._eco_region_path):
+        if not os.path.exists(self._eco_region_shape_path):
             try:
                 eco = gpd.read_file(self._eco_region_ftp_url)
                 eco.crs = {"init": "epsg:5070"}
-                eco.to_file(self._eco_region_path)
-                return gpd.read_file(self._eco_region_path)
+                eco.to_file(self._eco_region_shape_path)
+                return gpd.read_file(self._eco_region_shape_path)
             except Exception as e:
                 print("Failed to connect to EPA ftp site: using local file ...")
-                shutil.copy(self._project_eco_region_path, self._eco_region_path)
-                return gpd.read_file(self._eco_region_path)
+                shutil.copy(self._project_eco_region_path, self._eco_region_shape_path)
+                return gpd.read_file(self._eco_region_shape_path)
 
     def create_eco_region_raster(self, tiles: List[str]):
         if self.eco_region_data_frame is None:
@@ -745,14 +746,15 @@ class EcoRegion(Base):
                 raise FileNotFoundError(f'Burn HDFs do not exist for tile {tile} at {burn_dir}. Use the BurnData class '
                                         f'to download this data before rasterizing the eco region file')
 
-            file = [f for f in glob(os.path.join(burn_dir, "*hdf")) if re.match(self._burn_hdf_regex, f) is not None][0]
+            file = [os.path.join(burn_dir, f) for f in glob(os.path.join(burn_dir, "*")) if
+                    re.match(self._burn_hdf_regex, os.path.basename(f)) is not None][0]
             file_pointer = gdal.Open(file)
             dataset_pointer = file_pointer.GetSubDatasets()[0][0]
             ds = gdal.Open(dataset_pointer)
             geom = ds.GetGeoTransform()
             ulx, xres, xskew, uly, yskew, yres = geom
             lrx = ulx + (ds.RasterXSize * xres)
-            lry = uly + (ds.RasterYSize * yres) + yres
+            lry = uly + (ds.RasterYSize * yres)
             exts.append([ulx, lry, lrx, uly])
             projection = ds.GetProjection()
 
