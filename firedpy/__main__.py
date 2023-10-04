@@ -152,7 +152,7 @@ def main():
     if land_cover_type is not None:
         # Earthdata Login
         # test url for correct user/password
-        url = "https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.006/2019.01.01/MCD12Q1.A2019001.h13v12.006.2020212130349.hdf"
+        url = "https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.061/2019.01.01/MCD12Q1.A2019001.h13v12.061.2020212130349.hdf"
 
         password_manager = urllib.request.HTTPPasswordMgrWithDefaultRealm()
         password_manager.add_password(None, "https://urs.earthdata.nasa.gov", username, password)
@@ -169,7 +169,7 @@ def main():
             # urllib.request.HTTPSHandler(debuglevel=1),   # details of the requests/responses
             urllib.request.HTTPCookieProcessor(cookie_jar))
         urllib.request.install_opener(opener)
-        ##Checking to make sure username and password is correct:
+        # Checking to make sure username and password is correct:
         check = None
         while check is None:
             try:

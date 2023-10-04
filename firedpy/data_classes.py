@@ -17,7 +17,7 @@ import pandas as pd
 import paramiko
 import rasterio
 from netCDF4 import Dataset
-from osgeo import gdal, osr
+from osgeo import gdal, osr, ogr
 from rasterio.merge import merge
 from tqdm import tqdm
 import requests
@@ -51,12 +51,17 @@ class Base:
         self._burn_area_dir = os.path.join(self._raster_dir, 'burn_area')
         self._land_cover_dir = os.path.join(self._raster_dir, 'land_cover')
         self._eco_region_raster_dir = os.path.join(self._raster_dir, 'eco_region')
-        self._eco_region_shapefile_dir = os.path.join(self._raster_dir, 'eco_region')
+        self._eco_region_shapefile_dir = os.path.join(self._shape_file_dir, 'eco_region')
         self._tables_dir = os.path.join(out_dir, 'tables')
 
         self._mosaics_dir = os.path.join(self._land_cover_dir, 'mosaics')
         self._nc_dir = os.path.join(self._burn_area_dir, 'netcdfs')
         self._hdf_dir = os.path.join(self._burn_area_dir, 'hdfs')
+
+        self._modis_sinusoidal_grid_shape_path = os.path.join(self._shape_file_dir, 'modis_sinusoidal_grid_world.shp')
+        self._conus_shape_path = os.path.join(self._shape_file_dir, 'conus.shp')
+
+        self._burn_hdf_regex = r'MCD64A1\.A(?P<year>\d{4})(?P<ordinal_day>\d{3})\.h(?P<horizontal_tile>\d{2})v(?P<vertical_tile>\d{2})\.061\.(?P<prod_year>\d{4})(?P<prod_ordinal_day>\d{3})(?P<prod_hourminute>\d{4})(?P<prod_second>\d{2})\.hdf$'
 
         # Initialize output directory folders and files
         self._initialize_save_dirs()
@@ -83,12 +88,11 @@ class Base:
         """
 
         files_to_copy = {
-            'modis_sinusoidal_grid_world.shp': self.MODIS_SINUSOIDAL_PATH,
-            'conus.shp': self.CONUS_SHAPEFILE_PATH
+            self._modis_sinusoidal_grid_shape_path: self.MODIS_SINUSOIDAL_PATH,
+            self._conus_shape_path: self.CONUS_SHAPEFILE_PATH
         }
 
-        for dest_name, source_path in files_to_copy.items():
-            dest_path = os.path.join(self._shape_file_dir, dest_name)
+        for dest_path, source_path in files_to_copy.items():
             if not os.path.exists(dest_path):
                 shutil.copy(source_path, dest_path)
 
@@ -97,6 +101,49 @@ class Base:
         base = dt.datetime(1970, 1, 1)
         date = dt.datetime(year, 1, 1) + dt.timedelta(int(ordinal_day - 1))
         return (date - base).days
+
+    @staticmethod
+    def _rasterize_vector_data(src, dst, attribute, resolution, crs, extent, all_touch=False, na=-9999):
+        """Rasterizes input vector data"""
+
+        # Open shapefile, retrieve the layer
+        src_data = ogr.Open(src)
+        layer = src_data.GetLayer()
+
+        # Use transform to derive coordinates and dimensions
+        xmin = extent[0]
+        ymin = extent[1]
+        xmax = extent[2]
+        ymax = extent[3]
+
+        # Create the target raster layer
+        cols = int((xmax - xmin) / resolution)
+        rows = int((ymax - ymin) / resolution) + 1
+        trgt = gdal.GetDriverByName("GTiff").Create(dst, cols, rows, 1,
+                                                    gdal.GDT_Float32)
+        trgt.SetGeoTransform((xmin, resolution, 0, ymax, 0, -resolution))
+
+        # Add crs
+        refs = osr.SpatialReference()
+        refs.ImportFromWkt(crs)
+        trgt.SetProjection(refs.ExportToWkt())
+
+        # Set no value
+        band = trgt.GetRasterBand(1)
+        band.SetNoDataValue(na)
+
+        # Set options
+        if all_touch is True:
+            ops = ["-at", "ATTRIBUTE=" + attribute]
+        else:
+            ops = ["ATTRIBUTE=" + attribute]
+
+        # Finally rasterize
+        gdal.RasterizeLayer(trgt, [1], layer, options=ops)
+
+        # Close target an source rasters
+        del trgt
+        del src_data
 
     def _convert_dates(self, array, year) -> np.array:
         """Convert every day in an array to days since Jan 1 1970"""
@@ -108,6 +155,9 @@ class Base:
 
         return array
 
+    def _generate_local_burn_hdf_dir(self, tile: str) -> str:
+        return os.path.join(self._hdf_dir, tile)
+
 
 class BurnData(Base):
     def __init__(self, out_dir: str):
@@ -115,7 +165,6 @@ class BurnData(Base):
         self._base_sftp_folder = os.path.join('data', 'MODIS', 'C61', 'MCD64A1', 'HDF')
         self._modis_template_path = os.path.join(out_dir, 'rasters', 'mosaic_template.tif')
         self._record_start_year = 2000
-        self._hdf_regex = r'MCD64A1\.A(?P<year>\d{4})(?P<ordinal_day>\d{3})\.h(?P<horizontal_tile>\d{2})v(?P<vertical_tile>\d{2})\.061\.(?P<prod_year>\d{4})(?P<prod_ordinal_day>\d{3})(?P<prod_hourminute>\d{4})(?P<prod_second>\d{2})\.hdf$'
 
     @staticmethod
     def _verify_hdf_file(file_path) -> bool:
@@ -137,9 +186,6 @@ class BurnData(Base):
 
     def _generate_local_hdf_path(self, tile: str, hdf_name: str) -> str:
         return os.path.join(self._hdf_dir, tile, hdf_name)
-
-    def _generate_local_hdf_dir(self, tile: str) -> str:
-        return os.path.join(self._hdf_dir, tile)
 
     def _generate_remote_hdf_path(self, tile: str, hdf_name: str) -> str:
         return os.path.join(self._base_sftp_folder, tile, hdf_name)
@@ -216,7 +262,7 @@ class BurnData(Base):
             print(f"Downloading/Checking HDF files for: {tile}")
             hdf_files = []
             for hdf_file in sftp_client.listdir(self._generate_remote_hdf_dir(tile)):
-                match = re.match(self._hdf_regex, hdf_file)
+                match = re.match(self._burn_hdf_regex, hdf_file)
                 if match is not None and int(match.groupdict()['year']) in year_range:
                     hdf_files.append(hdf_file)
 
@@ -260,7 +306,7 @@ class BurnData(Base):
 
     def _extract_date_parts(self, filename):
         filename = os.path.basename(filename)
-        match = re.match(self._hdf_regex, filename)
+        match = re.match(self._burn_hdf_regex, filename)
         if match:
             return int(match.groupdict()['year']), int(match.groupdict()['ordinal_day'])
         return None
@@ -274,7 +320,7 @@ class BurnData(Base):
         fill_value = -9999
         for tile_id in tiles:
             try:
-                hdf_dir = self._generate_local_hdf_dir(tile_id)
+                hdf_dir = self._generate_local_burn_hdf_dir(tile_id)
 
                 files = sorted([os.path.join(hdf_dir, f) for f in os.listdir(hdf_dir) if self._extract_date_parts(f)
                                 is not None], key=self._extract_date_parts)
@@ -377,7 +423,7 @@ class BurnData(Base):
 
                     # One file a time, write the arrays
                     for tile_index, f in tqdm(enumerate(files), position=0, file=sys.stdout):
-                        match = re.match(self._hdf_regex, os.path.basename(f))
+                        match = re.match(self._burn_hdf_regex, os.path.basename(f))
                         if match is None:
                             continue
 
@@ -600,3 +646,129 @@ class LandCover(Base):
 
         # Print location
         print(f"Land cover data saved to {self._mosaics_dir}")
+
+
+class EcoRegion(Base):
+    def __init__(self, out_dir: str):
+        super().__init__(out_dir)
+
+        self._eco_region_ftp_url = 'ftp://newftp.epa.gov/EPADataCommons/ORD/Ecoregions/cec_na/NA_CEC_Eco_Level3.zip'
+        self._project_eco_region_path = os.path.join(PROJECT_DIR, "ref", "us_eco", "NA_CEC_Eco_Level3.shp")
+        self._eco_region_path = os.path.join(self._eco_region_shapefile_dir, 'NA_CEC_Eco_Level3.gpkg')
+        self._eco_region_csv_path = os.path.join(self._tables_dir, 'eco_refs.csv')
+        self._eco_region_raster_path = os.path.join(self._eco_region_raster_dir, 'NA_CEC_Eco_Level3_modis.tif')
+
+        self._ref_cols = ['NA_L3CODE', 'NA_L3NAME', 'NA_L2CODE', 'NA_L2NAME', 'NA_L1CODE', 'NA_L1NAME', 'NA_L3KEY',
+                          'NA_L2KEY', 'NA_L1KEY']
+        self.eco_region_data_frame: Union[None, gpd.GeoDataFrame] = None
+
+    @staticmethod
+    def _normalize_string(string) -> str:
+        """
+        # Character cases are inconsistent between I,II and III,IV levels
+        """
+        def capitalize_special(s):
+            """Handles capitalization for special characters within a string."""
+            if "/" in s:
+                s = "/".join([segment.capitalize() for segment in s.split("/")])
+            if "-" in s:
+                s = "-".join([segment.title() for segment in s.split("-")])
+            return s
+
+        # Split string into words
+        words = string.split()
+
+        # Create a new list with words formatted according to rules
+        formatted_words = []
+        for word in words:
+            # Special handling for "USA"
+            if word.upper() == "USA":
+                formatted_words.append("USA")
+            # Special handling for "and"
+            elif word.lower() == "and":
+                formatted_words.append("and")
+            # Capitalization with special character handling for other words
+            else:
+                formatted_words.append(capitalize_special(word.capitalize()))
+
+        # Join and return the formatted words as a single string
+        return " ".join(formatted_words)
+
+    def _read_eco_region_file(self) -> gpd.GeoDataFrame:
+        """
+       Update 02/2021: EPA FTP site is glitchy, adding local file in "ref"
+       If download fails, use local file
+       """
+        if not os.path.exists(self._eco_region_path):
+            try:
+                eco = gpd.read_file(self._eco_region_ftp_url)
+                eco.crs = {"init": "epsg:5070"}
+                eco.to_file(self._eco_region_path)
+                return gpd.read_file(self._eco_region_path)
+            except Exception as e:
+                print("Failed to connect to EPA ftp site: using local file ...")
+                shutil.copy(self._project_eco_region_path, self._eco_region_path)
+                return gpd.read_file(self._eco_region_path)
+
+    def create_eco_region_raster(self, tiles: List[str]):
+        if self.eco_region_data_frame is None:
+            self.get_eco_region()
+
+        # We need something with the correct geometry
+        template1 = gpd.read_file(self._modis_sinusoidal_grid_shape_path)
+
+        # Getting the extent regardless of existing files from other runs
+        template1["h"] = template1["h"].apply(lambda x: "{:02d}".format(x))
+        template1["v"] = template1["v"].apply(lambda x: "{:02d}".format(x))
+        template1["tile"] = "h" + template1["h"] + "v" + template1["v"]
+        template1 = template1[template1["tile"].isin(tiles)]
+
+        # We can use this to query which tiles are needed for coordinates
+        bounds = template1.geometry.bounds
+        minx = min(bounds["minx"])
+        miny = min(bounds["miny"])
+        maxx = max(bounds["maxx"])
+        maxy = max(bounds["maxy"])
+        minx_tile = template1["tile"][bounds["minx"] == minx].iloc[0]
+        miny_tile = template1["tile"][bounds["miny"] == miny].iloc[0]
+        maxx_tile = template1["tile"][bounds["maxx"] == maxx].iloc[0]
+        maxy_tile = template1["tile"][bounds["maxy"] == maxy].iloc[0]
+        extent_tiles = [minx_tile, miny_tile, maxx_tile, maxy_tile]
+
+        # If these aren't present, I say just go ahead and download
+        exts = []
+        projection = None
+        xres = None
+        for tile in extent_tiles:
+            burn_dir = self._generate_local_burn_hdf_dir(tile)
+            if not os.path.exists(burn_dir):
+                raise FileNotFoundError(f'Burn HDFs do not exist for tile {tile} at {burn_dir}. Use the BurnData class '
+                                        f'to download this data before rasterizing the eco region file')
+
+            file = [f for f in glob(os.path.join(burn_dir, "*hdf")) if re.match(self._burn_hdf_regex, f) is not None][0]
+            file_pointer = gdal.Open(file)
+            dataset_pointer = file_pointer.GetSubDatasets()[0][0]
+            ds = gdal.Open(dataset_pointer)
+            geom = ds.GetGeoTransform()
+            ulx, xres, xskew, uly, yskew, yres = geom
+            lrx = ulx + (ds.RasterXSize * xres)
+            lry = uly + (ds.RasterYSize * yres) + yres
+            exts.append([ulx, lry, lrx, uly])
+            projection = ds.GetProjection()
+
+        extent = [exts[0][0], exts[1][1], exts[2][2], exts[3][3]]
+        attribute = "US_L3CODE"
+        self._rasterize_vector_data(self.eco_region_data_frame, self._eco_region_raster_path, attribute, xres,
+                                    projection, extent)
+
+    def get_eco_region(self):
+        # Omernick's Ecoregions - EPA North American Albers
+        eco = self._read_eco_region_file()
+
+        # Create a reference table for ecoregions
+        eco_ref = eco[self._ref_cols].drop_duplicates()
+        eco_ref = eco_ref.applymap(self._normalize_string)
+
+        eco_ref.to_csv(self._eco_region_csv_path, index=False)
+
+        self.eco_region_data_frame = eco_ref

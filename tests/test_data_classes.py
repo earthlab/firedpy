@@ -3,13 +3,16 @@ import re
 import shutil
 import unittest
 from datetime import datetime
-from unittest.mock import patch, Mock, MagicMock
+from unittest.mock import patch, Mock, MagicMock, call
 
 import paramiko
 import numpy as np
 from netCDF4 import Dataset
+import geopandas as gpd
 
-from firedpy.data_classes import Base, BurnData
+from firedpy.data_classes import Base, BurnData, EcoRegion
+from osgeo import gdal
+import pandas as pd
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(__file__))
 
@@ -119,6 +122,42 @@ class TestBase(unittest.TestCase):
         expected = np.array([[0, 0], [0, 365 + 364], [365, 0]])
         result = base_class._convert_dates(arr, year)
         np.testing.assert_array_equal(result, expected)
+
+    @patch("osgeo.ogr.Open")
+    @patch("osgeo.gdal.GetDriverByName")
+    @patch("osgeo.osr.SpatialReference")
+    def test_rasterize_vector_data(self, mock_spatial_ref, mock_get_driver, mock_open):
+        # Mock objects and methods
+        mock_layer = Mock()
+        mock_src_data = Mock(GetLayer=Mock(return_value=mock_layer))
+        mock_open.return_value = mock_src_data
+
+        mock_band = Mock()
+        mock_trgt = Mock(GetRasterBand=Mock(return_value=mock_band), SetGeoTransform=Mock())
+        mock_get_driver.return_value = Mock(Create=Mock(return_value=mock_trgt))
+
+        mock_spatial_ref_instance = Mock(ExportToWkt=Mock(return_value="crs_wkt"))
+        mock_spatial_ref.return_value = mock_spatial_ref_instance
+
+        # Actual parameters you would use to call the method
+        src = os.path.join('shapefiles', 'ecoregion', 'NA_CEC_Eco_Level3.shp')
+        dst = os.path.join('rasters', 'ecoregion', 'NA_CEC_Eco_Level3.tif')
+        attribute = "US_L3CODE"
+        resolution = 100
+        crs = "WGS 84"
+        extent = [0, 0, 1000, 1000]  # example extent
+        all_touch = False
+        na = -9999
+
+        # Call the method
+        Base._rasterize_vector_data(src, dst, attribute, resolution, crs, extent, all_touch, na)
+
+        mock_open.assert_called_with(src)
+        mock_get_driver.assert_called_with("GTiff")
+        mock_get_driver.return_value.Create.assert_called_with(dst, 10, 11, 1, gdal.GDT_Float32)
+        mock_trgt.SetGeoTransform.assert_called_with((0, resolution, 0, 1000, 0, -resolution))
+        mock_spatial_ref_instance.ImportFromWkt.assert_called_with(crs)
+        mock_band.SetNoDataValue.assert_called_with(na)
 
 
 class TestBurnData(unittest.TestCase):
@@ -364,6 +403,237 @@ class TestBurnData(unittest.TestCase):
         self.assertEqual(output_file.variables['crs'].longitude_of_prime_meridian, 0.0)
         self.assertEqual(output_file.variables['crs'].semi_major_axis, 6371007.181)
         self.assertEqual(output_file.variables['crs'].inverse_flattening, 0.0)
+
+
+class TestEcoRegion(unittest.TestCase):
+
+    def test_init_method(self):
+        out_dir = "sample_out_dir"
+
+        # Creating an instance of EcoRegion
+        eco_region_instance = EcoRegion(out_dir)
+
+        # Assertions to check if the attributes are set correctly
+        self.assertEqual(eco_region_instance._eco_region_ftp_url,
+                         'ftp://newftp.epa.gov/EPADataCommons/ORD/Ecoregions/cec_na/NA_CEC_Eco_Level3.zip')
+
+        self.assertIsNotNone(eco_region_instance._eco_region_ftp_url)
+        self.assertTrue(eco_region_instance._eco_region_ftp_url.startswith(out_dir))
+        self.assertIsNotNone(eco_region_instance._project_eco_region_path)
+        self.assertTrue(eco_region_instance._project_eco_region_path.startswith(out_dir))
+        self.assertIsNotNone(eco_region_instance._eco_region_path)
+        self.assertTrue(eco_region_instance._eco_region_path.startswith(out_dir))
+        self.assertIsNotNone(eco_region_instance._eco_region_csv_path)
+        self.assertTrue(eco_region_instance._eco_region_csv_path.startswith(out_dir))
+        self.assertIsNotNone(eco_region_instance._eco_region_raster_path)
+        self.assertTrue(eco_region_instance._eco_region_raster_path.startswith(out_dir))
+        self.assertIsNotNone(eco_region_instance._ref_cols)
+        self.assertTrue(eco_region_instance._ref_cols.startswith(out_dir))
+
+        # Check if eco_region_data_frame is initialized to None
+        self.assertIsNone(eco_region_instance.eco_region_data_frame)
+
+    def test_basic_capitalization(self):
+        self.assertEqual(
+            EcoRegion._normalize_string("hello world"),
+            "Hello World"
+        )
+
+    def test_special_characters(self):
+        self.assertEqual(
+            EcoRegion._normalize_string("hello/world good-morning"),
+            "Hello/World Good-Morning"
+        )
+
+    def test_special_word_and(self):
+        self.assertEqual(
+            EcoRegion._normalize_string("hello and world"),
+            "Hello and World"
+        )
+
+    def test_special_word_usa(self):
+        self.assertEqual(
+            EcoRegion._normalize_string("hello USA world"),
+            "Hello USA World"
+        )
+
+    def test_combination(self):
+        self.assertEqual(
+            EcoRegion._normalize_string("hello and USA/world good-morning"),
+            "Hello and USA/World Good-Morning"
+        )
+
+    @patch("geopandas.read_file")
+    @patch("os.path.exists")
+    def test_read_from_ftp(self, mock_exists, mock_read_file):
+        mock_exists.return_value = False
+        mock_read_file.return_value = gpd.GeoDataFrame()
+
+        eco_region = EcoRegion('test_out_dir')
+        df = eco_region._read_eco_region_file()
+
+        mock_read_file.assert_called_with(eco_region._eco_region_ftp_url)
+        self.assertIsInstance(df, gpd.GeoDataFrame)
+
+    @patch("geopandas.read_file")
+    @patch("os.path.exists")
+    @patch("shutil.copy")
+    def test_read_from_local_when_ftp_fails(self, mock_copy, mock_exists, mock_read_file):
+        mock_exists.return_value = False
+        mock_read_file.side_effect = [Exception("FTP Error"), gpd.GeoDataFrame()]
+
+        eco_region = EcoRegion('test_out_dir')
+        df = eco_region._read_eco_region_file()
+
+        mock_read_file.assert_called_with(eco_region._eco_region_path)
+        self.assertIsInstance(df, gpd.GeoDataFrame)
+
+    @patch("geopandas.read_file")
+    @patch("os.path.exists")
+    @patch("shutil.copy")
+    def test_handle_total_failure(self, mock_copy, mock_exists, mock_read_file):
+        mock_exists.return_value = False
+        mock_read_file.side_effect = Exception("Total Failure")
+
+        eco_region = EcoRegion('test_out_dir')
+        with self.assertRaises(Exception) as context:
+            eco_region._read_eco_region_file()
+
+        self.assertEqual(str(context.exception), "Total Failure")
+
+    @patch.object(EcoRegion, '_read_eco_region_file')
+    @patch.object(EcoRegion, '_normalize_string')
+    @patch("pandas.DataFrame.to_csv")
+    def test_get_eco_region(self, mock_to_csv, mock_normalize, mock_read_file):
+        # Mock the data returned by `_read_eco_region_file`
+        mock_df = pd.DataFrame({
+            'NA_L3CODE': ['A', 'B', 'C'],
+            'NA_L3NAME': ['region_A', 'region_B', 'region_C'],
+            # Add other columns as per `_ref_cols`
+        })
+        mock_read_file.return_value = mock_df
+
+        # Mock `_normalize_string` method to just return the input string for simplicity
+        mock_normalize.side_effect = lambda x: x
+
+        # Initialize EcoRegion and call `get_eco_region`
+        eco_region = EcoRegion('your_out_dir')
+        eco_region.get_eco_region()
+
+        # Check that `_read_eco_region_file` was called once
+        mock_read_file.assert_called_once()
+
+        # Check that `_normalize_string` was called for each element in `eco_ref`
+        calls = [call(cell) for cell in mock_df[eco_region._ref_cols].values.flatten()]
+        mock_normalize.assert_has_calls(calls, any_order=True)
+
+        # Check that `to_csv` was called once with the correct path
+        mock_to_csv.assert_called_once_with(eco_region._eco_region_csv_path, index=False)
+
+        # Check that `eco_region_data_frame` is assigned correctly
+        pd.testing.assert_frame_equal(eco_region.eco_region_data_frame, mock_df.applymap(str))
+
+    @patch("geopandas.read_file")
+    @patch.object(EcoRegion, '_rasterize_vector_data')
+    @patch("os.path.exists", return_value=True)  # Mocking all `os.path.exists` calls to return True
+    @patch("gdal.Open")
+    @patch("os.path.join", return_value="mock_path")  # Mocking `os.path.join` to always return "mock_path"
+    @patch("glob.glob",
+           return_value=["mock_hdf_file_path"])  # Mocking `glob.glob` to always return a list with one mock path
+    def test_create_eco_region_raster(self, mock_glob, mock_join, mock_gdal_open,
+                                      mock_exists, mock_rasterize, mock_read_file):
+        # Mocking data returned by `read_file`
+        mock_df = gpd.GeoDataFrame({
+            'h': [1, 2, 3],
+            'v': [4, 5, 6],
+            'tile': ['h01v04', 'h02v05', 'h03v06'],
+        })
+        mock_read_file.return_value = mock_df
+
+        # Mocking data returned by `gdal.Open`
+        mock_file_pointer = Mock()
+        mock_ds = Mock()
+        mock_file_pointer.GetSubDatasets.return_value = [(None, None)]
+        mock_ds.GetGeoTransform.return_value = (0, 1, 0, 0, 0, -1)
+        mock_ds.RasterXSize = 1
+        mock_ds.RasterYSize = 1
+        mock_ds.GetProjection.return_value = "mock_projection"
+        mock_gdal_open.return_value = mock_ds
+
+        # Setting up a mock for the EcoRegion instance's `_generate_local_burn_hdf_dir` method
+        mock_eco_region = EcoRegion('test_out_dir')
+        mock_eco_region._generate_local_burn_hdf_dir = Mock(return_value="mock_burn_dir")
+
+        # Forcing `get_eco_region` to assign a non-None value to `eco_region_data_frame` to skip its call
+        mock_eco_region.eco_region_data_frame = pd.DataFrame()
+
+        # Calling the method with the mock objects and check behaviors
+        tiles = ['h01v04', 'h03v06']
+        mock_eco_region.create_eco_region_raster(tiles)
+
+        # Check the `read_file` is called correctly
+        mock_read_file.assert_called_once_with(mock_eco_region._modis_sinusoidal_grid_shape_path)
+
+        # Check the `_generate_local_burn_hdf_dir` is called for each `extent_tile`
+        mock_eco_region._generate_local_burn_hdf_dir.assert_has_calls(
+            [call(tile) for tile in ['h01v04', 'h01v04', 'h03v06', 'h03v06']])
+
+        # Check the `_rasterize_vector_data` is called correctly
+        mock_rasterize.assert_called_once_with(mock_eco_region.eco_region_data_frame,
+                                               mock_eco_region._eco_region_raster_path,
+                                               "US_L3CODE", 1, "mock_projection", [0, -1, 1, 0])
+
+    @patch("geopandas.read_file")
+    @patch.object(EcoRegion, '_rasterize_vector_data')
+    @patch.object(EcoRegion, 'get_eco_region')
+    @patch("os.path.exists", return_value=False)  # Mocking all `os.path.exists` calls to return True
+    @patch("gdal.Open")
+    @patch("os.path.join", return_value="mock_path")  # Mocking `os.path.join` to always return "mock_path"
+    @patch("glob.glob",
+           return_value=[
+               "mock_hdf_file_path"])  # Mocking `glob.glob` to always return a list with one mock path
+    def test_create_eco_region_raster(self, mock_glob, mock_join, mock_gdal_open,
+                                      mock_exists, mock_get_eco_region, mock_rasterize, mock_read_file):
+        mock_df = gpd.GeoDataFrame({
+            'h': [1, 2, 3],
+            'v': [4, 5, 6],
+            'tile': ['h01v04', 'h02v05', 'h03v06'],
+        })
+
+        mock_get_eco_region.return_value = mock_df
+
+        # Mocking data returned by `gdal.Open`
+        mock_file_pointer = Mock()
+        mock_ds = Mock()
+        mock_file_pointer.GetSubDatasets.return_value = [(None, None)]
+        mock_ds.GetGeoTransform.return_value = (0, 1, 0, 0, 0, -1)
+        mock_ds.RasterXSize = 1
+        mock_ds.RasterYSize = 1
+        mock_ds.GetProjection.return_value = "mock_projection"
+        mock_gdal_open.return_value = mock_ds
+
+        # Setting up a mock for the EcoRegion instance's `_generate_local_burn_hdf_dir` method
+        mock_eco_region = EcoRegion('test_out_dir')
+        mock_eco_region._generate_local_burn_hdf_dir = Mock(return_value="mock_burn_dir")
+        mock_eco_region.eco_region_data_frame = None
+
+        # Calling the method with the mock objects and check behaviors
+        tiles = ['h01v04', 'h03v06']
+        mock_eco_region.create_eco_region_raster(tiles)
+
+        # Check the `read_file` is called correctly
+        mock_read_file.assert_called_once_with(mock_eco_region._modis_sinusoidal_grid_shape_path)
+
+        # Check the `_generate_local_burn_hdf_dir` is called for each `extent_tile`
+        mock_eco_region._generate_local_burn_hdf_dir.assert_has_calls(
+            [call(tile) for tile in ['h01v04', 'h01v04', 'h03v06', 'h03v06']])
+
+        # Check the `_rasterize_vector_data` is called correctly
+        mock_rasterize.assert_called_once_with(mock_eco_region.eco_region_data_frame,
+                                               mock_eco_region._eco_region_raster_path,
+                                               "US_L3CODE", 1, "mock_projection", [0, -1, 1, 0])
+
+        self.assertTrue(mock_get_eco_region.call_count, 1)
 
 
 if __name__ == '__main__':
