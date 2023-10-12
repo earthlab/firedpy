@@ -61,8 +61,9 @@ class Base:
         self._modis_sinusoidal_grid_shape_path = os.path.join(self._shape_file_dir, 'modis_sinusoidal_grid_world.shp')
         self._conus_shape_path = os.path.join(self._shape_file_dir, 'conus.shp')
 
-        self._burn_hdf_regex = r'MCD64A1\.A(?P<year>\d{4})(?P<ordinal_day>\d{3})\.h(?P<horizontal_tile>\d{2})v(?P<vertical_tile>\d{2})\.061\.(?P<prod_year>\d{4})(?P<prod_ordinal_day>\d{3})(?P<prod_hourminute>\d{4})(?P<prod_second>\d{2})\.hdf$'
-
+        post_regex = r'\.A(?P<year>\d{4})(?P<ordinal_day>\d{3})\.h(?P<horizontal_tile>\d{2})v(?P<vertical_tile>\d{2})\.061\.(?P<prod_year>\d{4})(?P<prod_ordinal_day>\d{3})(?P<prod_hourminute>\d{4})(?P<prod_second>\d{2})\.hdf$'
+        self._burn_hdf_regex = r'MCD64A1' + post_regex
+        self._land_cover_regex = r'MCD12Q1' + post_regex
         # Initialize output directory folders and files
         self._initialize_save_dirs()
         self._get_shape_files()
@@ -101,6 +102,12 @@ class Base:
         base = dt.datetime(1970, 1, 1)
         date = dt.datetime(year, 1, 1) + dt.timedelta(int(ordinal_day - 1))
         return (date - base).days
+
+    @staticmethod
+    def _convert_unix_day_to_calendar_date(unix_day: int) -> str:
+        base = dt.datetime(1970, 1, 1)
+        date = base + dt.timedelta(days=unix_day - 1)
+        return date.strftime('%Y-%m-%d')
 
     @staticmethod
     def _rasterize_vector_data(src, dst, attribute, resolution, crs, extent, all_touch=False, na=-9999):
@@ -156,6 +163,9 @@ class Base:
     def _generate_local_burn_hdf_dir(self, tile: str) -> str:
         return os.path.join(self._hdf_dir, tile)
 
+    def _generate_local_nc_path(self, tile: str) -> str:
+        return os.path.join(self._nc_dir, f"{tile}.nc")
+
 
 class BurnData(Base):
     def __init__(self, out_dir: str):
@@ -190,9 +200,6 @@ class BurnData(Base):
 
     def _generate_remote_hdf_dir(self, tile: str) -> str:
         return os.path.join(self._base_sftp_folder, tile)
-
-    def _generate_local_nc_path(self, tile: str) -> str:
-        return os.path.join(self._nc_dir, f"{tile}.nc")
 
     def _download_files(self, sftp_client: paramiko.SFTPClient, tile: str, hdfs: List[str],
                         max_retries: int = 3) -> None:
@@ -367,8 +374,8 @@ class BurnData(Base):
                     # Variables
                     y = nco.createVariable("y", np.float64, ("y",))
                     x = nco.createVariable("x", np.float64, ("x",))
-                    times = nco.createVariable("time", np.int64, ("time",))
-                    variable = nco.createVariable("value", np.int32,
+                    times = nco.createVariable("time", np.int16, ("time",))
+                    variable = nco.createVariable("value", np.int16,
                                                   ("time", "y", "x"),
                                                   fill_value=fill_value, zlib=True)
                     variable.standard_name = "day"
@@ -437,10 +444,11 @@ class BurnData(Base):
 
                         data = hdf.GetRasterBand(1)
                         array = data.ReadAsArray()
+                        nulls = np.where(array < 0)
+
                         year = int(regex_group_dict['year'])
                         array = self._convert_dates(array, year)
 
-                        nulls = np.where(array < 0)
                         array[nulls] = fill_value
 
                         if array.shape == (ny, nx):
@@ -462,7 +470,6 @@ class LandCover(Base):
         super().__init__(out_dir)
         self._lp_daac_url = 'https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.061/'
         self._date_regex = r'(?P<year>\d{4})\.(?P<month>\d{2})\.(?P<day>\d{2})\/'
-        self._hdf_regex = r'MCD12Q1\.A(?P<year>\d{4})(?P<ordinal_day>\d{3})\.h(?P<horizontal_tile>\d{2})v(?P<vertical_tile>\d{2})\.061\.(?P<prod_year>\d{4})(?P<prod_ordinal_day>\d{3})(?P<prod_hourminute>\d{4})(?P<prod_second>\d{2})\.hdf$'
         self._core_count = os.cpu_count()
 
     @staticmethod
@@ -502,7 +509,7 @@ class LandCover(Base):
         soup = BeautifulSoup(request.text, 'html.parser')
         files = []
         for link in [link["href"] for link in soup.find_all("a", href=True)]:
-            match = re.match(self._hdf_regex, link)
+            match = re.match(self._land_cover_regex, link)
             if match is not None:
 
                 if tiles is not None:
@@ -569,7 +576,7 @@ class LandCover(Base):
 
         # Filter available files for the requested tiles
         lc_files = [self._generate_local_hdf_path(year, f) for f in os.listdir(self._generate_local_hdf_dir(year))
-                    if re.match(self._hdf_regex, f) is not None]
+                    if re.match(self._land_cover_regex, f) is not None]
 
         # Use the sub-dataset name to get the right land cover type
         datasets = []
