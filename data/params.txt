@@ -10,5 +10,5 @@ shp_type,fSpecify the format of the shapefile you want,str,gpkg,gpkg|shp|both|no
 land_cover_type,fIf you would like to include land cover as an attribute enter the land cover type number you would like to use.\nAvailable land cover categories: \n 0: None \n 1: IGBP global vegetation classification scheme \n 2: University of Maryland (UMD) scheme \n 3: MODIS-derived LAI/fPAR scheme \n,int,3,0|1|2|3
 username,Enter your NASA Earthdata username,str,,none
 password,Enter your NASA Earthdata password,str,,none
-start_year,Enter the year you want to start or all for all dates,int,all,none
-end_year,Enter the year you want to end or all for all dates,int,all,none
+start_year,Enter the year you want to start or 0 for all dates,int,0,none
+end_year,Enter the year you want to end or 0 for all dates,int,0,none

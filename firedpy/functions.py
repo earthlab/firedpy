@@ -62,6 +62,7 @@ pd.options.mode.chained_assignment = None
 
 # Functions
 
+
 def date_range(perimeter):
     """Converts days in a perimeter object since Jan 1 1970 to date strings"""
 
@@ -72,9 +73,6 @@ def date_range(perimeter):
     else:
         day1 = "N/A"
     return day1
-
-
-
 
 
 def flatten(lst):
@@ -131,7 +129,7 @@ def mode(lst):
 
 
 def pquery(p, lc, lc_array):
-    """Find the landcover code for a particular point (p)."""
+    """Find the land_cover code for a particular point (p)."""
     row, col = lc.index(p.x, p.y)
     lc_value = lc_array[row, col]
     return lc_value

@@ -1,20 +1,18 @@
-# -*- coding: utf-8 -*-
 import argparse
 import os
-#import shutil
 import time
 import warnings
-#import sys
-from typing import List, Any
+import enum
+import shutil
 
 from http.cookiejar import CookieJar
 import urllib.request
-from .functions import DataGetter, ModelBuilder
+from data_classes import EcoRegion, BurnData, LandCover
+from model_classes import ModelBuilder
 from utilities.create_readme import makeReadMe
 from firedpy import *
 from utilities.argument_parser import FiredpyArgumentParser
 from firedpy.spatial import shape_to_tiles
-
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
@@ -34,23 +32,81 @@ def get_tile_name_from_directory(parser: FiredpyArgumentParser, directory: str, 
     )
 
 
+def str_to_bool(s: str):
+    accepted_values = ['true', 'y', 'yes', 'false', 'n', 'no']
+    if s.lower() not in accepted_values:
+        raise ValueError(f'{s} must be in {accepted_values}')
+    return s.lower() in ['true', 'y', 'yes']
+
+
+class ShapeType(enum):
+    SHP = 'shp'
+    GPKG = 'gpkg'
+    BOTH = 'both'
+    NONE = 'none'
+
+
+class EcoRegionType(enum):
+    NA = 'na'
+    WORLD = 'world'
+
+
+class TileChoice(enum):
+    A = 'a'
+    B = 'b'
+    C = 'c'
+    D = 'd'
+
+
+class LandCoverType(enum.IntEnum):
+    NONE = 0
+    IGBP = 1
+    UMD = 2
+    MODIS_LAI = 3
+    MODIS_NPP = 4
+    PFT = 5
+
+
+def test_earthdata_credentials(username: str, password: str) -> None:
+    # Earthdata Login
+    # test url for correct user/password
+    url = "https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.061/2019.01.01/MCD12Q1.A2019001.h13v12.061.2020212130349.hdf"
+
+    password_manager = urllib.request.HTTPPasswordMgrWithDefaultRealm()
+    password_manager.add_password(None, "https://urs.earthdata.nasa.gov", username, password)
+    # Create a cookie jar for storing cookies. This is used to store and return
+    # the session cookie given to use by the data server (otherwise it will just
+    # keep sending us back to Earthdata Login to authenticate).  Ideally, we
+    # should use a file based cookie jar to preserve cookies between runs. This
+    # will make it much more efficient.
+    cookie_jar = CookieJar()
+    # Install all the handlers.
+    opener = urllib.request.build_opener(
+        urllib.request.HTTPBasicAuthHandler(password_manager),
+        # urllib.request.HTTPHandler(debuglevel=1),    # Uncomment these two lines to see
+        # urllib.request.HTTPSHandler(debuglevel=1),   # details of the requests/responses
+        urllib.request.HTTPCookieProcessor(cookie_jar))
+    urllib.request.install_opener(opener)
+
+    request = urllib.request.Request(url)
+    urllib.request.urlopen(request)
+
+
 def main():
     # Start the timer (seconds)
     start = time.perf_counter()
 
     # Parse arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument("-out_dir", dest="out_dir", default=os.path.join(os.getcwd(), 'output'),
-                        help=DATA_HELP, required=False)
-    parser.add_argument("-file_name", dest="file_name", default="fired", help=FILE_HELP, required=False)
-    parser.add_argument("-ecoregion_type", dest="ecoregion_type", help=ECO_HELP, required=False)
-    parser.add_argument("-ecoregion_level", dest="ecoregion_level", type=int, default=None, help=ECO_HELP)
-    parser.add_argument("-landcover_type", dest="landcover_type", default=None, help=LC_HELP)
-    parser.add_argument("-shp_type", dest="shp_type", help=SHP_HELP, default="gpkg")
-    parser.add_argument("-spatial", dest="spatial_param", default=5,
-                        type=int, help=SP_HELP)
-    parser.add_argument("-temporal", dest="temporal_param", default=11,
-                        type=int, help=TMP_HELP)
+    parser.add_argument("-out_dir", dest="out_dir", default=os.path.join(PROJECT_DIR, 'output'),
+                        help=DATA_HELP)
+    parser.add_argument("-file_name", dest="file_name", default="fired", type=str, help=FILE_HELP)
+    parser.add_argument("-eco_region_type", type=EcoRegionType, help=ECO_HELP)
+    parser.add_argument("-eco_region_level", type=int, help=ECO_HELP)
+    parser.add_argument("-land_cover_type", help=LC_HELP, type=LandCoverType)
+    parser.add_argument("-shape_type", help=SHP_HELP, type=ShapeType)
+    parser.add_argument("-spatial", dest="spatial_param", default=5, type=int, help=SP_HELP)
+    parser.add_argument("-temporal", dest="temporal_param", default=11, type=int, help=TMP_HELP)
     parser.add_argument("-aoi", "--names-list", nargs="+", dest="tiles",
                         default=["h08v04", "h09v04", "h10v04", "h11v04",
                                  "h12v04", "h13v04", "h08v05", "h09v05",
@@ -58,10 +114,11 @@ def main():
                                  "h09v05", "h10v05", "h11v05", "h12v05",
                                  "h08v06", "h09v06", "h10v06", "h11v06"],
                         help=TILE_HELP)
-    parser.add_argument("-daily", dest="daily", default="no", help=DAILY_HELP)
-    parser.add_argument("-start_yr", dest="start_yr", type=int, default=None, help=START_YR)
-    parser.add_argument("-end_yr", dest="end_yr", type=int, default=None, help=END_YR)
-    parser.add_argument("--full_csv", action='store_true', help=FULL_CSV)
+    parser.add_argument("--tile_choice", type=TileChoice, help='')
+    parser.add_argument("--daily", type=str, help=DAILY_HELP)
+    parser.add_argument("-start_year", type=int, help=START_YR)
+    parser.add_argument("-end_year", type=int, help=END_YR)
+    parser.add_argument("--full_csv", type=str, help=FULL_CSV)
     args = parser.parse_args()
 
     firedpy_parser = FiredpyArgumentParser(os.path.join(PROJECT_DIR, 'data', 'params.txt'))
@@ -71,59 +128,64 @@ def main():
     os.makedirs(out_dir, exist_ok=True)
 
     # Resolve full csv
-    full_csv = args.full_csv if args.full_csv is True else firedpy_parser.prompt_for_argument('full_csv')
+    full_csv = str_to_bool(args.full_csv) if args.full_csv is not None else \
+        firedpy_parser.prompt_for_argument('full_csv')
 
     # Resolve tile choice
-    tile_choice = firedpy_parser.prompt_for_argument('tile_choice')
-    if tile_choice == 'a':
+    tile_choice = TileChoice(firedpy_parser.prompt_for_argument('tile_choice')) if args.tile_choice is None else (
+        args.tile_choice)
+
+    if tile_choice == TileChoice.A:
         tile_name = get_tile_name_from_directory(firedpy_parser, os.path.join(PROJECT_DIR, 'ref', 'continents'),
                                                  "Please enter the continent name:")
-        tiles = [os.path.join("ref", "continents", tile_name + ".gpkg")]
-        ecoregion_type, ecoregion_level = ('na' if tile_name == "north_america" else 'world', 3
-        if tile_name == "north_america" else None)
+        shape_file = os.path.join("ref", "continents", tile_name + ".gpkg")
+        print(f"Filtering for MODIS tiles that intersect \n  {shape_file}")
+        tiles = shape_to_tiles(shape_file)
+        eco_region_type, eco_region_level = (EcoRegionType.NA if tile_name == "north_america" else EcoRegionType.WORLD,
+                                             3 if tile_name == "north_america" else None)
 
-    elif tile_choice == 'b':
+    elif tile_choice == TileChoice.B:
         tile_name = get_tile_name_from_directory(firedpy_parser,
                                                  os.path.join(PROJECT_DIR, 'ref', 'individual_countries'),
                                                  "Please enter the country name:")
-        tiles = [os.path.join('ref', 'individual_countries', tile_name + ".gpkg")]
-        ecoregion_type, ecoregion_level = ('na', 3) if tile_name in [
-            'united_States_of_america', 'canada', 'united_states_virgin_islands'] else ('world', None)
+        shape_file = os.path.join('ref', 'individual_countries', tile_name + ".gpkg")
+        print(f"Filtering for MODIS tiles that intersect \n  {shape_file}")
+        tiles = shape_to_tiles(shape_file)
+        eco_region_type, eco_region_level = (EcoRegionType.NA, 3) if tile_name in [
+            'united_States_of_america', 'canada', 'united_states_virgin_islands'] else (EcoRegionType.WORLD, None)
 
-    elif tile_choice == 'c':
+    elif tile_choice == TileChoice.C:
         tile_name = get_tile_name_from_directory(firedpy_parser, os.path.join(PROJECT_DIR, 'ref', 'us_states'),
                                                  "Please enter the state name:")
-        tiles = [os.path.join('ref', 'us_states', tile_name + ".gpkg")]
-        ecoregion_type, ecoregion_level = 'na', 3
+        shape_file = os.path.join('ref', 'us_states', tile_name + ".gpkg")
+        print(f"Filtering for MODIS tiles that intersect \n  {shape_file}")
+        tiles = shape_to_tiles(shape_file)
+        eco_region_type, eco_region_level = EcoRegionType.NA, 3
 
-    elif tile_choice == 'd':
+    elif tile_choice == TileChoice.D:
         tiles = firedpy_parser.prompt_for_argument(
             arg_name='tile_name',
-            prompt_override="Please enter tiles as a list of characters (no quotes no spaces)(e.g., h08v04 h09v04 "\
+            prompt_override="Please enter tiles as a list of characters (no quotes no spaces)(e.g., h08v04 h09v04 " \
                             "...):").split(' ')
-        # TODO: Some type of check here for valid tile names?
         tile_name = tiles[0]
-        ecoregion_type = firedpy_parser.prompt_for_argument('ecoregion_type')
-        ecoregion_level = 3 if ecoregion_type == 'na' else None
-
+        eco_region_type = firedpy_parser.prompt_for_argument('eco_region_type')
+        eco_region_level = 3 if eco_region_type == EcoRegionType.NA else None
+        shape_file = None
     else:
         raise ValueError('Invalid tile choice')
 
-    daily = firedpy_parser.prompt_for_argument('daily')
-    spatial_param = firedpy_parser.prompt_for_argument('spatial_param')
-    temporal_param = firedpy_parser.prompt_for_argument('temporal_param')
-
-    shp_type = firedpy_parser.prompt_for_argument('shp_type')
-    shapefile = shp_type != 'none'
-    if not shapefile:
-        shp_type = None
-
-    file_name = "fired_" + str(tile_name)
-    file_path = os.path.join(out_dir, "outputs", "tables", file_name)
+    daily = firedpy_parser.prompt_for_argument('daily') if args.daily is None else str_to_bool(args.daily)
+    spatial_param = firedpy_parser.prompt_for_argument('spatial_param') if args.spatial_param is None else \
+        args.spatial_param
+    temporal_param = firedpy_parser.prompt_for_argument('temporal_param') if args.temporal_param is None else \
+        args.temporal_param
+    shape_type = ShapeType(firedpy_parser.prompt_for_argument('shape_type')) if args.shp_type is None else args.shp_type
+    shapefile = shape_type != ShapeType.NONE
 
     # Resolve land cover type
-    land_cover_type = firedpy_parser.prompt_for_argument('land_cover_type')
-    if land_cover_type != 0:
+    land_cover_type = (LandCoverType(firedpy_parser.prompt_for_argument('land_cover_type')) if args.land_cover_type is
+                                                                                               None else args.land_cover_type)
+    if land_cover_type != LandCoverType.NONE:
         username = os.environ.get('FIREDPY_ED_USER', None)
         password = os.environ.get('FIREDPY_ED_PWD', None)
         if username is None or password is None:
@@ -134,185 +196,68 @@ def main():
             username = firedpy_parser.prompt_for_argument('username')
             password = firedpy_parser.prompt_for_argument('password', sensitive=True)
 
-    else:
-        land_cover_type = None
-        username = ''
-        password = ''
+            check = None
+            while check is None:
+                try:
+                    test_earthdata_credentials(username, password)
+                    check = 1
+                except Exception as _:
+                    pass
 
-    start_year = firedpy_parser.prompt_for_argument('start_year')
-    end_year = firedpy_parser.prompt_for_argument('end_year')
-    if start_year == 'all':
-        start_year = None
-    if end_year == 'all':
-        end_year = None
+        land_cover = LandCover(out_dir)
+        land_cover.get_land_cover(tiles, land_cover_type)
 
-    temp = 1
+    start_year = firedpy_parser.prompt_for_argument('start_year') if args.start_year is None else args.start_year
+    end_year = firedpy_parser.prompt_for_argument('end_year') if args.end_year is None else args.end_year
+    start_year = None if start_year == 0 else start_year
+    end_year = None if end_year == 0 else end_year
 
-    # Transfer the lookup tables
-    if land_cover_type is not None:
-        # Earthdata Login
-        # test url for correct user/password
-        url = "https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.061/2019.01.01/MCD12Q1.A2019001.h13v12.061.2020212130349.hdf"
+    eco_region_data = EcoRegion(out_dir)
+    eco_region_data.get_eco_region()
 
-        password_manager = urllib.request.HTTPPasswordMgrWithDefaultRealm()
-        password_manager.add_password(None, "https://urs.earthdata.nasa.gov", username, password)
-        # Create a cookie jar for storing cookies. This is used to store and return
-        # the session cookie given to use by the data server (otherwise it will just
-        # keep sending us back to Earthdata Login to authenticate).  Ideally, we
-        # should use a file based cookie jar to preserve cookies between runs. This
-        # will make it much more efficient.
-        cookie_jar = CookieJar()
-        # Install all the handlers.
-        opener = urllib.request.build_opener(
-            urllib.request.HTTPBasicAuthHandler(password_manager),
-            # urllib.request.HTTPHandler(debuglevel=1),    # Uncomment these two lines to see
-            # urllib.request.HTTPSHandler(debuglevel=1),   # details of the requests/responses
-            urllib.request.HTTPCookieProcessor(cookie_jar))
-        urllib.request.install_opener(opener)
-        # Checking to make sure username and password is correct:
-        check = None
-        while check is None:
-            try:
-                request = urllib.request.Request(url)
-                response = urllib.request.urlopen(request)
-                check = 1
-            except Exception:
-                print("Invalid username or password for NASA Earthdata service account. Try again \n")
-                # Try again
-                username = input("Enter NASA Earthdata User Name: ")
-                password = input("Enter NASA Earthdata Password: ")
-                password_manager = urllib.request.HTTPPasswordMgrWithDefaultRealm()
-                password_manager.add_password(None, "https://urs.earthdata.nasa.gov", username, password)
-                cookie_jar = CookieJar()
-                opener = urllib.request.build_opener(
-                    urllib.request.HTTPBasicAuthHandler(password_manager),
-                    # urllib.request.HTTPHandler(debuglevel=1),    # Uncomment these two lines to see
-                    # urllib.request.HTTPSHandler(debuglevel=1),   # details of the requests/responses
-                    urllib.request.HTTPCookieProcessor(cookie_jar))
-                urllib.request.install_opener(opener)
-
-        lookup = os.path.join(os.getcwd(), 'ref', 'landcover',
-                              'MCD12Q1_LegendDesc_Type{}.csv'.format(str(land_cover_type)))
-
-        new_path = os.path.join(out_dir, 'tables', 'landcover')
-        if not os.path.exists(new_path):
-            os.makedirs(new_path)
-        new_file = os.path.join(new_path, 'MCD12Q1_LegendDesc_Type{}.csv'.format(str(land_cover_type)))
-        shutil.copy(lookup, new_file)
-
-    # Get ecoregions if requested, use local file first
-    if ecoregion_type or ecoregion_level:
-
-        new_path = os.path.join(out_dir, 'shapefiles', 'ecoregion')
-
-        if not os.path.exists(new_path):
-            os.makedirs(new_path)
-
-        if ecoregion_type == 'world':
-            fname = 'wwf_terr_ecos.gpkg'
-            lookup = os.path.join(os.getcwd(), 'ref', 'world_ecoregions', fname)
-        elif ecoregion_type == 'na' or ecoregion_level:
-            fname = 'NA_CEC_Eco_Level3.gpkg'
-            lookup = os.path.join(os.getcwd(), 'ref', 'us_eco', fname)
-        try:
-            new_file = os.path.join(new_path, fname)
-            shutil.copy(lookup, new_file)
-        except Exception:
-            # data.getEcoregion(ecoregion_level)
-            pass
-
-    # Assign target MODIS tiles to the data object
-    shape_file_path = tiles[0]
-    if shape_file_path.endswith(('.shp', '.gpkg')):
-        print("Filtering for MODIS tiles that intersect \n    " + shape_file_path)
-        tiles = shape_to_tiles(shape_file_path)
-
-    data = DataGetter(out_dir, start_year, end_year, username, password, tiles=tiles)
-    data.get_eco_region(ecoregion_level)
-
-    # Get all of the MODIS burn area hdfs
-    try:
-        data.getBurns()
-    except (KeyboardInterrupt, SystemExit):
-        raise
-    except Exception as e:
-        template = "\nDownload failed: error type {0}:\n{1!r}"
-        message = template.format(type(e).__name__, e.args)
-        print(message)
-
-    # Download land cover if requested
-    if landcover_type is not None:
-        data.getLandcover(landcover_type)
-
-    # Grab the basename for the output file name
-    file_base = os.path.basename(file_path)
-
-    # Add date range to the file names before exporting final data frame
-    date_range = []
-    # TODO: Should be using regex and file type class here
-    for root, dirs, files in os.walk(os.path.join(proj_dir, 'rasters', 'burn_area', 'hdfs')):
-        for f in files:
-            if "MCD64A1" in f:
-                dr = int(f.split('.')[1][1:])
-                date_range.append(dr)
-    last_date = sorted(date_range)[-1]
-    first_date = sorted(date_range)[1]
-    file_name = os.path.join(os.path.dirname(file_path), file_base + "_to" + str(last_date))
+    burn_data = BurnData(out_dir)
+    burn_data.get_burns(tiles, start_year, end_year)
 
     # Create Model Builder object
-    models = ModelBuilder(file_name=file_name,
-                          proj_dir=proj_dir,
-                          tiles=tiles,
-                          shp=shp,
-                          spatial_param=spatial_param,
-                          temporal_param=temporal_param,
-                          landcover_type=landcover_type,
-                          ecoregion_type=ecoregion_type,
-                          ecoregion_level=ecoregion_level,
-                          daily=daily,
-                          shapefile=shapefile,
-                          shp_type=shp_type)
+    models = ModelBuilder(out_dir=out_dir, tiles=tiles, spatial_param=spatial_param, temporal_param=temporal_param)
 
-    # Now go ahead and create the events (Memory's a bit tight for parallel)
-    models.buildEvents()
+    event_perimeters = models.build_events()
+    gdf = models.build_points(event_perimeters, shape_file_path=shape_file)
+    gdf = models.add_fire_attributes(gdf)
+    gdf = models.add_land_cover_attributes(gdf, land_cover_type)
+    gdf = models.process_geometry(gdf)
+    gdf = models.add_eco_region_attributes(gdf, eco_region_type, eco_region_level)
 
-    # Now add fire attributes to this table
-    models.buildFireAttributes()
+    def generate_path(proj_dir, base_filename, shape_type: ShapeType):
+        """Generate the appropriate file path."""
+        file_ext = {
+            ShapeType.SHP: ['.shp', None],
+            ShapeType.GPKG: ['.gpkg', None],
+            ShapeType.BOTH: ['.shp', '.gpkg']
+        }.get(shape_type, ['.gpkg'])
 
-    # And now build the polygons
-    pref = file_base + "_to" + str(last_date)
-    daily_shp_file = "_".join([pref, "daily"])
-    event_shp_file = "_".join([pref, "events"])
+        if isinstance(file_ext, list):
+            return [os.path.join(proj_dir, "outputs", "shapefiles", base_filename + ext) if ext is not None else None
+                    for ext in file_ext]
 
-    if shp_type == "shp":
-        daily_shp_path_shp = os.path.join(proj_dir, "outputs", "shapefiles",
-                                          daily_shp_file + ".shp")
-        event_shp_path_shp = os.path.join(proj_dir, "outputs", "shapefiles",
-                                          event_shp_file + ".shp")
-    if shp_type == "both":
-        daily_shp_path_shp = os.path.join(proj_dir, "outputs", "shapefiles",
-                                          daily_shp_file + ".shp")
-        daily_shp_path = os.path.join(proj_dir, "outputs", "shapefiles",
-                                      daily_shp_file + ".gpkg")
-        event_shp_path_shp = os.path.join(proj_dir, "outputs", "shapefiles",
-                                          event_shp_file + ".shp")
-        event_shp_path = os.path.join(proj_dir, "outputs", "shapefiles",
-                                      event_shp_file + ".gpkg")
+    # Build the polygons
+    date_range = burn_data.get_date_range()
+    base_file_name = f"fired_{tile_name}_to_{date_range[-1][0]}_{date_range[-1][1]}"
+    daily_base = f"{base_file_name}_daily"
+    event_base = f"{base_file_name}_events"
+
+    daily_shape_path, daily_gpkg_path = generate_path(out_dir, daily_base, shape_type)
+    event_shape_path, event_gpkg_path = generate_path(out_dir, event_base, shape_type)
+
+    if daily:
+        gdf = models.process_daily_data(gdf, '', daily_shape_path, daily_gpkg_path)
     else:
-        daily_shp_path = os.path.join(proj_dir, "outputs", "shapefiles",
-                                      daily_shp_file + ".gpkg")
-        event_shp_path = os.path.join(proj_dir, "outputs", "shapefiles",
-                                      event_shp_file + ".gpkg")
-        daily_shp_path_shp = ''
-        event_shp_path_shp = ''
+        gdf = models.process_event_data(gdf)
 
-    models.buildPolygons(daily_shp_path=daily_shp_path,
-                         event_shp_path=event_shp_path,
-                         daily_shp_path_shp=daily_shp_path_shp,
-                         event_shp_path_shp=event_shp_path_shp,
-                         full_csv=full_csv)
-    makeReadMe(proj_dir, tilename, file_base, temp, first_date, last_date, ecoregion_type, ecoregion_level,
-               landcover_type, daily, spatial_param, temporal_param, shapefile, shp_type)
+    models.save_event_data(gdf, '', event_shape_path, event_gpkg_path, full_csv=full_csv)
+
+    makeReadMe(out_dir, tile_name, base_file_name, 1, date_range[0], date_range[-1], eco_region_type,
+               eco_region_level, land_cover_type, daily, spatial_param, temporal_param, shapefile, shape_type)
     # Print the time it took
     end = time.perf_counter()
     seconds = end - start

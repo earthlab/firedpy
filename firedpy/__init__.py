@@ -10,8 +10,8 @@ FILE_HELP = ("""
     """)
 DAILY_HELP = ("""
     You may specify whether to create the daily polygons or just the event-level perimeter
-    for your analysis area. Options are "yes" (to create the daily polygons and the event polygons),
-    "no" (create the event level only).
+    for your analysis area. If this flag is set, the daily and event polygons will be created, otherwise only the event
+    level
     """)
 ECO_HELP = ("""
     You can specify the ecoregion type as either "world" or "na":
@@ -72,5 +72,5 @@ END_YR = ("""
     The last year of fired events.
     """)
 FULL_CSV = ("""
-    If included full attribute table will exported to csv. If not included only x and y coordinates, event date, and
+    If set full attribute table will exported to csv. If not included only x and y coordinates, event date, and
     event id will be exported to a csv.""")

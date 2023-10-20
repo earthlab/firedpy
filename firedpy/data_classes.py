@@ -23,6 +23,8 @@ from tqdm import tqdm
 import requests
 from bs4 import BeautifulSoup
 
+from firedpy.__main__ import LandCoverType
+
 PROJECT_DIR = os.path.dirname(os.path.dirname(__file__))
 
 logging.basicConfig(filename='app.log', level=logging.ERROR,
@@ -56,10 +58,14 @@ class Base:
 
         self._mosaics_dir = os.path.join(self._land_cover_dir, 'mosaics')
         self._nc_dir = os.path.join(self._burn_area_dir, 'netcdfs')
-        self._hdf_dir = os.path.join(self._burn_area_dir, 'hdfs')
+        self.hdf_dir = os.path.join(self._burn_area_dir, 'hdfs')
 
         self._modis_sinusoidal_grid_shape_path = os.path.join(self._shape_file_dir, 'modis_sinusoidal_grid_world.shp')
         self._conus_shape_path = os.path.join(self._shape_file_dir, 'conus.shp')
+
+        self._eco_region_csv_path = os.path.join(self._tables_dir, 'eco_refs.csv')
+        self._project_eco_region_path = os.path.join(PROJECT_DIR, "ref", "us_eco", "NA_CEC_Eco_Level3.shp")
+        self._eco_region_shape_path = os.path.join(self._eco_region_shapefile_dir, 'NA_CEC_Eco_Level3.gpkg')
 
         post_regex = r'\.A(?P<year>\d{4})(?P<ordinal_day>\d{3})\.h(?P<horizontal_tile>\d{2})v(?P<vertical_tile>\d{2})\.061\.(?P<prod_year>\d{4})(?P<prod_ordinal_day>\d{3})(?P<prod_hourminute>\d{4})(?P<prod_second>\d{2})\.hdf$'
         self._burn_hdf_regex = r'MCD64A1' + post_regex
@@ -79,7 +85,7 @@ class Base:
             self._tables_dir,
             self._mosaics_dir,
             self._nc_dir,
-            self._hdf_dir
+            self.hdf_dir
         ]:
             os.makedirs(f, exist_ok=True)
 
@@ -161,7 +167,7 @@ class Base:
         return array
 
     def _generate_local_burn_hdf_dir(self, tile: str) -> str:
-        return os.path.join(self._hdf_dir, tile)
+        return os.path.join(self.hdf_dir, tile)
 
     def _generate_local_nc_path(self, tile: str) -> str:
         return os.path.join(self._nc_dir, f"{tile}.nc")
@@ -193,7 +199,7 @@ class BurnData(Base):
         return True
 
     def _generate_local_hdf_path(self, tile: str, hdf_name: str) -> str:
-        return os.path.join(self._hdf_dir, tile, hdf_name)
+        return os.path.join(self.hdf_dir, tile, hdf_name)
 
     def _generate_remote_hdf_path(self, tile: str, hdf_name: str) -> str:
         return os.path.join(self._base_sftp_folder, tile, hdf_name)
@@ -292,7 +298,7 @@ class BurnData(Base):
     def _write_modis_template_file(self):
         # Merge one year into a reference mosaic
         print("Creating reference mosaic ...")
-        folders = glob(os.path.join(self._hdf_dir, "*"))
+        folders = glob(os.path.join(self.hdf_dir, "*"))
         file_groups = [glob(os.path.join(f, "*hdf")) for f in folders]
         for f in file_groups:
             f.sort()
@@ -315,6 +321,13 @@ class BurnData(Base):
         if match:
             return int(match.groupdict()['year']), int(match.groupdict()['ordinal_day'])
         return None
+
+    def get_date_range(self) -> List[Tuple[int, int]]:
+        dates = [
+            self._extract_date_parts(f) for f in glob(os.path.join(self.hdf_dir, '**'))
+        ]
+
+        return sorted([d for d in dates if d is not None])
 
     def _write_ncs(self, tiles: List[str]):
         """
@@ -569,8 +582,8 @@ class LandCover(Base):
                 message = template.format(type(e).__name__, e.args)
                 print(message)
 
-    def _create_annual_mosaic(self, year: str, land_cover_type: int = 1):
-        output_file = f"lc_mosaic_{land_cover_type}_{year}.tif"
+    def _create_annual_mosaic(self, year: str, land_cover_type: LandCoverType = LandCoverType.IGBP):
+        output_file = f"lc_mosaic_{land_cover_type.value}_{year}.tif"
         if os.path.exists(output_file):
             return
 
@@ -582,7 +595,7 @@ class LandCover(Base):
         datasets = []
         for lc_file_path in lc_files:
             with rasterio.open(lc_file_path) as lc_file:
-                datasets.append([sd for sd in lc_file.subdatasets if land_cover_type in sd.lower()][0])
+                datasets.append([sd for sd in lc_file.subdatasets if land_cover_type.value in sd.lower()][0])
 
         # Create pointers to the chosen land cover type
         tiles = [rasterio.open(ds) for ds in datasets]
@@ -601,7 +614,7 @@ class LandCover(Base):
         with rasterio.open(os.path.join(self._mosaics_dir, output_file), "w+", **crs) as dst:
             dst.write(mosaic)
 
-    def get_land_cover(self, tiles: List[str] = None, land_cover_type: int = 1):
+    def get_land_cover(self, tiles: List[str] = None, land_cover_type: LandCoverType = LandCoverType.IGBP):
         """
         A method to download and process land cover data from  NASA's Land
         Processes Distributed Active Archive Center, which is an Earthdata
@@ -658,9 +671,6 @@ class EcoRegion(Base):
         super().__init__(out_dir)
 
         self._eco_region_ftp_url = 'ftp://newftp.epa.gov/EPADataCommons/ORD/Ecoregions/cec_na/NA_CEC_Eco_Level3.zip'
-        self._project_eco_region_path = os.path.join(PROJECT_DIR, "ref", "us_eco", "NA_CEC_Eco_Level3.shp")
-        self._eco_region_shape_path = os.path.join(self._eco_region_shapefile_dir, 'NA_CEC_Eco_Level3.gpkg')
-        self._eco_region_csv_path = os.path.join(self._tables_dir, 'eco_refs.csv')
         self._eco_region_raster_path = os.path.join(self._eco_region_raster_dir, 'NA_CEC_Eco_Level3_modis.tif')
 
         self._ref_cols = ['NA_L3CODE', 'NA_L3NAME', 'NA_L2CODE', 'NA_L2NAME', 'NA_L1CODE', 'NA_L1NAME', 'NA_L3KEY',

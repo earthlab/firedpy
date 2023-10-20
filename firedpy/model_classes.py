@@ -1,6 +1,7 @@
 import gc
 import os
 import re
+import shutil
 import sys
 from collections import OrderedDict, deque
 from glob import glob
@@ -16,7 +17,10 @@ from scipy.spatial import cKDTree
 import pandas as pd
 import rasterio
 
+from firedpy.__main__ import LandCoverType, EcoRegionType
 from firedpy.data_classes import Base
+
+PROJECT_DIR = os.path.dirname(os.path.dirname(__file__))
 
 
 class SpacetimeCoordinate:
@@ -239,20 +243,11 @@ class EventGrid(Base):
 
 
 class ModelBuilder(Base):
-    def __init__(self, out_dir: str, tiles: List[str], shp, daily, shapefile, spatial_param: int = 5,
-                 temporal_param: int = 11, landcover_type=None, ecoregion_type=None, ecoregion_level=None,
-                 shp_type=None):
+    def __init__(self, out_dir: str, tiles: List[str], spatial_param: int = 5, temporal_param: int = 11):
         super().__init__(out_dir)
         self.tiles = tiles
-        self.shp = shp
         self.spatial_param = spatial_param
         self.temporal_param = temporal_param
-        self.landcover_type = landcover_type
-        self.ecoregion_type = ecoregion_type
-        self.ecoregion_level = ecoregion_level
-        self.daily = daily
-        self.shapefile = shapefile
-        self.shp_type = shp_type
         self.files = sorted([self._generate_local_nc_path(t) for t in self.tiles])
 
         if not self.files:
@@ -283,6 +278,28 @@ class ModelBuilder(Base):
         if type(polygon) == Polygon:
             polygon = MultiPolygon([polygon])
         return polygon
+
+    @staticmethod
+    def _copy_file(src_path: str, dest_path: str) -> str:
+        """Generic function to handle copying files."""
+        if not os.path.exists(dest_path):
+            os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+            shutil.copy(src_path, dest_path)
+        return dest_path
+
+    def _copy_land_cover_ref(self, land_cover_type: LandCoverType) -> str:
+        lookup = os.path.join(PROJECT_DIR, 'ref', 'land_cover', f'MCD12Q1_LegendDesc_Type{land_cover_type.value}.csv')
+        land_cover_out_dir_path = os.path.join(self._out_dir, 'tables', 'land_cover',
+                                               f"MCD12Q1_LegendDesc_Type{land_cover_type.value}.csv")
+        return self._copy_file(lookup, land_cover_out_dir_path)
+
+    def _copy_wwf_file(self) -> str:
+        lookup = os.path.join(PROJECT_DIR, 'ref', 'world_eco_regions', 'wwf_terr_ecos.gpkg')
+        wwf_out_dir_path = os.path.join(self._out_dir, 'shapefiles', 'eco_region', 'wwf_terr_ecos.gpkg')
+        return self._copy_file(lookup, wwf_out_dir_path)
+
+    def _copy_cec_file(self) -> str:
+        return self._copy_file(self._project_eco_region_path, self._eco_region_shape_path)
 
     def _to_kms(self, p: float):
         return (p * self._res ** 2) / 1000000
@@ -352,20 +369,16 @@ class ModelBuilder(Base):
         # Clear memory
         gc.collect()
 
-    def _clip_to_shape_file(self, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-        if self.shp is not None:
-            shp = gpd.read_file(self.shp)
-            shp.to_crs(gdf.crs, inplace=True)
-            shp['geometry'] = shp.geometry.buffer(100000)  # Wide buffer to start
-            gdf = gpd.sjoin(gdf, shp, how="inner", op="intersects", rsuffix='_join_')
-            return gdf.loc[:, ~gdf.columns.str.contains('_join_')]
+        return fire_events
 
-        return gdf
+    def _clip_to_shape_file(self, gdf: gpd.GeoDataFrame, shape_file_path: str) -> gpd.GeoDataFrame:
+        shp = gpd.read_file(shape_file_path)
+        shp.to_crs(gdf.crs, inplace=True)
+        shp['geometry'] = shp.geometry.buffer(100000)  # Wide buffer to start
+        gdf = gpd.sjoin(gdf, shp, how="inner", op="intersects", rsuffix='_join_')
+        return gdf.loc[:, ~gdf.columns.str.contains('_join_')]
 
-    def build_points(self, event_perimeter_list: List[EventPerimeter]):
-        '''
-        Build point GeoDataFrame from a list of EventPerimeter objects
-        '''
+    def build_points(self, event_perimeter_list: List[EventPerimeter], shape_file_path: str = None):
         # Extract data from EventPerimeter objects and build DataFrame
         df = pd.DataFrame([
             [event.event_id, coord.x, coord.y, self._convert_unix_day_to_calendar_date(coord.t)]
@@ -381,12 +394,12 @@ class ModelBuilder(Base):
         df["geometry"] = df[["x", "y"]].apply(lambda x: Point(tuple(x)), axis=1)
         gdf = gpd.GeoDataFrame(df, crs=self.crs.proj4, geometry=df["geometry"])
 
-        return self._clip_to_shape_file(gdf)
+        if shape_file_path is not None:
+            gdf = self._clip_to_shape_file(gdf, shape_file_path)
+
+        return gdf
 
     def add_fire_attributes(self, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-        '''
-        Take the data table, add in attributes, and overwrite file.
-        '''
         print("Adding fire attributes ...")
 
         gdf['pixels'] = gdf.groupby(['id', 'date'])['id'].transform('count')
@@ -445,17 +458,17 @@ class ModelBuilder(Base):
 
         return gdf
 
-    def add_land_cover_attributes(self, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    def add_land_cover_attributes(self, gdf: gpd.GeoDataFrame,
+                                  land_cover_type: LandCoverType = LandCoverType.NONE) -> gpd.GeoDataFrame:
         print('Adding land cover attributes...')
 
-        # We'll need to specify which type of landcover
-        lc_types = {1: "IGBP global vegetation classification scheme",
-                    2: "University of Maryland (UMD) scheme",
-                    3: "MODIS-derived LAI/fPAR scheme",
-                    4: "MODIS-derived Net Primary Production (NPP) scheme",
-                    5: "Plant Functional Type (PFT) scheme."}
+        # We'll need to specify which type of land_cover
+        lc_descriptions = {LandCoverType.IGBP: "IGBP global vegetation classification scheme",
+                           LandCoverType.UMD: "University of Maryland (UMD) scheme",
+                           LandCoverType.MODIS_LAI: "MODIS-derived LAI/fPAR scheme",
+                           LandCoverType.MODIS_NPP: "MODIS-derived Net Primary Production (NPP) scheme",
+                           LandCoverType.PFT: "Plant Functional Type (PFT) scheme."}
 
-        # Get mosaicked landcover geotiffs
         lc_files = sorted([f for f in glob(os.path.join(self._land_cover_dir, "*tif"))
                            if re.match(self._land_cover_regex, os.path.basename(f))])
 
@@ -463,7 +476,7 @@ class ModelBuilder(Base):
         lc_files = {lc_years[i]: lc_files[i] for i in range(len(lc_files))}
 
         # Rasterio point querier (will only work here)
-        def pointQuery(row):
+        def point_query(row):
             x = row['x']
             y = row['y']
             try:
@@ -482,224 +495,173 @@ class ModelBuilder(Base):
 
             sgdf = gdf[gdf['ig_year'] == year]
 
-            # Now set year one back for landcover
+            # Now set year one back for land_cover
             year = year - 1
 
             # Use previous year's lc
             if year < min(lc_years):
                 year = min(lc_years)
-                # print("Min: ", year)
             elif year > max(lc_years):
                 year = max(lc_years)
-                # print("Max: ", year)
 
             lc_file = lc_files[year]
             lc = rasterio.open(lc_file)
-            sgdf['lc_code'] = sgdf.apply(pointQuery, axis=1)
+            sgdf['lc_code'] = sgdf.apply(point_query, axis=1)
             sgdfs.append(sgdf)
 
         gdf = pd.concat(sgdfs)
         gdf = gdf.reset_index(drop=True)
         gdf['lc_mode'] = gdf.groupby('id')['lc_code'].transform(self._mode)
 
-        # Add in the class description from landcover tables
-        lc_table = pd.read_csv(os.path.join(self._out_dir, 'tables', 'landcover',
-                                            'MCD12Q1_LegendDesc_Type{}.csv'.format(str(self.landcover_type))))
-        gdf = pd.merge(left=gdf, right=lc_table, how='left', left_on='lc_mode', right_on='Value')
-        gdf = gdf.drop('Value', axis=1)
-        gdf['lc_type'] = lc_types[int(self.landcover_type)]
+        # Add in the class description from land_cover tables
+        if land_cover_type != LandCoverType.NONE:
+            land_cover_path = self._copy_land_cover_ref(land_cover_type)
+            lc_table = pd.read_csv(land_cover_path)
+            gdf = pd.merge(left=gdf, right=lc_table, how='left', left_on='lc_mode', right_on='Value')
+            gdf = gdf.drop('Value', axis=1)
+            gdf['lc_type'] = lc_descriptions[land_cover_type]
 
         gdf.rename({'lc_description': 'lc_desc'}, inplace=True, axis='columns')
 
         return gdf
 
-    def add_eco_region_attributes(self, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-        ############################################
-        # Retrieve ecoregion attributes if requested
-        # Add the ecoregion attributes
-        if self.ecoregion_type or self.ecoregion_level:
-            print("Adding ecoregion attributes ...")
-            if self.ecoregion_level or self.ecoregion_type == "na":
-                # Different levels have different sources
-                eco_types = {
-                    'NA_L3CODE': ('Level III Ecoregions ' + '(NA-Commission for Environmental Cooperation)'),
-                    'NA_L2CODE': ('Level II Ecoregions ' + '(NA-Commission for Environmental Cooperation)'),
-                    'NA_L1CODE': ('Level I Ecoregions ' + '(NA-Commission for Environmental Cooperation)')}
+    def _add_attributes_from_na_cec(self, gdf, eco_region_level):
+        # Different levels have different sources
+        eco_types = {
+            'NA_L3CODE': ('Level III Ecoregions ' + '(NA-Commission for Environmental Cooperation)'),
+            'NA_L2CODE': ('Level II Ecoregions ' + '(NA-Commission for Environmental Cooperation)'),
+            'NA_L1CODE': ('Level I Ecoregions ' + '(NA-Commission for Environmental Cooperation)')}
 
-                # Read in the Level File (contains every level) and reference table
-                shp_path = os.path.join(self.proj_dir, 'shapefiles', 'ecoregion', 'NA_CEC_Eco_Level3.gpkg')
-                eco = gpd.read_file(shp_path)
-                eco.to_crs(gdf.crs, inplace=True)
+        # Read in the Level File (contains every level) and reference table
+        shp_path = self._copy_cec_file()
+        eco = gpd.read_file(shp_path)
+        eco.to_crs(gdf.crs, inplace=True)
 
-                # Filter for selected level (level III defaults to US-EPA version)
-                if not self.ecoregion_level:
-                    self.ecoregion_level = 3
+        # Filter for selected level (level III defaults to US-EPA version)
+        if not eco_region_level:
+            eco_region_level = 3
 
-                eco_code = [c for c in eco.columns if str(self.ecoregion_level) in
-                            c and 'CODE' in c]
+        eco_code = [c for c in eco.columns if str(eco_region_level) in
+                    c and 'CODE' in c]
 
-                if len(eco_code) > 1:
-                    eco_code = [c for c in eco_code if 'NA' in c][0]
-                else:
-                    eco_code = eco_code[0]
+        if len(eco_code) > 1:
+            eco_code = [c for c in eco_code if 'NA' in c][0]
+        else:
+            eco_code = eco_code[0]
 
-                print("Selected ecoregion code: " + str(eco_code))
+        print("Selected ecoregion code: " + str(eco_code))
 
-                # Find modal eco region for each event id
-                eco = eco[[eco_code, 'geometry']]
-                gdf = gpd.sjoin(gdf, eco, how="left", op="within")
-                gdf = gdf.reset_index(drop=True)
-                gdf['eco_mode'] = gdf.groupby('id')[eco_code].transform(self._mode)
+        # Find modal eco-region for each event id
+        eco = eco[[eco_code, 'geometry']]
+        gdf = gpd.sjoin(gdf, eco, how="left", op="within")
+        gdf = gdf.reset_index(drop=True)
+        gdf['eco_mode'] = gdf.groupby('id')[eco_code].transform(self._mode)
 
-                # Add in the type of ecoregion
-                gdf['eco_type'] = eco_types[eco_code]
+        # Add in the type of eco-region
+        gdf['eco_type'] = eco_types[eco_code]
 
-                # Add in the name of the modal ecoregion
-                eco_ref = pd.read_csv(os.path.join(self.proj_dir,
-                                                   'tables/eco_refs.csv'))
-                eco_name = eco_code.replace('CODE', 'NAME')
-                eco_df = eco_ref[[eco_code, eco_name]].drop_duplicates()
-                eco_map = dict(zip(eco_df[eco_code], eco_df[eco_name]))
-                gdf['eco_name'] = gdf[eco_code].map(eco_map)
+        # Add in the name of the modal ecoregion
+        eco_ref = pd.read_csv(self._eco_region_csv_path)
+        eco_name = eco_code.replace('CODE', 'NAME')
+        eco_df = eco_ref[[eco_code, eco_name]].drop_duplicates()
+        eco_map = dict(zip(eco_df[eco_code], eco_df[eco_name]))
+        gdf['eco_name'] = gdf[eco_code].map(eco_map)
 
-                # Clean up column names
-                gdf = gdf.drop('index_right', axis=1)
-                gdf = gdf.drop(eco_code, axis=1)
-
-            else:
-
-                # Read in the world ecoregions from WWF
-                eco_path = os.path.join(self.proj_dir, "shapefiles/ecoregion/wwf_terr_ecos.gpkg")
-                eco = gpd.read_file(eco_path)
-                eco.to_crs(gdf.crs, inplace=True)
-
-                # Find modal eco region for each event id
-                eco = eco[["ECO_NUM", "ECO_NAME", "geometry"]]
-                gdf = gpd.sjoin(gdf, eco, how="left", op="within")
-                gdf = gdf.reset_index(drop=True)
-
-                gdf["eco_mode"] = gdf.groupby('id')['ECO_NUM'].transform(self._mode)
-                gdf["eco_name"] = gdf["ECO_NAME"]
-                gdf["eco_type"] = "WWF Terrestrial Ecoregions of the World"
-
-                gdf = gdf.drop('index_right', axis=1)
-                gdf = gdf.drop('ECO_NAME', axis=1)
-                gdf = gdf.drop('ECO_NUM', axis=1)
+        # Clean up column names
+        gdf = gdf.drop('index_right', axis=1)
+        gdf = gdf.drop(eco_code, axis=1)
 
         return gdf
 
-    def build_polygons(self, gdf: gpd.GeoDataFrame, daily_shp_path, event_shp_path, daily_shp_path_shp,
-                       event_shp_path_shp, full_csv) -> gpd.GeoDataFrame:
+    def _add_attributes_from_wwf(self, gdf):
+        # Read in the world ecoregions from WWF
+        eco_path = self._copy_wwf_file()
+        eco = gpd.read_file(eco_path)
+        eco.to_crs(gdf.crs, inplace=True)
 
-        # Make sure we have the target folders
+        # Find modal eco region for each event id
+        eco = eco[["ECO_NUM", "ECO_NAME", "geometry"]]
+        gdf = gpd.sjoin(gdf, eco, how="left", op="within")
+        gdf = gdf.reset_index(drop=True)
 
-        if not (os.path.exists(os.path.dirname(event_shp_path))):
-            os.makedirs(os.path.dirname(event_shp_path))
+        gdf["eco_mode"] = gdf.groupby('id')['ECO_NUM'].transform(self._mode)
+        gdf["eco_name"] = gdf["ECO_NAME"]
+        gdf["eco_type"] = "WWF Terrestrial Ecoregions of the World"
 
-        # Create a circle buffer
+        gdf = gdf.drop('index_right', axis=1)
+        gdf = gdf.drop('ECO_NAME', axis=1)
+        gdf = gdf.drop('ECO_NUM', axis=1)
+
+        return gdf
+
+    def add_eco_region_attributes(self, gdf: gpd.GeoDataFrame, eco_region_type: EcoRegionType = EcoRegionType.NA,
+                                  eco_region_level: int = None) -> gpd.GeoDataFrame:
+
+        print("Adding eco-region attributes ...")
+        if eco_region_level or (eco_region_type == EcoRegionType.NA):
+            gdf = self._add_attributes_from_na_cec(gdf, eco_region_level)
+        else:
+            gdf = self._add_attributes_from_wwf(gdf)
+
+        return gdf
+
+    def process_geometry(self, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         print("Creating buffer...")
         geometry = gdf.buffer(1 + (self._res / 2))
         gdf["geometry"] = geometry
-
-        # Then create a square envelope around the circle
         gdf["geometry"] = gdf.envelope
-
         gdf["did"] = gdf["id"].astype(str) + "-" + gdf["date"]
+        return gdf
 
-        # Save the daily before dissolving into event level
-        # Only save the daily polygons if user specified to do so
-        if self.daily == "yes":
-            if not (os.path.exists(os.path.dirname(daily_shp_path))):
-                os.makedirs(os.path.dirname(daily_shp_path))
-            # Now add the first date of each event and merge daily event detections
-            print("Dissolving polygons...")
-            gdfd = gdf.dissolve(by="did", as_index=False)
-            # Cast as multipolygon for each geometry
-            print("Converting polygons to multipolygons...")
-            gdfd["geometry"] = gdfd["geometry"].apply(self._as_multi_polygon)
+    def process_daily_data(self, gdf: gpd.GeoDataFrame, output_csv_path: str, daily_shp_path: str,
+                           daily_gpkg_path: str) -> gpd.GeoDataFrame:
+        print("Dissolving polygons...")
+        gdfd = gdf.dissolve(by="did", as_index=False)
+        print("Converting polygons to multipolygons...")
+        gdfd["geometry"] = gdfd["geometry"].apply(self._as_multi_polygon)
 
-            print("Saving daily file to " + daily_shp_path)
+        self.save_data(gdfd, daily_shp_path, daily_gpkg_path, output_csv_path[:-4] + "_daily" + ".csv")
 
-            gdfd.to_csv(str(self.file_name)[:-4] + "_daily" + ".csv", index=False)
-            if self.shapefile:
-                # gdf.to_crs(outCRS, inplace=True)
-                # gdf.to_crs(outCRS, inplace=True)
-                if self.shp_type == "gpkg":
-                    gdfd.to_file(daily_shp_path, driver="GPKG")
-                    print("Saving daily file to " + daily_shp_path)
-                elif self.shp_type == "shp":
-                    gdfd.to_file(daily_shp_path_shp)
-                    print("Saving daily file to " + daily_shp_path_shp)
-                elif self.shp_type == "both":
-                    print("Saving daily file to " + daily_shp_path_shp)
-                    print("Saving daily file to " + daily_shp_path)
-                    gdfd.to_file(daily_shp_path_shp)
-                    gdfd.to_file(daily_shp_path, driver="GPKG")
+        gdf = gdfd.drop(['did', 'pixels', 'date', 'event_day', 'dy_ar_km2'], axis=1)
+        gdf = gdf.dissolve(by="id", as_index=False)
+        print("Calculating perimeter lengths...")
+        gdf["tot_perim"] = gdf["geometry"].length
+        gdf["geometry"] = gdf["geometry"].apply(self._as_multi_polygon)
 
-            # Drop the daily attributes before exporting event-level
-            gdf = gdfd.drop(['did', 'pixels', 'date', 'event_day',
-                             'dy_ar_km2'], axis=1)
-            # Dissolve by ID to create event-level
-            gdf = gdf.dissolve(by="id", as_index=False)
-            # Calculate perimeter length
-            print("Calculating perimeter lengths...")
-            gdf["tot_perim"] = gdf["geometry"].length
+        return gdf
 
-            # We still can't have multiple polygon types
-            gdf["geometry"] = gdf["geometry"].apply(self._as_multi_polygon)
+    def process_event_data(self, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+        gdf = gdf.drop(['did', 'pixels', 'date', 'event_day', 'dy_ar_km2'], axis=1)
 
-        if self.daily == "no":
-            # Drop daily attributes
-            gdf = gdf.drop(['did', 'pixels', 'date', 'event_day',
-                            'dy_ar_km2'], axis=1)
+        print("Dissolving polygons...")
+        gdf = gdf.dissolve(by="id", as_index=False)
+        print("Calculating perimeter lengths...")
+        gdf["tot_perim"] = gdf["geometry"].length
+        print("Converting polygons to multipolygons...")
+        gdf["geometry"] = gdf["geometry"].apply(self._as_multi_polygon)
 
-            # Dissolve by ID to create event-level
-            print("Dissolving polygons...")
-            gdf = gdf.dissolve(by="id", as_index=False)
-            # Calculate perimeter length
-            print("Calculating perimeter lengths...")
-            gdf["tot_perim"] = gdf["geometry"].length
+        return gdf
 
-            # We have multiple polygon types
-            print("Converting polygons to multipolygons...")
-            gdf["geometry"] = gdf["geometry"].apply(asMultiPolygon)
-
-            # Clip to AOI if specified
-            if os.path.splitext(self.shp[0])[1] in [".shp", ".gpkg"]:
-                print("Extracting events which intersect: ", self.shp)
-                shp = gpd.read_file(self.shp)
-                shp.to_crs(gdf.crs, inplace=True)
-                gdf = gpd.sjoin(gdf, shp, how="inner", op="intersects")
-            else:
-                print("No shapefile for clipping found ...")
-
-            # Remove left columns from spatial join
-            gdf = gdf.loc[:, ~gdf.columns.str.contains('_left')]
-            gdf = gdf.loc[:, ~gdf.columns.str.contains('_right')]
-
-        # Export event-level to CSV
-
+    def save_event_data(self, gdf: gpd.GeoDataFrame, output_csv_path: str, event_shape_path: str, event_gpkg_path: str,
+                        full_csv: bool):
+        event_csv = output_csv_path[:-4] + "_events" + ".csv"
         if full_csv:
-            gdf.to_csv(str(self.file_name)[:-4] + "_events" + ".csv", index=False)
+            gdf.to_csv(event_csv, index=False)
         else:
             to_raw_csv = gdf[["x", "y", "id", "ig_date", "last_date"]]
-            to_raw_csv.to_csv(str(self.file_name)[:-4] + "_events" + ".csv", index=False)
-        # Save as gpkg if specified
-        if self.shapefile:
-            # Now save as a geopackage and csv
-            print("Saving event-level file to " + event_shp_path)
-            # gdf.to_crs(outCRS, inplace=True)
-            if self.shp_type == "gpkg":
-                gdf.to_file(event_shp_path, driver="GPKG")
-                print("Saving event-level file to " + event_shp_path)
-            elif self.shp_type == "shp":
-                gdf.to_file(event_shp_path_shp)
-                print("Saving event-level file to " + event_shp_path_shp)
-            elif self.shp_type == "both":
-                print("Saving event-level file to " + event_shp_path_shp)
-                print("Saving event-level file to " + event_shp_path)
-                gdf.to_file(event_shp_path_shp)
-                gdf.to_file(event_shp_path, driver="GPKG")
+            to_raw_csv.to_csv(event_csv, index=False)
 
-        # Remove the intermediate file
-        os.remove(self.file_name)
+        self.save_data(gdf, event_shape_path, event_gpkg_path)
+
+    @staticmethod
+    def save_data(gdf: gpd.GeoDataFrame, shape_path: str = None, gpkg_path: str = None, csv_path: str = None):
+        if csv_path:
+            gdf.to_csv(csv_path, index=False)
+
+        if shape_path is not None:
+            gdf.to_file(shape_path)
+            print("Saving file to " + shape_path)
+
+        if gpkg_path is not None:
+            gdf.to_file(gpkg_path, driver="GPKG")
+            print("Saving file to " + gpkg_path)

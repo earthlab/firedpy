@@ -43,7 +43,7 @@ class TestBase(unittest.TestCase):
         self.assertIsInstance(base._tables_dir, str)
         self.assertIsInstance(base._mosaics_dir, str)
         self.assertIsInstance(base._nc_dir, str)
-        self.assertIsInstance(base._hdf_dir, str)
+        self.assertIsInstance(base.hdf_dir, str)
 
         self.assertIsInstance(base.MODIS_CRS, str)
         self.assertIsInstance(base.MODIS_SINUSOIDAL_PATH, str)
@@ -248,7 +248,7 @@ class TestBurnData(unittest.TestCase):
 
     def test_generate_local_hdf_path(self):
         result = self.burn_data._generate_local_hdf_path("tile1", "hdf1.hdf")
-        expected = os.path.join(self.burn_data._hdf_dir, 'tile1', 'hdf1.hdf')
+        expected = os.path.join(self.burn_data.hdf_dir, 'tile1', 'hdf1.hdf')
         self.assertEqual(result, expected)
 
     def test_generate_remote_hdf_path(self):

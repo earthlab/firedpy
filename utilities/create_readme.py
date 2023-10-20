@@ -205,15 +205,15 @@ Balch, J.K.; St. Denis, L.A.; Mahood, A.L.; Mietkiewicz, N.P.; Williams, T.M.; M
         S. Name: mx_grw_dte   \n
             i. Description: date of maximum   \n
         T. Name: lc_code   \n
-            i. Description: Numeric code for the landcover type extracted from the MODIS landcover product for the year preceding the fire.  \n 
+            i. Description: Numeric code for the land_cover type extracted from the MODIS land_cover product for the year preceding the fire.  \n 
         U. Name: lc_mode   \n
-            i. Description: Numeric code for the landcover type extracted from the MODIS landcover product for the year preceding the fire.   \n
+            i. Description: Numeric code for the land_cover type extracted from the MODIS land_cover product for the year preceding the fire.   \n
         V. Name: lc_name   \n
-            i. Description: Character string of the landcover type from the year before the fire.   \n
+            i. Description: Character string of the land_cover type from the year before the fire.   \n
         W. Name: lc_desc   \n
-            i. Description: Character string description of the landcover type from the year before the fire.   \n
+            i. Description: Character string description of the land_cover type from the year before the fire.   \n
         X. Name: lc_type   \n
-            i. Description: Which landcover classification type was used from the MCD12Q1 product? Default is IGBP global vegetation classification scheme   \n
+            i. Description: Which land_cover classification type was used from the MCD12Q1 product? Default is IGBP global vegetation classification scheme   \n
         Y. Name: eco_mode  \n
             i. Description: Modal ecoregion code  \n
         Z. Name: eco_type   \n
@@ -292,21 +292,21 @@ Balch, J.K.; St. Denis, L.A.; Mahood, A.L.; Mietkiewicz, N.P.; Williams, T.M.; M
     		ZZ. Name: mx_grw_dte   \n
     		      i. Description: Date of maximum fire growth  \n
     		AAA. Name: lc_code  \n
-    		      i. Description: Numeric code for the landcover type extracted from the MODIS landcover product for the year preceding the fire.   \n
+    		      i. Description: Numeric code for the land_cover type extracted from the MODIS land_cover product for the year preceding the fire.   \n
     		BBB. Name: lc_mode  \n
-    		      i. Description: Numeric code for the landcover type extracted from the MODIS landcover product for the year preceding the fire.  \n
+    		      i. Description: Numeric code for the land_cover type extracted from the MODIS land_cover product for the year preceding the fire.  \n
     		CCC. Name: lc_name  \n
-    		      i. Description: Character string of the landcover type from the year before the fire.   \n
+    		      i. Description: Character string of the land_cover type from the year before the fire.   \n
     		DDD. Name: lc_desc  \n
-    		      i. Description: Character string description of the landcover type from the year before the fire.   \n
+    		      i. Description: Character string description of the land_cover type from the year before the fire.   \n
     		EEE. Name: lc_type  \n
-    		      i. Description: The landcover classification scheme used  \n
+    		      i. Description: The land_cover classification scheme used  \n
     		FFF. Name: eco_mode  \n
     		      i. Description: modal ecoregion type  \n
     		GGG. Name: eco_type  \n
     		      i. Description: modal ecoregion type  \n
     		HHH. Name: eco_name  \n
-    		      i. Description: Character string of the landcover type from the year before the fire.   \n
+    		      i. Description: Character string of the land_cover type from the year before the fire.   \n
     		III. Name: ig_utm_x  \n
     		      i. Description: estimated ignition x coordinate  \n
     		JJJ. Name: ig_utm_y  \n
