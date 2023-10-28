@@ -7,7 +7,7 @@ with open("README.md", "r") as fh:
 
 print('find packages ', setuptools.find_packages())
 setuptools.setup(
-    name="firedpy",
+    name="src",
     version="0.0.2",
     author="Travis Williams, Lise St. Denis, Adam Mahood, Maxwell C. Cook, Maxwell B. Joseph, Joseph McGlinchy, Estelle Lindrooth",
     author_email="adam.mahood@colorado.edu",
@@ -21,6 +21,6 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    entry_points={'console_scripts': ['firedpy = firedpy.__main__:main']},
+    entry_points={'console_scripts': ['src = src.__main__:main']},
     packages=setuptools.find_packages()
 )

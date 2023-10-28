@@ -1,7 +1,7 @@
-name = "firedpy"
+name = "src"
 DATA_HELP = ("""
     The project directory you would like to use for  and output
-    data files. Defaults to a temporary directory 'firedpy/proj'.
+    data files. Defaults to a temporary directory 'src/proj'.
     """)
 FILE_HELP = ("""
     The file name of the resulting dataframe. This will be saved in
@@ -57,7 +57,7 @@ TILE_HELP = ("""
     covering the Contiguous United States. Specify "all" to use all
     available MODIS tiles. Alternatively, provide a path to a shapefile
     with either a ".shp" or ".gpkg" extension to use intersecting MODIS
-    tiles. In the firedpy directory, you can access any of the 50 states by specifying ref/us_states/state_name.gpkg,
+    tiles. In the src directory, you can access any of the 50 states by specifying ref/us_states/state_name.gpkg,
     all 7 continents by specifying ref/continents/continent_name.gpkg, and a country by ref/individual_countries/country_name.gpkg.
     A list of all avalible countries can be found in the ReadMe.
     """)

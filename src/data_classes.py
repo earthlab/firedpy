@@ -23,7 +23,7 @@ from tqdm import tqdm
 import requests
 from bs4 import BeautifulSoup
 
-from firedpy.__main__ import LandCoverType
+from src.enums import LandCoverType
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(__file__))
 
@@ -64,7 +64,7 @@ class Base:
         self._conus_shape_path = os.path.join(self._shape_file_dir, 'conus.shp')
 
         self._eco_region_csv_path = os.path.join(self._tables_dir, 'eco_refs.csv')
-        self._project_eco_region_path = os.path.join(PROJECT_DIR, "ref", "us_eco", "NA_CEC_Eco_Level3.shp")
+        self._project_eco_region_dir = os.path.join(PROJECT_DIR, "ref", "us_eco")
         self._eco_region_shape_path = os.path.join(self._eco_region_shapefile_dir, 'NA_CEC_Eco_Level3.gpkg')
 
         post_regex = r'\.A(?P<year>\d{4})(?P<ordinal_day>\d{3})\.h(?P<horizontal_tile>\d{2})v(?P<vertical_tile>\d{2})\.061\.(?P<prod_year>\d{4})(?P<prod_ordinal_day>\d{3})(?P<prod_hourminute>\d{4})(?P<prod_second>\d{2})\.hdf$'
@@ -81,7 +81,7 @@ class Base:
             self._burn_area_dir,
             self._land_cover_dir,
             self._eco_region_raster_dir,
-            self._eco_region_shapefile_dir,
+           # self._eco_region_shapefile_dir,
             self._tables_dir,
             self._mosaics_dir,
             self._nc_dir,
@@ -112,7 +112,7 @@ class Base:
     @staticmethod
     def _convert_unix_day_to_calendar_date(unix_day: int) -> str:
         base = dt.datetime(1970, 1, 1)
-        date = base + dt.timedelta(days=unix_day - 1)
+        date = base + dt.timedelta(days=int(unix_day) - 1)
         return date.strftime('%Y-%m-%d')
 
     @staticmethod
@@ -243,7 +243,7 @@ class BurnData(Base):
             http://modis-fire.umd.edu/files/MODIS_C6_BA_User_Guide_1.2.pdf
 
         Update 02/2021 -> fuoco server transitioned to SFTP Dec 2020
-            Update firedpy to use Paramiko SSHClient / SFTPClient
+            Update src to use Paramiko SSHClient / SFTPClient
             Server-side changes are described in the user manual linked above
 
         SFTP:
@@ -324,7 +324,7 @@ class BurnData(Base):
 
     def get_date_range(self) -> List[Tuple[int, int]]:
         dates = [
-            self._extract_date_parts(f) for f in glob(os.path.join(self.hdf_dir, '**'))
+            self._extract_date_parts(f) for f in glob(os.path.join(self.hdf_dir, '**', '*'), recursive=True)
         ]
 
         return sorted([d for d in dates if d is not None])
@@ -725,8 +725,10 @@ class EcoRegion(Base):
                 return gpd.read_file(self._eco_region_shape_path)
             except Exception as e:
                 print("Failed to connect to EPA ftp site: using local file ...")
-                shutil.copy(self._project_eco_region_path, self._eco_region_shape_path)
+                shutil.copytree(self._project_eco_region_dir, self._eco_region_shapefile_dir)
                 return gpd.read_file(self._eco_region_shape_path)
+
+        return gpd.read_file(self._eco_region_shape_path)
 
     def create_eco_region_raster(self, tiles: List[str]):
         if self.eco_region_data_frame is None:

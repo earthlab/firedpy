@@ -31,7 +31,7 @@ class FiredpyArgumentParser:
             for name, data in self.arguments.items():
                 # Convert newlines back to literals before writing
                 prompt_literal = data['prompt'].replace('\n', '\\n')
-                accepted_values = 'none' if data['accepted_values'] is None else data['accepted_values']
+                accepted_values = 'none' if data['accepted_values'] is None else '|'.join(data['accepted_values'])
                 file.write(f"{name},{prompt_literal},{data['type']},{data['last_value']},{accepted_values}\n")
         self._load_params()
 
@@ -54,7 +54,7 @@ class FiredpyArgumentParser:
         if not user_input:
             user_input = last_value
 
-        if accepted_values is not None and user_input not in accepted_values:
+        if accepted_values is not None and user_input.lower() not in accepted_values:
             print(f'{user_input} is not an acceptable value. Acceptable values are:\n {accepted_values}')
             return self.prompt_for_argument(arg_name, prompt_override)
 

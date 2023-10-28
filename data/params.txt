@@ -1,13 +1,13 @@
 out_dir,fWhere would you like the output for this run saved?,str,output,none
-full_csv,fEnter (true y yes) if you want a full csv. Enter (false n no) if you want a raw csv,bool,false,true|yes|y|false|no|n
+full_csv,fEnter (true y yes) if you want a full csv. Enter (false n no) if you want a raw csv,bool,False,true|yes|y|false|no|n
 tile_choice,f"Would you like the fired product on a) continent b) country c) US state or d) speific MODIS tiles?",str,b,a|b|c|d
-tile_name,f,str,None,none
-ecoregion_type,fPlease enter the ecoregion type,str,world,world|na
-daily,fEnter (true y yes) if you want to create the daily polygons or (false n no) for just the event-level perimeter for your analysis area,bool,false,true|yes|y|false|no|n
+tile_name,f,str,papua_new_guinea,none
+eco_region_type,fPlease enter the eco_region type,str,world,world|na
+daily,fEnter (true y yes) if you want to create the daily polygons or (false n no) for just the event-level perimeter for your analysis area,bool,False,true|yes|y|false|no|n
 spatial_param,fPlease enter the number of cells (~463 m resolution) to search for neighboring burn detections in all directions,int,5,none
 temporal_param,fThe number of days between events to search for neighboring burn detections,int,11,none
-shp_type,fSpecify the format of the shapefile you want,str,gpkg,gpkg|shp|both|none
-land_cover_type,fIf you would like to include land cover as an attribute enter the land cover type number you would like to use.\nAvailable land cover categories: \n 0: None \n 1: IGBP global vegetation classification scheme \n 2: University of Maryland (UMD) scheme \n 3: MODIS-derived LAI/fPAR scheme \n,int,3,0|1|2|3
+shape_type,fSpecify the format of the shapefile you want,str,gpkg,gpkg|shp|both|none
+land_cover_type,fIf you would like to include land cover as an attribute enter the land cover type number you would like to use.\nAvailable land cover categories: \n 0: None \n 1: IGBP global vegetation classification scheme \n 2: University of Maryland (UMD) scheme \n 3: MODIS-derived LAI/fPAR scheme \n,int,0,0|1|2|3
 username,Enter your NASA Earthdata username,str,,none
 password,Enter your NASA Earthdata password,str,,none
 start_year,Enter the year you want to start or 0 for all dates,int,0,none

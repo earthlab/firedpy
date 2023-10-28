@@ -2,7 +2,7 @@ import os
 import shutil
 
 from unittest import TestCase
-from firedpy.model_classes import EventGrid, EventPerimeter
+from src.model_classes import EventGrid, EventPerimeter
 from mock import patch, Mock
 import numpy as np
 import xarray as xr
@@ -23,7 +23,7 @@ class TestEventGridInitMethodTestCase(TestCase):
         self.event1 = EventPerimeter(1, {(1, 2), (2, 3), (3, 4)})
         self.event2 = EventPerimeter(2, {(4, 5), (5, 6), (6, 7)})
 
-    @patch("firedpy.model_classes.xr.open_dataset")
+    @patch("src.model_classes.xr.open_dataset")
     def test_init_sets_parameters(self, mock_open):
         # Given
         expected_spatial_param = self.spatial_param
@@ -46,7 +46,7 @@ class TestEventGridInitMethodTestCase(TestCase):
         self.assertEqual(grid._area_unit, expected_area_unit)
         self.assertEqual(grid._time_unit, expected_time_unit)
 
-    @patch("firedpy.model_classes.xr.open_dataset")
+    @patch("src.model_classes.xr.open_dataset")
     def test_init_sets_default_parameters(self, mock_open):
         mock_array = Mock()
         mock_array.coords = None
@@ -63,7 +63,7 @@ class TestEventGridInitMethodTestCase(TestCase):
         self.assertEqual(grid._area_unit, "Unknown")
         self.assertEqual(grid._time_unit, "days since 1970-01-01")
 
-    @patch("firedpy.model_classes.xr.open_dataset")
+    @patch("src.model_classes.xr.open_dataset")
     def test_merge_perimeters(self, mock_open):
         mock_array = Mock()
         mock_array.coords = None
@@ -108,7 +108,7 @@ class TestEventGridInitMethodTestCase(TestCase):
             "Obsolete event coords do not show original coords"
         )
 
-    @patch("firedpy.model_classes.xr.open_dataset")
+    @patch("src.model_classes.xr.open_dataset")
     def test_get_available_cells(self, mock_open):
         mock_array = Mock()
         mock_array.coords = None
@@ -131,7 +131,7 @@ class TestEventGridInitMethodTestCase(TestCase):
             "Available cells do not match expected cells"
         )
 
-    @patch("firedpy.model_classes.xr.open_dataset")
+    @patch("src.model_classes.xr.open_dataset")
     def test_get_perimeters(self, mock_open):
         mock_open.return_value = xr.DataArray(
             np.array([
@@ -176,7 +176,7 @@ class TestEventGridInitMethodTestCase(TestCase):
 
         print(perimeters[0].spacetime_coordinates)
 
-    @patch("firedpy.model_classes.xr.open_dataset")
+    @patch("src.model_classes.xr.open_dataset")
     def test_get_no_available_cells(self, mock_open):
         mock_array = Mock()
         mock_array.coords = None
@@ -199,7 +199,7 @@ class TestEventGridInitMethodTestCase(TestCase):
             "Available cells do not match expected cells"
         )
 
-    @patch("firedpy.model_classes.xr.open_dataset")
+    @patch("src.model_classes.xr.open_dataset")
     def test_get_all_available_cells(self, mock_open):
         mock_array = Mock()
         mock_array.coords = None
@@ -230,7 +230,7 @@ class TestEventGridSpatialWindow(TestCase):
         if os.path.exists(self._test_data_dir):
             shutil.rmtree(self._test_data_dir)
 
-    @patch("firedpy.model_classes.xr.open_dataset")
+    @patch("src.model_classes.xr.open_dataset")
     def test_get_spatial_window_center(self, mock_open):
         # Assuming we have an array of 11x11 (y, x)
         array_dims = (11, 11)
@@ -251,7 +251,7 @@ class TestEventGridSpatialWindow(TestCase):
         self.assertEqual(result, expected_output,
                          f"For (y, x) = ({y}, {x}), expected {expected_output} but got {result}")
 
-    @patch("firedpy.model_classes.xr.open_dataset")
+    @patch("src.model_classes.xr.open_dataset")
     def test_get_spatial_window_top_left(self, mock_open):
         # Testing a case where the window is in the top-left corner.
         array_dims = (11, 11)
@@ -271,7 +271,7 @@ class TestEventGridSpatialWindow(TestCase):
         self.assertEqual(result, expected_output,
                          f"For (y, x) = ({y}, {x}), expected {expected_output} but got {result}")
 
-    @patch("firedpy.model_classes.xr.open_dataset")
+    @patch("src.model_classes.xr.open_dataset")
     def test_get_spatial_window_top_right(self, mock_open):
         # Testing a case where the window is in the top-left corner.
         array_dims = (11, 11)
@@ -291,7 +291,7 @@ class TestEventGridSpatialWindow(TestCase):
         self.assertEqual(result, expected_output,
                          f"For (y, x) = ({y}, {x}), expected {expected_output} but got {result}")
 
-    @patch("firedpy.model_classes.xr.open_dataset")
+    @patch("src.model_classes.xr.open_dataset")
     def test_get_spatial_window_bottom_right(self, mock_open):
         # Testing a case where the window is in the bottom-right corner.
         array_dims = (11, 11)
@@ -311,7 +311,7 @@ class TestEventGridSpatialWindow(TestCase):
         self.assertEqual(result, expected_output,
                          f"For (y, x) = ({y}, {x}), expected {expected_output} but got {result}")
 
-    @patch("firedpy.model_classes.xr.open_dataset")
+    @patch("src.model_classes.xr.open_dataset")
     def test_get_spatial_window_bottom_left(self, mock_open):
         # Testing a case where the window is in the top-left corner.
         array_dims = (11, 11)
@@ -331,7 +331,7 @@ class TestEventGridSpatialWindow(TestCase):
         self.assertEqual(result, expected_output,
                          f"For (y, x) = ({y}, {x}), expected {expected_output} but got {result}")
 
-    @patch("firedpy.model_classes.xr.open_dataset")
+    @patch("src.model_classes.xr.open_dataset")
     def test_get_spatial_window_top_left_corner(self, mock_open):
         # Testing a case where the window is in the top-left corner.
         array_dims = (11, 11)
@@ -351,7 +351,7 @@ class TestEventGridSpatialWindow(TestCase):
         self.assertEqual(result, expected_output,
                          f"For (y, x) = ({y}, {x}), expected {expected_output} but got {result}")
 
-    @patch("firedpy.model_classes.xr.open_dataset")
+    @patch("src.model_classes.xr.open_dataset")
     def test_get_spatial_window_top_right_corner(self, mock_open):
         # Testing a case where the window is in the top-left corner.
         array_dims = (11, 11)
@@ -371,7 +371,7 @@ class TestEventGridSpatialWindow(TestCase):
         self.assertEqual(result, expected_output,
                          f"For (y, x) = ({y}, {x}), expected {expected_output} but got {result}")
 
-    @patch("firedpy.model_classes.xr.open_dataset")
+    @patch("src.model_classes.xr.open_dataset")
     def test_get_spatial_window_bottom_right_corner(self, mock_open):
         # Testing a case where the window is in the bottom-right corner.
         array_dims = (11, 11)
@@ -391,7 +391,7 @@ class TestEventGridSpatialWindow(TestCase):
         self.assertEqual(result, expected_output,
                          f"For (y, x) = ({y}, {x}), expected {expected_output} but got {result}")
 
-    @patch("firedpy.model_classes.xr.open_dataset")
+    @patch("src.model_classes.xr.open_dataset")
     def test_get_spatial_window_bottom_left_corner(self, mock_open):
         # Testing a case where the window is in the top-left corner.
         array_dims = (11, 11)

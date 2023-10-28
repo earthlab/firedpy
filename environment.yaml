@@ -1,4 +1,4 @@
-name: firedpy
+name: src
 channels:
   - defaults
 dependencies:

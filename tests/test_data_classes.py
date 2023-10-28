@@ -11,7 +11,7 @@ from netCDF4 import Dataset
 import geopandas as gpd
 from shapely.geometry import Point
 
-from firedpy.data_classes import Base, BurnData, EcoRegion
+from src.data_classes import Base, BurnData, EcoRegion
 from osgeo import gdal
 import pandas as pd
 
@@ -127,7 +127,7 @@ class TestBase(unittest.TestCase):
     @patch("osgeo.ogr.Open")
     @patch("osgeo.gdal.GetDriverByName")
     @patch("osgeo.osr.SpatialReference")
-    @patch("firedpy.data_classes.gdal.RasterizeLayer")
+    @patch("src.data_classes.gdal.RasterizeLayer")
     def test_rasterize_vector_data(self, mock_rasterize, mock_spatial_ref, mock_get_driver, mock_open):
         # Mock objects and methods
         mock_layer = Mock()
@@ -221,7 +221,7 @@ class TestBurnData(unittest.TestCase):
         for off_nominal in off_nominals:
             self.assertIsNone(re.match(burn._hdf_regex, off_nominal))
 
-    @patch('firedpy.data_classes.gdal.Open')  # Mock the gdal.Open method
+    @patch('src.data_classes.gdal.Open')  # Mock the gdal.Open method
     def test_verify_hdf_file_success(self, mock_open):
         mock_ds = Mock()  # Create a mock dataset
         mock_ds.GetSubDatasets.return_value = [1, 2, 3]  # Mock subdatasets
@@ -230,14 +230,14 @@ class TestBurnData(unittest.TestCase):
         result = BurnData._verify_hdf_file('dummy_path.hdf')
         self.assertTrue(result)
 
-    @patch('firedpy.data_classes.gdal.Open')
+    @patch('src.data_classes.gdal.Open')
     def test_verify_hdf_file_failure_open(self, mock_open):
         mock_open.return_value = None
 
         result = BurnData._verify_hdf_file('dummy_path.hdf')
         self.assertFalse(result)
 
-    @patch('firedpy.data_classes.gdal.Open')
+    @patch('src.data_classes.gdal.Open')
     def test_verify_hdf_file_failure_subdatasets(self, mock_open):
         mock_ds = Mock()
         mock_ds.GetSubDatasets.return_value = []  # Empty subdatasets
@@ -548,9 +548,9 @@ class TestEcoRegion(unittest.TestCase):
     @patch("geopandas.read_file")
     @patch.object(EcoRegion, '_rasterize_vector_data')
     @patch("os.path.exists", return_value=True)  # Mocking all `os.path.exists` calls to return True
-    @patch("firedpy.data_classes.gdal.Open")
+    @patch("src.data_classes.gdal.Open")
     @patch("os.path.join", return_value="mock_path")  # Mocking `os.path.join` to always return "mock_path"
-    @patch("firedpy.data_classes.glob",
+    @patch("src.data_classes.glob",
            return_value=["mock_hdf_file_path"])  # Mocking `glob.glob` to always return a list with one mock path
     def test_create_eco_region_raster(self, mock_glob, mock_join, mock_gdal_open,
                                       mock_exists, mock_rasterize, mock_read_file):
@@ -603,9 +603,9 @@ class TestEcoRegion(unittest.TestCase):
     @patch.object(EcoRegion, '_rasterize_vector_data')
     @patch.object(EcoRegion, 'get_eco_region')
     @patch("os.path.exists", side_effect=[True, True, True, True])
-    @patch("firedpy.data_classes.gdal.Open")
+    @patch("src.data_classes.gdal.Open")
     @patch("os.path.join", return_value="mock_path")  # Mocking `os.path.join` to always return "mock_path"
-    @patch("firedpy.data_classes.glob",
+    @patch("src.data_classes.glob",
            return_value=[
                "mock_hdf_file_path"])  # Mocking `glob.glob` to always return a list with one mock path
     def test_create_eco_region_raster_no_ecoregion_shapefile(self, mock_glob, mock_join, mock_gdal_open,
