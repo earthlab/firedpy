@@ -36,32 +36,37 @@ def _merge_events_spatially_task(namespace: Namespace):
         return events
 
     ckd_trees = [cKDTree(np.array([(c.x, c.y) for c in event.spacetime_coordinates])) for event in events]
+    print('created trees')
 
     i, j = 0, 1
     merged_event_indices = set()
     merged_events = []
     pbar = tqdm(total=len(ckd_trees), desc="Merging events", position=pos)
+    found_overlapping = False
     while i < len(ckd_trees):
         if j not in merged_event_indices and j < len(ckd_trees):
             indices = ckd_trees[i].query_ball_tree(ckd_trees[j], r=sp_buf, p=2)
             if any(index_list for index_list in indices):
+                found_overlapping = True
                 events[i].add_spacetime_coordinates(events[j].spacetime_coordinates)
                 events[i].is_edge = events[i].is_edge or events[j].is_edge
+                ckd_trees[i] = cKDTree(np.array([(c.x, c.y) for c in events[i].spacetime_coordinates]))
                 merged_event_indices.add(j)
 
         j += 1
 
         if j >= len(ckd_trees):
-            merged_events.append(events[i])
-            i += 1
-            while i in merged_event_indices:
+            #print('A', len(merged_events))
+            if not found_overlapping:
+                merged_events.append(events[i])
                 i += 1
-
-            # if i % 1000 == 0:
-            #     print(i, len(ckd_trees))
+                while i in merged_event_indices:
+                    i += 1
 
             pbar.update(i)
             j = i + 1
+
+            found_overlapping = False
 
     return merged_events
 
@@ -130,6 +135,7 @@ class EventGrid(Base):
         self.temporal_param = temporal_param
         self._area_unit = area_unit
         self._time_unit = time_unit
+        self._starting_event_id = starting_event_id
         self.current_event_id = starting_event_id
 
         burns = xr.open_dataset(nc_file_path)
@@ -215,9 +221,6 @@ class EventGrid(Base):
             center_y, center_x = center
 
             window = self._input_array[:, top:bottom + 1, left:right + 1]
-            #window = window[np.where(window > 0)]  # TODO: Handle 0s and -1s accordingly, any other null values in data
-
-            print(window.shape)
 
             # The center of the window is the target burn day
             center_burn = window[:, center_y, center_x]
@@ -225,10 +228,11 @@ class EventGrid(Base):
 
             # Loop through each event in the window and identify neighbors
             for burn in center_burn:
+                overlapping_event_ids = []
                 event = EventPerimeter(event_id=self.current_event_id, spacetime_coordinates=set(), is_edge=is_edge)
 
                 # Now we can get the values and position right away
-                mask = (abs(burn - window) <= self.temporal_param // 2) & (window != 0) & (window != -1)
+                mask = (abs(burn - window) <= self.temporal_param) & (window != 0) & (window != -1)
                 val_locs = np.where(mask)
                 y_locs = val_locs[1]
                 x_locs = val_locs[2]
@@ -242,39 +246,47 @@ class EventGrid(Base):
                 new_spacetime_coords = set()
                 for i, val in enumerate(vals):
                     point = SpacetimeCoordinate(ys[i], xs[i], int(val))
-                    # if point not in identified_points:
-                    new_spacetime_coords.add(point)
-                    # elif identified_points[point] not in overlapping_event_ids:
-                    #     overlapping_event_ids.append(identified_points[point])
+                    if point not in identified_points:
+                        new_spacetime_coords.add(point)
+                    elif identified_points[point] not in overlapping_event_ids:
+                        overlapping_event_ids.append(identified_points[point])
 
                 event.add_spacetime_coordinates(new_spacetime_coords)
 
-                # if overlapping_event_ids:
-                #
-                #     overlapping_event_ids = sorted(overlapping_event_ids, reverse=True)
-                #     for event_id in overlapping_event_ids[:-1]:
-                #         perimeters[overlapping_event_ids[-1]].add_spacetime_coordinates(
-                #             perimeters[event_id].spacetime_coordinates)
-                #         identified_points.update({
-                #             p: overlapping_event_ids[-1] for p in perimeters[event_id].spacetime_coordinates
-                #         })
-                #         events_to_remove.append(event_id)
-                #
-                #     perimeters[overlapping_event_ids[-1]].add_spacetime_coordinates(event.spacetime_coordinates)
-                #     identified_points.update({
-                #         p: overlapping_event_ids[-1] for p in new_spacetime_coords
-                #     })
-                #
-                # elif event.spacetime_coordinates:
-                perimeters.append(event)
-                    # identified_points.update({
-                    #     p: event.event_id for p in new_spacetime_coords
-                    # })
-                self.current_event_id += 1
+                if overlapping_event_ids:
 
-        # print(len(events_to_remove), len(set(events_to_remove)))
-        # for event_id in sorted(events_to_remove, reverse=True):
-        #     perimeters.pop(event_id)
+                    # First merge any existing overlapping events
+                    overlapping_event_ids = sorted(overlapping_event_ids, reverse=True)
+                    to_keep = perimeters[overlapping_event_ids[-1]]
+                    for event_id in overlapping_event_ids[:-1]:
+                        to_merge = perimeters[event_id]
+                        to_keep.add_spacetime_coordinates(to_merge.spacetime_coordinates)
+                        to_keep.is_edge = to_keep.is_edge or to_merge.is_edge
+
+                        identified_points.update({
+                            p: overlapping_event_ids[-1] for p in to_merge.spacetime_coordinates
+                        })
+
+                        events_to_remove.append(event_id)
+
+                    # Finally merge the new event with existing
+                    to_keep.add_spacetime_coordinates(event.spacetime_coordinates)
+                    to_keep.is_edge = to_keep.is_edge or event.is_edge
+                    identified_points.update({
+                        p: overlapping_event_ids[-1] for p in new_spacetime_coords
+                    })
+
+                # This new event doesn't overlap at all
+                elif event.spacetime_coordinates:
+                    perimeters.append(event)
+                    identified_points.update({
+                        p: event.event_id - self._starting_event_id for p in new_spacetime_coords
+                    })
+                    self.current_event_id += 1
+
+        # Remove all the events that were merged
+        for event_id in sorted(events_to_remove, reverse=True):
+            perimeters.pop(event_id)
 
         return perimeters
 
@@ -342,7 +354,7 @@ class ModelBuilder(Base):
     def _to_kms(self, p: float):
         return (p * self._res ** 2) / 1000000
 
-    def events_within_spatial_range(self, tree_1: cKDTree, tree_2: cKDTree) -> bool:
+    def events_within_spatial_range(self, event_1: EventPerimeter, event_2: EventPerimeter) -> bool:
         """
         Check if any point in points_array1 is within distance p to any point in points_array2.
 
@@ -351,14 +363,14 @@ class ModelBuilder(Base):
         Returns:
             bool: True if any pair of points is closer than p, else False.
         """
-        # query_ball_tree returns indices of all points in tree2 within distance p of points in tree1
-        indices = tree_1.query_ball_tree(tree_2, r=self.sp_buf, p=2)
+        event1_burn_days = [c.x for c in event_1.spacetime_coordinates]
+        event2_burn_days = np.array([c.x for c in event_2.spacetime_coordinates])
 
-        # Check if there are any points within distance p
-        for index_list in indices:
-            if index_list:  # if not empty, meaning we found a point within the distance
-                return True
-        return False
+        # EV Find events that are within the start and end of the current edge + temporal param
+        return any(np.logical_and((min(event1_burn_days) - self.temporal_param) <= event2_burn_days,
+                                  (max(event1_burn_days) + self.temporal_param) >= event2_burn_days))
+
+
 
     def events_within_temporal_range(self, event_1: EventPerimeter, event_2: EventPerimeter) -> bool:
         event1_burn_days = [c.t for c in event_1.spacetime_coordinates]
@@ -368,11 +380,9 @@ class ModelBuilder(Base):
         return any(np.logical_and((min(event1_burn_days) - self.temporal_param) <= event2_burn_days,
                                   (max(event1_burn_days) + self.temporal_param) >= event2_burn_days))
 
-    def merge_fire_edge_events(self, fire_events: List[EventPerimeter]) -> List[EventPerimeter]:
+    def merge_fire_edge_events(self, edge_events: List[EventPerimeter]) -> List[EventPerimeter]:
         # Sort the events by start date
-        # edge_events = sorted([e for e in fire_events if e.is_edge], key=lambda x: min([c.t for c in
-        #                                                                                x.spacetime_coordinates]))
-        edge_events = sorted(fire_events, key=lambda x: min([c.t for c in x.spacetime_coordinates]))
+        edge_events = sorted(edge_events, key=lambda x: min([c.t for c in x.spacetime_coordinates]))
 
         if not edge_events:
             return []
@@ -386,8 +396,15 @@ class ModelBuilder(Base):
             else:
                 temporal_groups.append([edge_events[i]])
 
-        for group in temporal_groups:
-            print(len(group))
+        # for group in temporal_groups:
+        #     group = sorted(group, key=lambda x: min([c.x for c in x.spacetime_coordinates]))
+        #     x_groups = [[group[0]]]
+        #     for i in range(1, len(group)):
+        #         if self.events_within_spatial_range(group[i - 1], group[i]):
+        #             x_groups[-1].append(group[i])
+        #         else:
+        #             x_groups.append([group[i]])
+
 
         # Now process these groups in parallel to create sub-groups of events that overlap in space
         num_cpus = mp.cpu_count()
@@ -473,7 +490,7 @@ class ModelBuilder(Base):
 
             perims = event_grid.get_event_perimeters()
             print(len(perims), 'fe')
-            perims = self.merge_fire_edge_events(perims)
+            #perims = self.merge_fire_edge_events(perims)
             print(len(perims), 'fe')
             fire_events += perims
             last_event_id = event_grid.current_event_id + 1
