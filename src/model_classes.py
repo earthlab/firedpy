@@ -28,7 +28,6 @@ PROJECT_DIR = os.path.dirname(os.path.dirname(__file__))
 
 def _merge_events_spatially_task(namespace: Namespace):
     namespace, pos = namespace
-    print('pos', pos)
     events: List[EventPerimeter] = namespace.events
     sp_buf: float = namespace.sp_buf
 
@@ -36,7 +35,6 @@ def _merge_events_spatially_task(namespace: Namespace):
         return events
 
     ckd_trees = [cKDTree(np.array([(c.x, c.y) for c in event.spacetime_coordinates])) for event in events]
-    print('created trees')
 
     i, j = 0, 1
     merged_event_indices = set()
@@ -56,7 +54,7 @@ def _merge_events_spatially_task(namespace: Namespace):
         j += 1
 
         if j >= len(ckd_trees):
-            #print('A', len(merged_events))
+            # print('A', len(merged_events))
             if not found_overlapping:
                 merged_events.append(events[i])
                 i += 1
@@ -202,89 +200,64 @@ class EventGrid(Base):
         """
         print("Filtering out cells with no events...")
         available_pairs = self._get_available_cells()
-
-        # This is to check the window positions
         nz, ny, nx = self._input_array.shape
         dims = [ny, nx]
         perimeters = []
         identified_points = {}
 
-        # traverse spatially, processing each burn day
         print("Building event perimeters...")
-        events_to_remove = []
+        events_to_remove = set()
         for pair in tqdm(available_pairs, position=0, file=sys.stdout):
-            # Separate coordinates
             y, x = pair
-
-            # get the spatial window
             top, bottom, left, right, center, origin, is_edge = self._get_spatial_window(y, x, dims)
             center_y, center_x = center
 
             window = self._input_array[:, top:bottom + 1, left:right + 1]
-
-            # The center of the window is the target burn day
             center_burn = window[:, center_y, center_x]
             center_burn = center_burn[center_burn > 0]
 
-            # Loop through each event in the window and identify neighbors
             for burn in center_burn:
-                overlapping_event_ids = []
-                event = EventPerimeter(event_id=self.current_event_id, spacetime_coordinates=set(), is_edge=is_edge)
+                overlapping_event_ids = set()
 
-                # Now we can get the values and position right away
-                mask = (abs(burn - window) <= self.temporal_param) & (window != 0) & (window != -1)
+                mask = (abs(burn - window) <= self.temporal_param) & (window > 0)
                 val_locs = np.where(mask)
-                y_locs = val_locs[1]
-                x_locs = val_locs[2]
+                y_locs, x_locs = val_locs[1], val_locs[2]
                 oy, ox = origin
 
-                # Now get the geographic coordinates from tile positions
                 vals = window[val_locs]
-                ys = self._coordinates["y"].data[[oy + yl for yl in y_locs]]
-                xs = self._coordinates["x"].data[[ox + xl for xl in x_locs]]
+                ys = self._coordinates["y"].data[oy + y_locs]
+                xs = self._coordinates["x"].data[ox + x_locs]
 
-                new_spacetime_coords = set()
-                for i, val in enumerate(vals):
-                    point = SpacetimeCoordinate(ys[i], xs[i], int(val))
-                    if point not in identified_points:
-                        new_spacetime_coords.add(point)
-                    elif identified_points[point] not in overlapping_event_ids:
-                        overlapping_event_ids.append(identified_points[point])
+                new_spacetime_coords = {SpacetimeCoordinate(ys[i], xs[i], int(val)) for i, val in enumerate(vals)}
+                overlapping_event_ids.update(
+                    {identified_points[point] for point in new_spacetime_coords if point in identified_points}
+                )
 
-                event.add_spacetime_coordinates(new_spacetime_coords)
+                event = EventPerimeter(event_id=self.current_event_id, spacetime_coordinates=new_spacetime_coords,
+                                       is_edge=is_edge)
 
                 if overlapping_event_ids:
+                    to_keep_id = max(overlapping_event_ids)
+                    to_keep = perimeters[to_keep_id]
+                    for event_id in overlapping_event_ids:
+                        if event_id != to_keep_id:
+                            to_merge = perimeters[event_id]
+                            to_keep.add_spacetime_coordinates(to_merge.spacetime_coordinates)
+                            to_keep.is_edge = to_keep.is_edge or to_merge.is_edge
 
-                    # First merge any existing overlapping events
-                    overlapping_event_ids = sorted(overlapping_event_ids, reverse=True)
-                    to_keep = perimeters[overlapping_event_ids[-1]]
-                    for event_id in overlapping_event_ids[:-1]:
-                        to_merge = perimeters[event_id]
-                        to_keep.add_spacetime_coordinates(to_merge.spacetime_coordinates)
-                        to_keep.is_edge = to_keep.is_edge or to_merge.is_edge
+                            identified_points.update({p: to_keep_id for p in to_merge.spacetime_coordinates})
+                            events_to_remove.add(event_id)
 
-                        identified_points.update({
-                            p: overlapping_event_ids[-1] for p in to_merge.spacetime_coordinates
-                        })
-
-                        events_to_remove.append(event_id)
-
-                    # Finally merge the new event with existing
                     to_keep.add_spacetime_coordinates(event.spacetime_coordinates)
                     to_keep.is_edge = to_keep.is_edge or event.is_edge
-                    identified_points.update({
-                        p: overlapping_event_ids[-1] for p in new_spacetime_coords
-                    })
+                    identified_points.update({p: to_keep_id for p in new_spacetime_coords})
 
-                # This new event doesn't overlap at all
                 elif event.spacetime_coordinates:
                     perimeters.append(event)
-                    identified_points.update({
-                        p: event.event_id - self._starting_event_id for p in new_spacetime_coords
-                    })
+                    identified_points.update({p: event.event_id - self._starting_event_id
+                                              for p in new_spacetime_coords})
                     self.current_event_id += 1
 
-        # Remove all the events that were merged
         for event_id in sorted(events_to_remove, reverse=True):
             perimeters.pop(event_id)
 
@@ -354,31 +327,12 @@ class ModelBuilder(Base):
     def _to_kms(self, p: float):
         return (p * self._res ** 2) / 1000000
 
-    def events_within_spatial_range(self, event_1: EventPerimeter, event_2: EventPerimeter) -> bool:
-        """
-        Check if any point in points_array1 is within distance p to any point in points_array2.
-
-        Args:
-
-        Returns:
-            bool: True if any pair of points is closer than p, else False.
-        """
-        event1_burn_days = [c.x for c in event_1.spacetime_coordinates]
-        event2_burn_days = np.array([c.x for c in event_2.spacetime_coordinates])
-
-        # EV Find events that are within the start and end of the current edge + temporal param
-        return any(np.logical_and((min(event1_burn_days) - self.temporal_param) <= event2_burn_days,
-                                  (max(event1_burn_days) + self.temporal_param) >= event2_burn_days))
-
-
-
-    def events_within_temporal_range(self, event_1: EventPerimeter, event_2: EventPerimeter) -> bool:
+    def _events_within_temporal_range(self, event_1: EventPerimeter, event_2: EventPerimeter) -> bool:
         event1_burn_days = [c.t for c in event_1.spacetime_coordinates]
-        event2_burn_days = np.array([c.t for c in event_2.spacetime_coordinates])
+        event2_burn_days = [c.t for c in event_2.spacetime_coordinates]
 
         # EV Find events that are within the start and end of the current edge + temporal param
-        return any(np.logical_and((min(event1_burn_days) - self.temporal_param) <= event2_burn_days,
-                                  (max(event1_burn_days) + self.temporal_param) >= event2_burn_days))
+        return max(event1_burn_days) + self.temporal_param >= min(event2_burn_days)
 
     def merge_fire_edge_events(self, edge_events: List[EventPerimeter]) -> List[EventPerimeter]:
         # Sort the events by start date
@@ -391,90 +345,20 @@ class ModelBuilder(Base):
         temporal_groups = [[edge_events[0]]]
 
         for i in range(1, len(edge_events)):
-            if self.events_within_temporal_range(edge_events[i-1], edge_events[i]):
+            if self._events_within_temporal_range(edge_events[i - 1], edge_events[i]):
                 temporal_groups[-1].append(edge_events[i])
             else:
                 temporal_groups.append([edge_events[i]])
-
-        # for group in temporal_groups:
-        #     group = sorted(group, key=lambda x: min([c.x for c in x.spacetime_coordinates]))
-        #     x_groups = [[group[0]]]
-        #     for i in range(1, len(group)):
-        #         if self.events_within_spatial_range(group[i - 1], group[i]):
-        #             x_groups[-1].append(group[i])
-        #         else:
-        #             x_groups.append([group[i]])
-
 
         # Now process these groups in parallel to create sub-groups of events that overlap in space
         num_cpus = mp.cpu_count()
         groups = [Namespace(events=tg, sp_buf=self.sp_buf) for tg in temporal_groups]
 
-        # results = []
-        # for i, group in enumerate(groups):
-        #     results.append(_merge_events_spatially_task((group, i+1)))
         with mp.Pool(processes=num_cpus - 1) as pool:
             groups = [(group, i) for i, group in enumerate(groups)]
-            # Process the groups in parallel
             results = list(tqdm(pool.imap_unordered(_merge_events_spatially_task, groups), total=len(groups)))
 
-        # Flatten the list of lists into a single list
         return list(chain(*results))
-
-
-
-        # ckd_trees = [cKDTree(np.array([(c.x, c.y) for c in event.spacetime_coordinates])) for event in edge_events]
-        # print(f'Edge events: {len(edge_events)}')
-        #
-        #
-        #
-        # i, j = 0, 1
-        # events_to_keep = [edge_events[i]]
-        # prev_in_temp = set()
-        # now_in_temp = set()
-        # merged_events = set()
-        # while i < len(edge_events):
-        #     if j in merged_events:
-        #         j += 1
-        #         continue
-        #
-        #     if j in prev_in_temp or self.events_within_temporal_range(edge_events[i], edge_events[j]):
-        #
-        #         now_in_temp.add(j)
-        #         if self.events_within_spatial_range(ckd_trees[i], ckd_trees[j]):
-        #
-        #             merged_events.add(j)
-        #             edge_events[i].add_spacetime_coordinates(edge_events[j].spacetime_coordinates)
-        #     else:
-        #         prev_in_temp = now_in_temp
-        #         now_in_temp = set()
-        #
-        #         i += 1
-        #         while i in merged_events:
-        #             i += 1
-        #         j = i
-        #         print(i)
-        #
-        #     j += 1
-
-            # if j >= len(edge_events) or not self.events_within_temporal_range(edge_events[i], edge_events[j]):
-            #     events_to_keep.append(edge_events[i])
-            #
-            #     i += 1
-            #     while i in merged_events:
-            #         i += 1
-            #
-            #     j = i
-            #
-            # elif self.events_within_spatial_range(edge_events[i], edge_events[j]):
-            #     edge_events[i].add_spacetime_coordinates(edge_events[j].spacetime_coordinates)
-            #     merged_events.add(j)
-            #
-            # j += 1
-            # while j in merged_events:
-            #     j += 1
-
-        #return events_to_keep
 
     def build_events(self):
         """
@@ -487,22 +371,15 @@ class ModelBuilder(Base):
         for file in self.files:
             event_grid = EventGrid(nc_file_path=file, out_dir=self._out_dir, spatial_param=self.spatial_param,
                                    temporal_param=self.temporal_param, starting_event_id=last_event_id)
-
-            perims = event_grid.get_event_perimeters()
-            print(len(perims), 'fe')
-            #perims = self.merge_fire_edge_events(perims)
-            print(len(perims), 'fe')
-            fire_events += perims
+            fire_events += event_grid.get_event_perimeters()
             last_event_id = event_grid.current_event_id + 1
 
         non_edge = [e for e in fire_events if not e.is_edge]
+        print(len(fire_events) - len(non_edge))
         merged_edges = self.merge_fire_edge_events([e for e in fire_events if e.is_edge])
-        #print(merged_edges, len(merged_edges), len([e for e in fire_events if e.is_edge]))
+        print(len(merged_edges))
         fire_events = non_edge + merged_edges
 
-        #fire_events = [e for e in fire_events if not e.is_edge] + self.merge_fire_edge_events(fire_events)
-        #fire_events = self.merge_fire_edge_events(fire_events)
-        # Clear memory
         gc.collect()
 
         return fire_events
@@ -537,7 +414,7 @@ class ModelBuilder(Base):
     def add_fire_attributes(self, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         print("Adding fire attributes ...")
 
-        #date_id_group = gdf.groupby(['id', 'date'])
+        # date_id_group = gdf.groupby(['id', 'date'])
         print('finished grouping')
 
         gdf['pixels'] = gdf.groupby(['id', 'date'])['id'].transform('count')
