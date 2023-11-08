@@ -90,6 +90,7 @@ def main():
     parser.add_argument("-start_year", type=int, help=START_YR)
     parser.add_argument("-end_year", type=int, help=END_YR)
     parser.add_argument("--full_csv", type=str, help=FULL_CSV)
+    parser.add_argument('--n_cores', type=int, help='Number of cores to use for parallel processing.')
     args = parser.parse_args()
 
     firedpy_parser = FiredpyArgumentParser(os.path.join(PROJECT_DIR, 'data', 'params.txt'))
@@ -101,6 +102,9 @@ def main():
     # Resolve full csv
     full_csv = str_to_bool(args.full_csv) if args.full_csv is not None else \
         firedpy_parser.prompt_for_argument('full_csv')
+
+    n_cores = firedpy_parser.prompt_for_argument('n_cores') if args.n_cores is None else args.n_cores
+    n_cores = os.cpu_count() - 1 if n_cores == 0 else n_cores
 
     # Resolve tile choice
     tile_choice = TileChoice(firedpy_parser.prompt_for_argument('tile_choice')) if args.tile_choice is None else (
@@ -156,6 +160,7 @@ def main():
     # Resolve land cover type
     land_cover_type = (LandCoverType(firedpy_parser.prompt_for_argument('land_cover_type')) if args.land_cover_type is
                                                                                                None else args.land_cover_type)
+
     if land_cover_type != LandCoverType.NONE:
         username = os.environ.get('FIREDPY_ED_USER', None)
         password = os.environ.get('FIREDPY_ED_PWD', None)
@@ -175,7 +180,7 @@ def main():
                 except Exception as _:
                     pass
 
-        land_cover = LandCover(out_dir)
+        land_cover = LandCover(out_dir, n_cores=n_cores)
         land_cover.get_land_cover(tiles, land_cover_type)
 
     start_year = firedpy_parser.prompt_for_argument('start_year') if args.start_year is None else args.start_year
@@ -186,7 +191,7 @@ def main():
     eco_region_data = EcoRegion(out_dir)
     eco_region_data.get_eco_region()
 
-    burn_data = BurnData(out_dir)
+    burn_data = BurnData(out_dir, n_cores)
     burn_data.get_burns(tiles, start_year, end_year)
 
     # Create Model Builder object
@@ -194,6 +199,8 @@ def main():
 
     event_perimeters = models.build_events()
     print(event_perimeters[0].event_id)
+
+    # TODO: This can be parallelized
     gdf = models.build_points(event_perimeters, shape_file_path=shape_file)
     print(gdf, 'A')
     gdf = models.add_fire_attributes(gdf)

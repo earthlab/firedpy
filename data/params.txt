@@ -1,7 +1,7 @@
 out_dir,fWhere would you like the output for this run saved?,str,output,none
 full_csv,fEnter (true y yes) if you want a full csv. Enter (false n no) if you want a raw csv,bool,False,true|yes|y|false|no|n
-tile_choice,f"Would you like the fired product on a) continent b) country c) US state or d) speific MODIS tiles?",str,b,a|b|c|d
-tile_name,f,str,papua_new_guinea,none
+tile_choice,f"Would you like the fired product on a) continent b) country c) US state or d) specific MODIS tiles?",str,b,a|b|c|d
+tile_name,f,str,brazil,none
 eco_region_type,fPlease enter the eco_region type,str,world,world|na
 daily,fEnter (true y yes) if you want to create the daily polygons or (false n no) for just the event-level perimeter for your analysis area,bool,False,true|yes|y|false|no|n
 spatial_param,fPlease enter the number of cells (~463 m resolution) to search for neighboring burn detections in all directions,int,5,none
@@ -12,3 +12,4 @@ username,Enter your NASA Earthdata username,str,,none
 password,Enter your NASA Earthdata password,str,,none
 start_year,Enter the year you want to start or 0 for all dates,int,0,none
 end_year,Enter the year you want to end or 0 for all dates,int,0,none
+n_cores,Number of cores for parallel processing. Input 0 to use cpu_count - 1,int,0,none

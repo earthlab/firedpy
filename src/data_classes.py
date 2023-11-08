@@ -174,11 +174,12 @@ class Base:
 
 
 class BurnData(Base):
-    def __init__(self, out_dir: str):
+    def __init__(self, out_dir: str, n_cores: int = None):
         super().__init__(out_dir)
         self._base_sftp_folder = os.path.join('data', 'MODIS', 'C61', 'MCD64A1', 'HDF')
         self._modis_template_path = os.path.join(out_dir, 'rasters', 'mosaic_template.tif')
         self._record_start_year = 2000
+        self._parallel_cores = n_cores if n_cores is not None else os.cpu_count() - 1
 
     @staticmethod
     def _verify_hdf_file(file_path) -> bool:
@@ -207,13 +208,18 @@ class BurnData(Base):
     def _generate_remote_hdf_dir(self, tile: str) -> str:
         return os.path.join(self._base_sftp_folder, tile)
 
-    def _download_files(self, sftp_client: paramiko.SFTPClient, tile: str, hdfs: List[str],
-                        max_retries: int = 3) -> None:
+    def _download_files(self, file_request: Tuple[List[str], str, int], max_retries: int = 3) -> None:
+        ssh_client = paramiko.SSHClient()
+        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh_client.connect(hostname="fuoco.geog.umd.edu", username="fire", password="burnt")
+        sftp_client = ssh_client.open_sftp()
+        hdfs, tile, position = file_request
+
         attempt = 0
         retries = hdfs.copy()
         while attempt < max_retries and retries:
             next_retries = []
-            for hdf_file in tqdm(retries):
+            for hdf_file in tqdm(retries, position=position):
                 remote_path = self._generate_remote_hdf_path(tile, hdf_file)
                 local_path = self._generate_local_hdf_path(tile, hdf_file)
                 if os.path.exists(local_path):
@@ -229,9 +235,14 @@ class BurnData(Base):
             retries = next_retries
             attempt += 1
 
+            print(attempt, max_retries)
+
         if attempt == max_retries and retries:
             raise IOError(f'Error downloading burn data: max retries exceeded ({max_retries}). Files not downloaded or '
                           f'not able to open: {retries}')
+
+        ssh_client.close()
+        sftp_client.close()
 
     def get_burns(self, tiles: List[str], start_year: int = None, end_year: int = None):
         """
@@ -253,17 +264,15 @@ class BurnData(Base):
 
         """
         # Check into the UMD SFTP fuoco server using Paramiko
-        ssh_client = paramiko.SSHClient()
-        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh_client.connect(hostname="fuoco.geog.umd.edu", username="fire", password="burnt")
-        print("Connected to 'fuoco.geog.umd.edu' ...")
-
         year_range = np.arange(start_year if start_year is not None else self._record_start_year,
                                end_year if end_year is not None else datetime.now().year + 1, 1)
 
-        # Open the connection to the SFTP
+        ssh_client = paramiko.SSHClient()
+        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh_client.connect(hostname="fuoco.geog.umd.edu", username="fire", password="burnt")
         sftp_client = ssh_client.open_sftp()
 
+        # Open the connection to the SFTP
         for tile in tiles:
             nc_file = self._generate_local_nc_path(tile)
 
@@ -276,22 +285,22 @@ class BurnData(Base):
                 match = re.match(self._burn_hdf_regex, hdf_file)
                 if match is not None and int(match.groupdict()['year']) in year_range:
                     hdf_files.append(hdf_file)
-
+            hdf_batches = [(list(b), tile, i) for i, b in enumerate(np.array_split(hdf_files, self._parallel_cores))]
             if not hdf_files:
                 print(f"No MCD64A1 Product for tile: {tile}, skipping...")
 
-            try:
-                self._download_files(sftp_client, tile, hdf_files)
-            except IOError as e:
-                continue
+            # for batch in hdf_batches:
+            #     self._download_files(batch)
 
-        # Close new SFTP connection
-        ssh_client.close()
-        sftp_client.close()
-        print("Disconnected from 'fuoco.geog.umd.edu' ...")
+            with Pool(self._parallel_cores) as pool:
+                for _ in pool.imap_unordered(self._download_files, hdf_batches):
+                    pass
 
         if not os.path.exists(self._modis_template_path):
             self._write_modis_template_file()
+
+        ssh_client.close()
+        sftp_client.close()
 
         self._write_ncs(tiles)
 
@@ -479,11 +488,11 @@ class BurnData(Base):
 
 
 class LandCover(Base):
-    def __init__(self, out_dir: str):
+    def __init__(self, out_dir: str, n_cores: int = None):
         super().__init__(out_dir)
         self._lp_daac_url = 'https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.061/'
         self._date_regex = r'(?P<year>\d{4})\.(?P<month>\d{2})\.(?P<day>\d{2})\/'
-        self._core_count = os.cpu_count()
+        self._parallel_cores = n_cores if n_cores is not None else os.cpu_count() - 1
 
     @staticmethod
     def get_all_available_tiles() -> List[str]:
@@ -569,7 +578,7 @@ class LandCover(Base):
 
     def _download_files(self, download_requests):
         try:
-            with Pool(int(self._core_count / 2)) as pool:
+            with Pool(self._parallel_cores - 1) as pool:
                 for _ in tqdm(pool.imap_unordered(self._download_task, download_requests),
                               total=len(download_requests)):
                     pass
