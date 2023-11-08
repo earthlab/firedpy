@@ -310,8 +310,8 @@ class EventGrid(Base):
                 #t1 = time.time()
 
                 # In each time slice we have a possible range of 30 days (hdf files are monthly temporal resolution)
-                l = int(valid_center_burn_indices[i] - time_index_buffer)
-                r = int(valid_center_burn_indices[i] + time_index_buffer)
+                l = max(0, int(valid_center_burn_indices[i] - time_index_buffer))
+                r = min(nz, int(valid_center_burn_indices[i] + time_index_buffer) + 1)
 
                 burn_window = window[l:r, :, :]
                 val_locs = np.where(abs(burn_value - burn_window) <= self.temporal_param)
@@ -329,7 +329,7 @@ class EventGrid(Base):
                 for i, val in enumerate(vals):
                    # t1 = time.time()
                     #c = SpacetimeCoordinate(ys[i], xs[i], int(val))
-                    c = (ys[i], xs[i], int(val))
+                    c = (ys[i], xs[i], np.uint16(val))
                     #point_times.append(time.time() - t1)
 
                     #t1 = time.time()
@@ -341,7 +341,7 @@ class EventGrid(Base):
 
                 #t1 = time.time()
                 event = EventPerimeter(event_id=self.current_event_id, spacetime_coordinates=new_spacetime_coords,
-                                       is_edge=is_edge)  # O(1) time
+                                       is_edge=is_edge)
                 #c_new_event.append(time.time() - t1)
 
                 if overlapping_event_ids.list:
@@ -540,7 +540,7 @@ class ModelBuilder(Base):
         x_groups = [[events_sorted_by_x[0]]]
 
         for event in events_sorted_by_x[1:]:
-            if event.min_x <= x_groups[-1][-1].max_x + self.spatial_param:  # Overlaps in x with the last group
+            if event.min_x <= x_groups[-1][-1].max_x + self.sp_buf:  # Overlaps in x with the last group
                 x_groups[-1].append(event)
             else:
                 x_groups.append([event])
@@ -550,11 +550,11 @@ class ModelBuilder(Base):
     def group_by_y(self, x_groups):
         y_groups = []
         for group in x_groups:
-            group_sorted_by_y = sorted(group, key=lambda event: event.min_y)
+            group_sorted_by_y = sorted(group, key=lambda event: event.max_y)
             y_group = [[group_sorted_by_y[0]]]
 
             for event in group_sorted_by_y[1:]:
-                if event.min_y <= y_group[-1][-1].max_y + self.spatial_param:  # Overlaps in y with the last group
+                if event.max_y >= y_group[-1][-1].min_y - self.sp_buf:  # Overlaps in y with the last group
                     y_group[-1].append(event)
                 else:
                     y_group.append([event])
@@ -622,17 +622,17 @@ class ModelBuilder(Base):
             for future in as_completed(futures):
                 fire_events.extend(future.result())
 
-        # for file in [self.files[1]]:
+        # for file in self.files:
         #     e = EventGrid(self._out_dir, file, self.spatial_param, self.temporal_param)
-        #     pr = cProfile.Profile()
-        #     pr.enable()
+        #     # pr = cProfile.Profile()
+        #     # pr.enable()
         #     perims = e.get_event_perimeters(0, file)
-        #     pr.disable()
-        #     ps = pstats.Stats(pr)
-        #     ps.sort_stats('cumulative')
-        #     with open('output_stats.txt', 'w') as f:
-        #         ps.stream = f
-        #         ps.print_stats()
+        #     # pr.disable()
+        #     # ps = pstats.Stats(pr)
+        #     # ps.sort_stats('cumulative')
+        #     # with open('output_stats.txt', 'w') as f:
+        #     #     ps.stream = f
+        #     #     ps.print_stats()
         #     fire_events.extend(perims)
 
         print('Adjusting event ids')
@@ -645,9 +645,10 @@ class ModelBuilder(Base):
         edge_events = [e for e in fire_events if e.is_edge]
         for edge_event in edge_events:
             edge_event.compute_min_max()
+
         print(len(non_edge), 'non_edge')
         print(len(edge_events), 'edge events')
-
+        print(self.sp_buf)
         merged_edges = self.merge_fire_edge_events(edge_events)
         fire_events = non_edge + merged_edges
 
