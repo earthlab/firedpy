@@ -2,23 +2,23 @@ name: firedpy
 channels:
   - defaults
 dependencies:
-  - beautifulsoup4
-  - dask
-  - descartes
-  - gdal
-  - geopandas
-  - fiona
-  - lxml
-  - matplotlib
-  - netcdf4
-  - numpy
-  - pandas
-  - pycurl
-  - pyyaml
-  - rasterio
-  - requests
-  - toolz
-  - tqdm
-  - xarray
-  - paramiko
-  - pytest-shutil
+  - beautifulsoup4=4.11.1
+  - dask=2022.7.0
+  - descartes=1.1.0
+  - gdal=3.0.2
+  - geopandas=0.9.0
+  - fiona=1.8.13.post1
+  - lxml=4.9.1
+  - matplotlib=3.5.2
+  - netcdf4=1.5.7
+  - numpy=1.23.1
+  - pandas=1.4.3
+  - pycurl=7.45.1
+  - pyyaml=6.0
+  - rasterio=1.2.10
+  - requests=2.28.1
+  - toolz=0.11.2
+  - tqdm=4.64.0
+  - xarray=0.20.1
+  - paramiko=2.8.1
+  - pytest-shutil=1.7.0
