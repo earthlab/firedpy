@@ -108,7 +108,7 @@ class SpacetimeCoordinate:
 
 
 class EventPerimeter:
-    def __init__(self, event_id: int, spacetime_coordinates: Set[float], is_edge: bool = False):
+    def __init__(self, event_id: int, spacetime_coordinates: Set[Tuple[float, float, np.int16]], is_edge: bool = False):
         self.event_id = event_id
         self.spacetime_coordinates = spacetime_coordinates
         self.is_edge = is_edge
@@ -116,7 +116,7 @@ class EventPerimeter:
         self.min_geom_x = None
         self.max_geom_y = None
 
-    def add_spacetime_coordinates(self, new_coordinates: Set[float]):
+    def add_spacetime_coordinates(self, new_coordinates: Set[Tuple[float, float, np.int16]]):
         self.spacetime_coordinates.update(new_coordinates)
 
     def compute_min_max(self):
@@ -311,7 +311,7 @@ class EventGrid(Base):
 
                 new_spacetime_coords = set()
                 for i, val in enumerate(vals):
-                    c = (ys[i], xs[i], np.uint16(val))
+                    c = (np.float32(ys[i]), np.float32(xs[i]), np.uint16(val))
 
                     if c in identified_points:  # O(1) time
                         overlapping_event_ids.add(identified_points[c])  # O(1) time
@@ -378,7 +378,7 @@ class ModelBuilder(Base):
             self.crs = data_set.crs
             self.geom = self.crs.geo_transform
             self._res = self.geom[1]
-            self.sp_buf = spatial_param * self._res * np.sqrt(2)
+            self.sp_buf = spatial_param * self._res
             self._coordinates = {dim: np.array(data_set.coords[dim].values) for dim in ['y', 'x', 'time']}
 
         self._n_cores = n_cores
@@ -426,7 +426,7 @@ class ModelBuilder(Base):
     def _to_kms(self, p: float):
         return (p * self._res ** 2) / 1000000
 
-    def group_by_x(self, events):
+    def group_by_x(self, events) -> List[List[EventPerimeter]]:
         events_sorted_by_x = sorted(events, key=lambda event: event.min_x)
         x_groups = [[events_sorted_by_x[0]]]
 
@@ -438,7 +438,23 @@ class ModelBuilder(Base):
 
         return x_groups
 
-    def group_by_y(self, x_groups):
+    def group_by_t(self, events) -> List[List[EventPerimeter]]:
+        t_groups = []
+        for group in events:
+            group_sorted_by_t = sorted(group, key=lambda event: event.min_t)
+            t_group = [[group_sorted_by_t[0]]]
+
+            for event in group_sorted_by_t[1:]:
+                if event.min_t <= t_group[-1][-1].max_t + self.temporal_param:  # Overlaps in y with the last group
+                    t_group[-1].append(event)
+                else:
+                    t_group.append([event])
+
+            t_groups.extend(t_group)
+
+        return t_groups
+
+    def group_by_y(self, x_groups) -> List[List[EventPerimeter]]:
         y_groups = []
         for group in x_groups:
             group_sorted_by_y = sorted(group, key=lambda event: event.max_y)
@@ -489,7 +505,7 @@ class ModelBuilder(Base):
 
         # Step 3: Create an empty 3D array
         array_shape = (len(events), height_index+1, width_index+1)
-        three_d_array = np.zeros(array_shape, dtype=np.float64)
+        three_d_array = np.zeros(array_shape, dtype=np.uint16)
 
         coordinates = {
             'x': np.array([math.ceil(min_x_event.min_geom_x + self._res * i) for i in range(width_index + 1)]),
@@ -499,23 +515,32 @@ class ModelBuilder(Base):
         # Step 4: Populate the 3D array with your instances
         for instance_num, instance in enumerate(events):
             for y, x, t in instance.spacetime_coordinates:
-                x_idx = int((x - min_x_event.min_geom_x + 0.1) / self._res)
-                y_idx = int((max_y_geom - y - 0.1) / self._res)
+                x_idx = int((x - min_x_event.min_geom_x + 1) / self._res)
+                y_idx = int((max_y_geom - y - 1) / self._res)
                 three_d_array[instance_num, y_idx, x_idx] = t
 
         return three_d_array, coordinates
 
     def merge_fire_edge_events(self, edge_events: List[EventPerimeter]) -> List[EventPerimeter]:
         # Group by close in x and y
-        spatial_groups = self.group_by_y(self.group_by_x(edge_events))
+        if not edge_events:
+            return []
+
+        groups = self.group_by_t(self.group_by_y(self.group_by_x(edge_events)))
+        #groups = self.group_by_y(self.group_by_x(edge_events))
 
         merged_events = []
-        for i, spatial_group in enumerate(spatial_groups):
+        for i, spatial_group in enumerate(groups):
+            print(len(spatial_group), len(set([s.event_id for s in spatial_group])), 'set length')
             group_array, coordinates = self._create_event_grid_array(spatial_group)
+            print(sys.getsizeof(group_array), 'bytes', group_array.shape)
             event_grid = EventGrid(out_dir=self._out_dir, input_array=group_array, coordinates=coordinates)
+            print(sys.getsizeof(event_grid), 'event grid bytes')
             perimeters = event_grid.get_event_perimeters(progress_position=i,
                                                          progress_description=f'Merging edge tiles for group {i} of'
-                                                                              f' {len(spatial_groups)}', all_t=True)
+                                                                              f' {len(groups)}', all_t=True)
+            print(sys.getsizeof(perimeters), 'perimeters bytes')
+            del event_grid, group_array, coordinates, spatial_group
             merged_events.extend(perimeters)
 
         print(len(merged_events), 'merged')
@@ -539,7 +564,7 @@ class ModelBuilder(Base):
 
         fire_events = []
         # Use a thread pool executor to process files in parallel
-        with ProcessPoolExecutor(max_workers=self._n_cores) as executor:
+        with ProcessPoolExecutor(max_workers=6) as executor:
             # Schedule the processing of each file
             futures = {executor.submit(self._process_file_perimeter, file, i): file for i, file
                        in enumerate(self.files)}
@@ -556,7 +581,15 @@ class ModelBuilder(Base):
         for edge_event in edge_events:
             edge_event.compute_min_max()
 
+        # print(len(edge_events))
+        # edge_array, coordinates = self._create_event_grid_array(edge_events)
+        # print(sys.getsizeof(edge_array), 'edge array')
+
         merged_edges = self.merge_fire_edge_events(edge_events)
+        # merged_edges = EventGrid(out_dir=self._out_dir, input_array=edge_array, coordinates=coordinates
+        #                          ).get_event_perimeters()
+
+        del edge_events
 
         last_non_edge_id = non_edge[-1].event_id + 1
         for edge in merged_edges:
