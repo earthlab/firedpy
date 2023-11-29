@@ -547,7 +547,7 @@ class ModelBuilder(Base):
 
         return merged_events
 
-    def _process_file_perimeter(self, file, progress_position: int):
+    def _process_file_perimeter(self, progress_position: int, file: str):
         event_grid = EventGrid(nc_file_path=file, out_dir=self._out_dir,
                                spatial_param=self.spatial_param,
                                temporal_param=self.temporal_param)
@@ -563,15 +563,16 @@ class ModelBuilder(Base):
         print('Building fire event perimeters')
 
         fire_events = []
-        # Use a thread pool executor to process files in parallel
-        with ProcessPoolExecutor(max_workers=6) as executor:
-            # Schedule the processing of each file
-            futures = {executor.submit(self._process_file_perimeter, file, i): file for i, file
-                       in enumerate(self.files)}
 
-            # As each file is processed, get the result and add it to the fire_events list
-            for future in as_completed(futures):
-                fire_events.extend(future.result())
+        # Create a pool of workers with the number of cores specified
+        with mp.Pool(self._n_cores) as pool:
+            # Map the files to the processing function and collect the results
+            # Use starmap to pass the arguments unpacked
+            results = pool.starmap(self._process_file_perimeter, enumerate(self.files))
+
+            # As each file is processed, results will be appended to the fire_events list
+            for result in results:
+                fire_events.extend(result)
 
         for i in range(len(fire_events)):
             fire_events[i].event_id = i
@@ -581,13 +582,7 @@ class ModelBuilder(Base):
         for edge_event in edge_events:
             edge_event.compute_min_max()
 
-        # print(len(edge_events))
-        # edge_array, coordinates = self._create_event_grid_array(edge_events)
-        # print(sys.getsizeof(edge_array), 'edge array')
-
         merged_edges = self.merge_fire_edge_events(edge_events)
-        # merged_edges = EventGrid(out_dir=self._out_dir, input_array=edge_array, coordinates=coordinates
-        #                          ).get_event_perimeters()
 
         del edge_events
 
