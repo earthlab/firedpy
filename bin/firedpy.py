@@ -7,7 +7,7 @@ from http.cookiejar import CookieJar
 import urllib.request
 from src.data_classes import EcoRegion, BurnData, LandCover
 from src.model_classes import ModelBuilder
-from utilities.create_readme import makeReadMe
+from utilities.create_readme import make_read_me
 from src import *
 from utilities.argument_parser import FiredpyArgumentParser
 from src.spatial import shape_to_tiles
@@ -207,7 +207,7 @@ def main():
     if land_cover_type != LandCoverType.NONE:
         gdf = models.add_land_cover_attributes(gdf, land_cover_type)
     gdf = models.process_geometry(gdf)
-    #gdf = models.add_eco_region_attributes(gdf, eco_region_type, eco_region_level)
+    gdf = models.add_eco_region_attributes(gdf, eco_region_type, eco_region_level)
 
     def generate_path(proj_dir, base_filename, shape_type: ShapeType):
         """Generate the appropriate file path."""
@@ -244,8 +244,8 @@ def main():
         os.makedirs(os.path.dirname(event_gpkg_path), exist_ok=True)
     models.save_event_data(gdf, csv_path, event_shape_path, event_gpkg_path, full_csv=full_csv)
 
-    # makeReadMe(out_dir, tile_name, base_file_name, 1, date_range[0], date_range[-1], eco_region_type,
-    #            eco_region_level, land_cover_type, daily, spatial_param, temporal_param, shapefile, shape_type)
+    make_read_me(out_dir, tile_name, base_file_name, 1, date_range[0], date_range[-1],
+                 daily, spatial_param, temporal_param, shapefile, shape_type)
     # Print the time it took
     end = time.perf_counter()
     seconds = end - start
