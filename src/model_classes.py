@@ -35,6 +35,14 @@ from concurrent.futures import as_completed, ProcessPoolExecutor
 PROJECT_DIR = os.path.dirname(os.path.dirname(__file__))
 
 
+def _process_file_perimeter(args):
+    event_grid = EventGrid(nc_file_path=args[1], out_dir=args[2],
+                           spatial_param=args[4],
+                           temporal_param=args[3])
+    fire_events = event_grid.get_event_perimeters(args[0], progress_description=os.path.basename(args[1]))
+    return fire_events
+
+
 def _merge_events_spatially_task(namespace: Namespace):
     namespace, pos = namespace
     events: List[EventPerimeter] = namespace.events
@@ -547,13 +555,6 @@ class ModelBuilder(Base):
 
         return merged_events
 
-    def _process_file_perimeter(self, progress_position: int, file: str):
-        event_grid = EventGrid(nc_file_path=file, out_dir=self._out_dir,
-                               spatial_param=self.spatial_param,
-                               temporal_param=self.temporal_param)
-        fire_events = event_grid.get_event_perimeters(progress_position, progress_description=os.path.basename(file))
-        return fire_events
-
     def build_events(self):
         """
         Use the EventGrid class to classify events tile by tile and then merge
@@ -568,7 +569,10 @@ class ModelBuilder(Base):
         with mp.Pool(self._n_cores) as pool:
             # Map the files to the processing function and collect the results
             # Use starmap to pass the arguments unpacked
-            results = pool.starmap(self._process_file_perimeter, enumerate(self.files))
+            args = []
+            for i, file in enumerate(self.files):
+                args.append((i, file, self._out_dir, self.temporal_param, self.spatial_param))
+            results = pool.imap_unordered(_process_file_perimeter, args)
 
             # As each file is processed, results will be appended to the fire_events list
             for result in results:
