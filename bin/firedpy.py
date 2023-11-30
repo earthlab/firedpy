@@ -195,7 +195,8 @@ def main():
     burn_data.get_burns(tiles, start_year, end_year)
 
     # Create Model Builder object
-    models = ModelBuilder(out_dir=out_dir, tiles=tiles, spatial_param=spatial_param, temporal_param=temporal_param)
+    models = ModelBuilder(out_dir=out_dir, tiles=tiles, spatial_param=spatial_param, temporal_param=temporal_param,
+                          n_cores=n_cores)
 
     event_perimeters = models.build_events()
     print(event_perimeters[0].event_id)
