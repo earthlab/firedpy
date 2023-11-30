@@ -890,10 +890,17 @@ class ModelBuilder(Base):
         if csv_path:
             gdf.to_csv(csv_path, index=False)
 
-        if shape_path is not None:
-            gdf.to_file(shape_path)
-            print("Saving file to " + shape_path)
-
         if gpkg_path is not None:
             gdf.to_file(gpkg_path, driver="GPKG")
             print("Saving file to " + gpkg_path)
+
+        if shape_path is not None:
+            print('Writing shape file')
+            gdf['ig_date'] = [str(d) for d in gdf['ig_date']]
+            gdf['last_date'] = [str(d) for d in gdf['last_date']]
+            gdf['mx_grw_dte'] = [str(d) for d in gdf['mx_grw_dte']]
+
+            gdf.to_file(shape_path)
+            print("Saving file to " + shape_path)
+
+
