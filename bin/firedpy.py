@@ -1,7 +1,9 @@
 import argparse
 import os
+import shutil
 import time
 import warnings
+import resource
 
 from http.cookiejar import CookieJar
 import urllib.request
@@ -41,7 +43,7 @@ def str_to_bool(s: str):
 def test_earthdata_credentials(username: str, password: str) -> None:
     # Earthdata Login
     # test url for correct user/password
-    url = "https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.061/2019.01.01/MCD12Q1.A2019001.h13v12.061.2020212130349.hdf"
+    url = "https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.061/2019.01.01/BROWSE.MCD12Q1.A2019001.h10v09.061.2022169160720.1.jpg"
 
     password_manager = urllib.request.HTTPPasswordMgrWithDefaultRealm()
     password_manager.add_password(None, "https://urs.earthdata.nasa.gov", username, password)
@@ -63,7 +65,17 @@ def test_earthdata_credentials(username: str, password: str) -> None:
     urllib.request.urlopen(request)
 
 
+def peak_memory():
+    return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+
+
+def cleanup_intermediate_files(out_dir):
+    shutil.rmtree(os.path.join(out_dir, 'rasters', 'burn_area'))
+    shutil.rmtree(os.path.join(out_dir, 'rasters', 'land_cover'))
+
+
 def main():
+    initial_memory = peak_memory()
     # Start the timer (seconds)
     start = time.perf_counter()
 
@@ -91,6 +103,9 @@ def main():
     parser.add_argument("-end_year", type=int, help=END_YR)
     parser.add_argument("--full_csv", type=str, help=FULL_CSV)
     parser.add_argument('--n_cores', type=int, help='Number of cores to use for parallel processing.')
+    parser.add_argument('--cleanup', type=str,
+                        help='If set then the burn area and landcover files will be removed after each run to save '\
+                             ' disk space in between multiple runs')
     args = parser.parse_args()
 
     firedpy_parser = FiredpyArgumentParser(os.path.join(PROJECT_DIR, 'data', 'params.txt'))
@@ -161,37 +176,33 @@ def main():
     land_cover_type = (LandCoverType(firedpy_parser.prompt_for_argument('land_cover_type')) if args.land_cover_type is
                                                                                                None else args.land_cover_type)
 
-    if land_cover_type != LandCoverType.NONE:
-        username = os.environ.get('FIREDPY_ED_USER', None)
-        password = os.environ.get('FIREDPY_ED_PWD', None)
-        if username is None or password is None:
-            print("Please input your NASA Earthdata username and password in order to download the land cover data. If"
-                  " you do not have an Earthdata account, you can register at https://urs.earthdata.nasa.gov/. To "
-                  "avoid seeing this prompt again, you can set the FIREDPY_ED_USER and FIREDPY_ED_PWD environment "
-                  " variables.")
-            username = firedpy_parser.prompt_for_argument('username')
-            password = firedpy_parser.prompt_for_argument('password', sensitive=True)
+    cleanup = str_to_bool(args.cleanup) if args.cleanup is not None else firedpy_parser.prompt_for_argument('cleanup')
 
-            check = None
-            while check is None:
-                try:
-                    test_earthdata_credentials(username, password)
-                    check = 1
-                except Exception as _:
-                    pass
-
-        land_cover = LandCover(out_dir, n_cores=n_cores)
-        land_cover.get_land_cover(tiles, land_cover_type)
+    username = os.environ.get('FIREDPY_ED_USER', None)
+    password = os.environ.get('FIREDPY_ED_PWD', None)
+    if username is None or password is None:
+        print("Please input your NASA Earthdata username and password in order to download the land cover data. If"
+              " you do not have an Earthdata account, you can register at https://urs.earthdata.nasa.gov/. To "
+              "avoid seeing this prompt again, you can set the FIREDPY_ED_USER and FIREDPY_ED_PWD environment "
+              " variables.")
+        username = firedpy_parser.prompt_for_argument('username')
+        password = firedpy_parser.prompt_for_argument('password', sensitive=True)
+        test_earthdata_credentials(username, password)
 
     start_year = firedpy_parser.prompt_for_argument('start_year') if args.start_year is None else args.start_year
     end_year = firedpy_parser.prompt_for_argument('end_year') if args.end_year is None else args.end_year
     start_year = None if start_year == 0 else start_year
     end_year = None if end_year == 0 else end_year
 
+    if land_cover_type != LandCoverType.NONE:
+        print('Retrieving landcover...')
+        land_cover = LandCover(out_dir, n_cores=n_cores, username=username, password=password)
+        land_cover.get_land_cover(tiles, land_cover_type)
+
     eco_region_data = EcoRegion(out_dir)
     eco_region_data.get_eco_region()
 
-    burn_data = BurnData(out_dir, n_cores)
+    burn_data = BurnData(out_dir, username, password, n_cores)
     burn_data.get_burns(tiles, start_year, end_year)
 
     # Create Model Builder object
@@ -203,7 +214,6 @@ def main():
 
     # TODO: This can be parallelized
     gdf = models.build_points(event_perimeters, shape_file_path=shape_file)
-    print(gdf, 'A')
     gdf = models.add_fire_attributes(gdf)
     if land_cover_type != LandCoverType.NONE:
         gdf = models.add_land_cover_attributes(gdf, land_cover_type)
@@ -245,13 +255,19 @@ def main():
         os.makedirs(os.path.dirname(event_gpkg_path), exist_ok=True)
     models.save_event_data(gdf, csv_path, event_shape_path, event_gpkg_path, full_csv=full_csv)
 
-    make_read_me(out_dir, tile_name, base_file_name, 1, date_range[0], date_range[-1],
-                 daily, spatial_param, temporal_param, shapefile, shape_type)
-    # Print the time it took
     end = time.perf_counter()
     seconds = end - start
     minutes = seconds / 60
     print("Job completed in {} minutes".format(round(minutes, 2)))
+
+    peak_mem = (peak_memory() - initial_memory) / (1024 * 1024 * 1024)
+    print("Peak memory usage:", peak_mem, "GB")
+
+    make_read_me(out_dir, tile_name, base_file_name, 1, date_range[0], date_range[-1],
+                 daily, spatial_param, temporal_param, shapefile, shape_type, seconds, peak_mem, n_cores)
+
+    if cleanup:
+        cleanup_intermediate_files(out_dir)
 
 
 if __name__ == "__main__":

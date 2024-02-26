@@ -377,6 +377,7 @@ class ModelBuilder(Base):
         self.spatial_param = spatial_param
         self.temporal_param = temporal_param
         self.files = sorted([self._generate_local_nc_path(t) for t in self.tiles])
+        self._lc_mosaic_re = r'lc_mosaic_(?P<land_cover_type>\d{1})_(?P<year>\d{4})\.tif$'
 
         if not self.files:
             raise FileNotFoundError(f'Could not find any netcdf files in {self._nc_dir} for tiles: {self.tiles}')
@@ -535,23 +536,16 @@ class ModelBuilder(Base):
             return []
 
         groups = self.group_by_t(self.group_by_y(self.group_by_x(edge_events)))
-        #groups = self.group_by_y(self.group_by_x(edge_events))
 
         merged_events = []
         for i, spatial_group in enumerate(groups):
-            print(len(spatial_group), len(set([s.event_id for s in spatial_group])), 'set length')
             group_array, coordinates = self._create_event_grid_array(spatial_group)
-            print(sys.getsizeof(group_array), 'bytes', group_array.shape)
             event_grid = EventGrid(out_dir=self._out_dir, input_array=group_array, coordinates=coordinates)
-            print(sys.getsizeof(event_grid), 'event grid bytes')
             perimeters = event_grid.get_event_perimeters(progress_position=i,
                                                          progress_description=f'Merging edge tiles for group {i} of'
                                                                               f' {len(groups)}', all_t=True)
-            print(sys.getsizeof(perimeters), 'perimeters bytes')
             del event_grid, group_array, coordinates, spatial_group
             merged_events.extend(perimeters)
-
-        print(len(merged_events), 'merged')
 
         return merged_events
 
@@ -631,16 +625,12 @@ class ModelBuilder(Base):
     def add_fire_attributes(self, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         print("Adding fire attributes ...")
 
-        # date_id_group = gdf.groupby(['id', 'date'])
-        print('finished grouping')
-
         gdf['pixels'] = gdf.groupby(['id', 'date'])['id'].transform('count')
 
         gdf['ig_utm_x'] = gdf.groupby(['id', 'date'])['x'].nth(0)
 
         gdf['ig_utm_y'] = gdf.groupby(['id', 'date'])['y'].nth(0)
 
-        print('grouping')
         group = gdf.groupby('id')
 
         gdf['date'] = gdf['date'].apply(lambda x: datetime.strptime(x, '%Y-%m-%d'))
@@ -674,13 +664,10 @@ class ModelBuilder(Base):
         gdf['mx_grw_km2'] = gdf['mx_grw_px'].apply(self._to_kms)
         gdf['mn_grw_km2'] = gdf['mn_grw_px'].apply(self._to_kms)
         gdf['mu_grw_km2'] = gdf['mu_grw_px'].apply(self._to_kms)
-        print('to_csv')
 
         max_date = pd.DataFrame(group[['date', 'pixels']].apply(self._max_growth_date).reset_index())
         max_date = max_date.rename(columns={0: 'mx_grw_dte'})
         gdf = gdf.merge(max_date, on="id")
-
-        print('merged')
 
         gdf = gdf[['id', 'date', 'ig_date', 'ig_day', 'ig_month',
                    'ig_year', 'last_date', 'event_day', 'event_dur',
@@ -702,14 +689,15 @@ class ModelBuilder(Base):
         lc_descriptions = {LandCoverType.IGBP: "IGBP global vegetation classification scheme",
                            LandCoverType.UMD: "University of Maryland (UMD) scheme",
                            LandCoverType.MODIS_LAI: "MODIS-derived LAI/fPAR scheme",
-                           LandCoverType.MODIS_NPP: "MODIS-derived Net Primary Production (NPP) scheme",
+                           LandCoverType.MODIS_BGC: "MODIS-derived Net Primary Production (NPP) scheme",
                            LandCoverType.PFT: "Plant Functional Type (PFT) scheme."}
 
-        lc_files = sorted([f for f in glob(os.path.join(self._land_cover_dir, '**', "*tif"), recursive=True)
-                           if re.match(self._land_cover_regex, os.path.basename(f))])
-
-        lc_years = [re.match(self._land_cover_regex, os.path.basename(f)).groupdict()['year'] for f in lc_files]
+        lc_files = sorted([os.path.join(self._mosaics_dir, f)
+                           for f in os.listdir(self._mosaics_dir) if re.match(self._lc_mosaic_re, f)])
+        lc_years = [int(re.match(self._lc_mosaic_re, os.path.basename(f)).groupdict()['year']) for f in lc_files]
         lc_files = {lc_years[i]: lc_files[i] for i in range(len(lc_files))}
+
+        print(lc_years)
 
         # Rasterio point querier (will only work here)
         def point_query(row):
@@ -750,12 +738,11 @@ class ModelBuilder(Base):
         gdf['lc_mode'] = gdf.groupby('id')['lc_code'].transform(self._mode)
 
         # Add in the class description from land_cover tables
-        if land_cover_type != LandCoverType.NONE:
-            land_cover_path = self._copy_land_cover_ref(land_cover_type)
-            lc_table = pd.read_csv(land_cover_path)
-            gdf = pd.merge(left=gdf, right=lc_table, how='left', left_on='lc_mode', right_on='Value')
-            gdf = gdf.drop('Value', axis=1)
-            gdf['lc_type'] = lc_descriptions[land_cover_type]
+        land_cover_path = self._copy_land_cover_ref(land_cover_type)
+        lc_table = pd.read_csv(land_cover_path)
+        gdf = pd.merge(left=gdf, right=lc_table, how='left', left_on='lc_mode', right_on='Value')
+        gdf = gdf.drop('Value', axis=1)
+        gdf['lc_type'] = lc_descriptions[land_cover_type]
 
         gdf.rename({'lc_description': 'lc_desc'}, inplace=True, axis='columns')
 
@@ -900,6 +887,8 @@ class ModelBuilder(Base):
 
         if shape_path is not None:
             print('Writing shape file')
+            if 'date' in gdf.columns:
+                gdf['date'] = [str(d) for d in gdf['date']]
             gdf['ig_date'] = [str(d) for d in gdf['ig_date']]
             gdf['last_date'] = [str(d) for d in gdf['last_date']]
             gdf['mx_grw_dte'] = [str(d) for d in gdf['mx_grw_dte']]

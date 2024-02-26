@@ -16,7 +16,7 @@ def format_name(input_type, tilename):
 
 
 def make_read_me(out_dir, tile_name, file_base, input, first_date, last_date,
-                 daily, spatial_param, temporal_param, shapefile, shp_type):
+                 daily, spatial_param, temporal_param, shapefile, shp_type, job_time, job_memory, n_cores):
     print(first_date, last_date)
 
     read_path = os.path.join(out_dir, 'outputs', file_base + "_README.txt")
@@ -35,6 +35,10 @@ def make_read_me(out_dir, tile_name, file_base, input, first_date, last_date,
         tilename = tile_name.upper()
         name = tilename.split("_")
 
+    daily_text = (" Daily polygons are included and the event identification numbers are the same for both files, "
+                  "but the event-level product has only single polygons for each entire event, while the daily "
+                  "product has separate polygons for each date per event. ")
+
     with open(read_path, "w") as text_file:
         print("-------------------\n", file=text_file)
         print("ABSTRACT\n", file=text_file)
@@ -43,29 +47,27 @@ def make_read_me(out_dir, tile_name, file_base, input, first_date, last_date,
             print("This is event-level polygons for the fire event delineation (FIRED) product for MODIS grid tiles",
                   *name,
                   "from {}  to {}. It is derived from the MODIS MCD64A1 burned area product (see "
-                  "https://lpdaac.usgs.gov/products/mcd64a1v006/ for more details). The MCD64A1 is a monthly raster "
-                  "grid of estimated burned dates. Firedpy (www.github.com/earthlab/src) is an algorithm that "
+                  "https://lpdaac.usgs.gov/products/mcd64a1v061/ for more details). The MCD64A1 is a monthly raster "
+                  "grid of estimated burned dates starting in November 2001. Firedpy (https://github.com/earthlab/firedpy) is an algorithm that "
                   "converts these rasters into events by stacking the entire time series into a spatial-temporal data "
                   "cube, then uses an algorithm to assign event identification numbers to pixels that fit into the "
                   "same 3-dimensional spatial temporal window. This particular dataset was created using a spatial "
-                  "parameter of {} pixels and {} days. If daily polygons are included, the event identification "
-                  "numbers are the same for both files, but the event-level product has only single polygons for each "
-                  "entire event, while the daily product has separate polygons for each date per event. See the "
-                  "associated paper for more details on the methods and more:\n".format(
-                      first_event, last_event, spatial_param, temporal_param), file=text_file)
+                  "parameter of {} pixels and {} days.{}See the associated paper for more details on the methods "\
+                  "and more:\n".format(
+                      first_event, last_event, spatial_param, temporal_param, daily_text if daily else " "),
+                  file=text_file)
         else:
             print("This is event-level polygons for the fire event delineation (FIRED) product for", *name,
                   "from {}  to {}. It is derived from the MODIS MCD64A1 burned area product (see "
-                  "https://lpdaac.usgs.gov/products/mcd64a1v006/ for more details). The MCD64A1 is a monthly raster "
-                  "grid of estimated burned dates. Firedpy (www.github.com/earthlab/src) is an algorithm that "
+                  "https://lpdaac.usgs.gov/products/mcd64a1v061/ for more details). The MCD64A1 is a monthly raster "
+                  "grid of estimated burned dates. Firedpy (https://github.com/earthlab/firedpy) is an algorithm that "
                   "converts these rasters into events by stacking the entire time series into a spatial-temporal data "
                   "cube, then uses an algorithm to assign event identification numbers to pixels that fit into the "
                   "same 3-dimensional spatial temporal window. This particular dataset was created using a spatial "
-                  "parameter of {} pixels and {} days. If daily polygons are included, the event identification "
-                  "numbers are the same for both files, but the event-level product has only single polygons for each "
-                  "entire event, while the daily product has separate polygons for each date per event. See the "
-                  "associated paper for more details on the methods and more:\n".format(
-                      first_event, last_event, spatial_param, temporal_param), file=text_file)
+                  "parameter of {} pixels and {} days.{}See the associated paper for more details on the methods and "\
+                  "more:\n".format(
+                      first_event, last_event, spatial_param, temporal_param, daily_text if daily else " "),
+                  file=text_file)
         print(
             "Balch, J.K.; St. Denis, L.A.; Mahood, A.L.; Mietkiewicz, N.P.; Williams, T.M.; McGlinchy, J.; Cook, "
             "M.C. FIRED (Fire Events Delineation): An Open, Flexible Algorithm and Database of US Fire Events Derived "
@@ -73,42 +75,42 @@ def make_read_me(out_dir, tile_name, file_base, input, first_date, last_date,
             "3498. https://doi.org/10.3390/rs12213498 \n",
             file=text_file)
         print("""-------------------\n
-GENERAL INFORMATION\n
--------------------\n
-
-
-1. Title of Dataset:  FIRED """, *name, f"""\n
-
-
-2. Authors: Jennifer K. Balch, Lise A. St. Denis, Adam L. Mahood, Nathan P.  Mietkiewicz, Travis Williams, 
-Joe McGlinchy, Maxwell C. Cook, Estelle J. Lindrooth.\n
-
-
-3. Contact information: jennifer.balch@colorado.edu; adam.mahood@colorado.edu\n
-
-
-4. Date of data collection:{first_event} - {last_event}\n
-
-
---------------------------\n
-SHARING/ACCESS INFORMATION\n
---------------------------\n
-
-
-1. Licenses/restrictions placed on the data: MIT\n
-
-
-2. Links to publications that cite or use the data: TBD\n
-
-
-3. Links to other publicly accessible locations of the data: None\n
-
-
-4. Recommended citation for the data: \n
-
-Balch, J.K.; St. Denis, L.A.; Mahood, A.L.; Mietkiewicz, N.P.; Williams, T.M.; McGlinchy, J.; Cook, M.C. FIRED (Fire 
-Events Delineation): An Open, Flexible Algorithm and Database of US Fire Events Derived from the MODIS Burned Area 
-Product (2001–2019). Remote Sens. 2020, 12, 3498. https://doi.org/10.3390/rs12213498\n """, file=text_file)
+        GENERAL INFORMATION\n
+        -------------------\n
+        
+        
+        1. Title of Dataset:  FIRED """, *name, f"""\n
+        
+        
+        2. Authors: Jennifer K. Balch, Lise A. St. Denis, Adam L. Mahood, Nathan P.  Mietkiewicz, Travis Williams, 
+        Joe McGlinchy, Maxwell C. Cook, Estelle J. Lindrooth, Erick A. Verleye.\n
+        
+        
+        3. Contact information: jennifer.balch@colorado.edu; adam.mahood@colorado.edu\n
+        
+        
+        4. Date of data collection:{first_event} - {last_event}\n
+        
+        
+        --------------------------\n
+        SHARING/ACCESS INFORMATION\n
+        --------------------------\n
+        
+        
+        1. Licenses/restrictions placed on the data: MIT\n
+        
+        
+        2. Links to publications that cite or use the data: TBD\n
+        
+        
+        3. Links to other publicly accessible locations of the data: None\n
+        
+        
+        4. Recommended citation for the data: \n
+        
+        Balch, J.K.; St. Denis, L.A.; Mahood, A.L.; Mietkiewicz, N.P.; Williams, T.M.; McGlinchy, J.; Cook, M.C. FIRED (Fire 
+        Events Delineation): An Open, Flexible Algorithm and Database of US Fire Events Derived from the MODIS Burned Area 
+        Product (2001–2019). Remote Sens. 2020, 12, 3498. https://doi.org/10.3390/rs12213498\n """, file=text_file)
 
         print("-------------------\n", file=text_file)
         print("DATA & FILE OVERVIEW\n", file=text_file)
@@ -358,3 +360,11 @@ Product (2001–2019). Remote Sens. 2020, 12, 3498. https://doi.org/10.3390/rs12
     		      i. Description: estimated ignition x coordinate  \n
     		JJJ. Name: ig_utm_y  \n
     		      i. Description: estimated ignition y coordinate """, file=text_file)
+        print(f"""
+        --------------------------\n
+        RUNTIME INFORMATION\n
+        --------------------------\n
+        Time to complete: {job_time} seconds
+        Peak memory usage: {job_memory} GB 
+        Cores used: {n_cores}
+        """, file=text_file)

@@ -25,5 +25,5 @@ class LandCoverType(enum.IntEnum):
     IGBP = 1
     UMD = 2
     MODIS_LAI = 3
-    MODIS_NPP = 4
+    MODIS_BGC = 4
     PFT = 5

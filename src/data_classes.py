@@ -3,9 +3,10 @@ import os
 import re
 import shutil
 import sys
+import warnings
 from datetime import datetime
 from glob import glob
-from typing import List, Union, Tuple
+from typing import List, Union, Tuple, Dict
 import logging
 import urllib
 from http.cookiejar import CookieJar
@@ -67,9 +68,7 @@ class Base:
         self._project_eco_region_dir = os.path.join(PROJECT_DIR, "ref", "us_eco")
         self._eco_region_shape_path = os.path.join(self._eco_region_shapefile_dir, 'NA_CEC_Eco_Level3.gpkg')
 
-        post_regex = r'\.A(?P<year>\d{4})(?P<ordinal_day>\d{3})\.h(?P<horizontal_tile>\d{2})v(?P<vertical_tile>\d{2})\.061\.(?P<prod_year>\d{4})(?P<prod_ordinal_day>\d{3})(?P<prod_hourminute>\d{4})(?P<prod_second>\d{2})\.hdf$'
-        self._burn_hdf_regex = r'MCD64A1' + post_regex
-        self._land_cover_regex = r'MCD12Q1' + post_regex
+        self._post_regex = r'\.A(?P<year>\d{4})(?P<ordinal_day>\d{3})\.h(?P<horizontal_tile>\d{2})v(?P<vertical_tile>\d{2})\.061\.(?P<prod_year>\d{4})(?P<prod_ordinal_day>\d{3})(?P<prod_hourminute>\d{4})(?P<prod_second>\d{2})\.hdf$'
         # Initialize output directory folders and files
         self._initialize_save_dirs()
         self._get_shape_files()
@@ -81,7 +80,7 @@ class Base:
             self._burn_area_dir,
             self._land_cover_dir,
             self._eco_region_raster_dir,
-           # self._eco_region_shapefile_dir,
+            # self._eco_region_shapefile_dir,
             self._tables_dir,
             self._mosaics_dir,
             self._nc_dir,
@@ -173,13 +172,18 @@ class Base:
         return os.path.join(self._nc_dir, f"{tile}.nc")
 
 
-class BurnData(Base):
-    def __init__(self, out_dir: str, n_cores: int = None):
+class LPDAAC(Base):
+    def __init__(self, out_dir: str):
         super().__init__(out_dir)
-        self._base_sftp_folder = os.path.join('data', 'MODIS', 'C61', 'MCD64A1', 'HDF')
-        self._modis_template_path = os.path.join(out_dir, 'rasters', 'mosaic_template.tif')
-        self._record_start_year = 2000
-        self._parallel_cores = n_cores if n_cores is not None else os.cpu_count() - 1
+        self._lp_daac_url = None
+        self._date_regex = r'(?P<year>\d{4})\.(?P<month>\d{2})\.(?P<day>\d{2})\/'
+        self._parallel_cores = None
+        self._username = None
+        self._password = None
+        self._file_regex = None
+
+    def _generate_local_hdf_path(self, year: str, remote_name: str) -> str:
+        pass
 
     @staticmethod
     def _verify_hdf_file(file_path) -> bool:
@@ -199,50 +203,136 @@ class BurnData(Base):
 
         return True
 
+    def _download_task(self, request: Tuple[str, str]):
+        link = request[0]
+        dest = request[1]
+
+        print(link, dest)
+
+        if os.path.exists(dest):
+            return
+
+        pm = urllib.request.HTTPPasswordMgrWithDefaultRealm()
+        pm.add_password(None, "https://urs.earthdata.nasa.gov", self._username, self._password)
+        cookie_jar = CookieJar()
+        opener = urllib.request.build_opener(
+            urllib.request.HTTPBasicAuthHandler(pm),
+            urllib.request.HTTPCookieProcessor(cookie_jar)
+        )
+        urllib.request.install_opener(opener)
+        myrequest = urllib.request.Request(link)
+        response = urllib.request.urlopen(myrequest)
+        response.begin()
+        with open(dest, 'wb') as fd:
+            while True:
+                chunk = response.read()
+                if chunk:
+                    fd.write(chunk)
+                else:
+                    break
+
+    @staticmethod
+    def get_all_available_tiles() -> List[str]:
+        with paramiko.SSHClient() as ssh_client:
+            ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh_client.connect(hostname="fuoco.geog.umd.edu",
+                               username="fire", password="burnt")
+            print("Connected to 'fuoco.geog.umd.edu' ...")
+            # Open the connection to the SFTP
+            with ssh_client.open_sftp() as sftp_client:
+                sftp_client.chdir('/data/MODIS/C61/MCD64A1/HDF')
+                return sftp_client.listdir()
+
+    def _download_files(self, download_requests):
+        try:
+            with Pool(self._parallel_cores - 1) as pool:
+                for _ in tqdm(pool.imap_unordered(self._download_task, download_requests),
+                              total=len(download_requests)):
+                    pass
+
+        except Exception as pe:
+            try:
+                _ = [self._download_task(q) for q in tqdm(download_requests, position=0, file=sys.stdout)]
+            except Exception as e:
+                template = "Download failed: error type {0}:\n{1!r}"
+                message = template.format(type(e).__name__, e.args)
+                print(message)
+
+    def _get_available_year_paths(self, start_year: int = None, end_year: int = None) -> List[str]:
+        # Get available years
+        request = requests.get(self._lp_daac_url)
+        soup = BeautifulSoup(request.text, 'html.parser')
+        year_paths = []
+        for link in [link["href"] for link in soup.find_all("a", href=True)]:
+            match = re.match(self._date_regex, link)
+            if match is not None:
+                file_year = int(match.groupdict().get('year'))
+                if (start_year is None or file_year >= start_year) and (
+                        end_year is None or file_year <= end_year):
+                    year_paths.append(link)
+
+        return year_paths
+
+    def _generate_tile(self, regex_group_dict: Dict[str, str]):
+        return f"h{regex_group_dict['horizontal_tile']}v{regex_group_dict['vertical_tile']}"
+
+    def _get_available_files(self, year_path: str, tiles: List[str] = None):
+        request = requests.get(urllib.parse.urljoin(self._lp_daac_url, year_path))
+        soup = BeautifulSoup(request.text, 'html.parser')
+        files = []
+        for link in [link["href"] for link in soup.find_all("a", href=True)]:
+            match = re.match(self._file_regex, link)
+            if match is not None:
+                if tiles is not None:
+                    group_dict = match.groupdict()
+                    tile = self._generate_tile(group_dict)
+                    if tile not in tiles:
+                        continue
+
+                files.append(link)
+
+        return files
+
+
+class BurnData(LPDAAC):
+    def __init__(self, out_dir: str, username: str, password: str, n_cores: int = None):
+        super().__init__(out_dir)
+        self._lp_daac_url = 'https://e4ftl01.cr.usgs.gov/MOTA/MCD64A1.061/'
+        self._base_sftp_folder = os.path.join('data', 'MODIS', 'C61', 'MCD64A1', 'HDF')
+        self._modis_template_path = os.path.join(out_dir, 'rasters', 'mosaic_template.tif')
+        self._record_start_year = 2000
+        self._parallel_cores = n_cores if n_cores is not None else os.cpu_count() - 1
+        self._file_regex = r'MCD64A1' + self._post_regex
+        self._username = username
+        self._password = password
+
+    def _generate_local_hdf_dir(self, tile: str) -> str:
+        return os.path.join(self.hdf_dir, tile)
+
     def _generate_local_hdf_path(self, tile: str, hdf_name: str) -> str:
         return os.path.join(self.hdf_dir, tile, hdf_name)
 
-    def _generate_remote_hdf_path(self, tile: str, hdf_name: str) -> str:
-        return os.path.join(self._base_sftp_folder, tile, hdf_name)
+    def _create_requests(self, available_year_paths: List[str], tiles: List[str]):
+        download_requests = []
+        for year_path in available_year_paths:
 
-    def _generate_remote_hdf_dir(self, tile: str) -> str:
-        return os.path.join(self._base_sftp_folder, tile)
+            available_files = self._get_available_files(year_path, tiles=tiles)
+            for file in available_files:
+                match = re.match(self._file_regex, file)
+                tile = self._generate_tile(match.groupdict())
+                local_file_path = self._generate_local_hdf_path(tile, file)
+                os.makedirs(os.path.dirname(local_file_path), exist_ok=True)
+                if os.path.exists(local_file_path):
+                    if not self._verify_hdf_file(local_file_path):
+                        print('Removing', local_file_path)
+                        os.remove(local_file_path)
+                    else:
+                        continue
+                download_requests.append(
+                    (urllib.parse.urljoin(urllib.parse.urljoin(self._lp_daac_url, year_path), file), local_file_path)
+                )
 
-    def _download_files(self, file_request: Tuple[List[str], str, int], max_retries: int = 3) -> None:
-        ssh_client = paramiko.SSHClient()
-        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh_client.connect(hostname="fuoco.geog.umd.edu", username="fire", password="burnt")
-        sftp_client = ssh_client.open_sftp()
-        hdfs, tile, position = file_request
-
-        attempt = 0
-        retries = hdfs.copy()
-        while attempt < max_retries and retries:
-            next_retries = []
-            for hdf_file in tqdm(retries, position=position):
-                remote_path = self._generate_remote_hdf_path(tile, hdf_file)
-                local_path = self._generate_local_hdf_path(tile, hdf_file)
-                if os.path.exists(local_path):
-                    continue
-                os.makedirs(os.path.dirname(local_path), exist_ok=True)
-                try:
-                    sftp_client.get(remote_path, local_path)
-                    if not self._verify_hdf_file(local_path):
-                        next_retries.append(hdf_file)
-                except Exception as e:
-                    next_retries.append(hdf_file)
-
-            retries = next_retries
-            attempt += 1
-
-            print(attempt, max_retries)
-
-        if attempt == max_retries and retries:
-            raise IOError(f'Error downloading burn data: max retries exceeded ({max_retries}). Files not downloaded or '
-                          f'not able to open: {retries}')
-
-        ssh_client.close()
-        sftp_client.close()
+        return download_requests
 
     def get_burns(self, tiles: List[str], start_year: int = None, end_year: int = None):
         """
@@ -264,44 +354,11 @@ class BurnData(Base):
 
         """
         # Check into the UMD SFTP fuoco server using Paramiko
-        year_range = np.arange(start_year if start_year is not None else self._record_start_year,
-                               end_year if end_year is not None else datetime.now().year + 1, 1)
+        print('Finding available files...')
+        available_year_paths = self._get_available_year_paths(start_year=start_year, end_year=end_year)
+        download_requests = self._create_requests(available_year_paths, tiles)
 
-        ssh_client = paramiko.SSHClient()
-        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh_client.connect(hostname="fuoco.geog.umd.edu", username="fire", password="burnt")
-        sftp_client = ssh_client.open_sftp()
-
-        # Open the connection to the SFTP
-        for tile in tiles:
-            nc_file = self._generate_local_nc_path(tile)
-
-            if os.path.exists(nc_file):
-                continue
-
-            print(f"Downloading/Checking HDF files for: {tile}")
-            hdf_files = []
-            for hdf_file in sftp_client.listdir(self._generate_remote_hdf_dir(tile)):
-                match = re.match(self._burn_hdf_regex, hdf_file)
-                if match is not None and int(match.groupdict()['year']) in year_range:
-                    hdf_files.append(hdf_file)
-            hdf_batches = [(list(b), tile, i) for i, b in enumerate(np.array_split(hdf_files, self._parallel_cores))]
-            if not hdf_files:
-                print(f"No MCD64A1 Product for tile: {tile}, skipping...")
-
-            # for batch in hdf_batches:
-            #     self._download_files(batch)
-
-            with Pool(self._parallel_cores) as pool:
-                for _ in pool.imap_unordered(self._download_files, hdf_batches):
-                    pass
-
-        if not os.path.exists(self._modis_template_path):
-            self._write_modis_template_file()
-
-        ssh_client.close()
-        sftp_client.close()
-
+        self._download_files(download_requests)
         self._write_ncs(tiles)
 
     def _write_modis_template_file(self):
@@ -326,7 +383,7 @@ class BurnData(Base):
 
     def _extract_date_parts(self, filename):
         filename = os.path.basename(filename)
-        match = re.match(self._burn_hdf_regex, filename)
+        match = re.match(self._file_regex, filename)
         if match:
             return int(match.groupdict()['year']), int(match.groupdict()['ordinal_day'])
         return None
@@ -347,6 +404,10 @@ class BurnData(Base):
         fill_value = -9999
         for tile_id in tiles:
             try:
+                nc_file_name = self._generate_local_nc_path(tile_id)
+                if os.path.exists(nc_file_name):
+                    continue
+
                 hdf_dir = self._generate_local_burn_hdf_dir(tile_id)
 
                 files = sorted([os.path.join(hdf_dir, f) for f in os.listdir(hdf_dir) if self._extract_date_parts(f)
@@ -354,8 +415,6 @@ class BurnData(Base):
 
                 if not files:
                     print(f'No hdf files for tile {tile_id} in {hdf_dir}')
-
-                nc_file_name = self._generate_local_nc_path(tile_id)
 
                 # Skip if it exists already
                 if os.path.exists(nc_file_name):
@@ -450,7 +509,7 @@ class BurnData(Base):
 
                     # One file a time, write the arrays
                     for tile_index, f in tqdm(enumerate(files), position=0, file=sys.stdout):
-                        match = re.match(self._burn_hdf_regex, os.path.basename(f))
+                        match = re.match(self._file_regex, os.path.basename(f))
                         if match is None:
                             continue
 
@@ -486,63 +545,34 @@ class BurnData(Base):
                 # Log the error and move on to the next tile
                 logging.error(f"Error processing tile {tile_id}: {str(e)}")
 
+    @staticmethod
+    def _verify_hdf_file(file_path) -> bool:
+        # Open the HDF file
+        hdf_ds = gdal.Open(file_path)
 
-class LandCover(Base):
-    def __init__(self, out_dir: str, n_cores: int = None):
+        if hdf_ds is None:
+            print(f"Failed to open {file_path}.")
+            return False
+
+        # List available sub-datasets (specific to HDF)
+        sub_datasets = hdf_ds.GetSubDatasets()
+
+        if not sub_datasets:
+            print("No sub-datasets found.")
+            return False
+
+        return True
+
+
+class LandCover(LPDAAC):
+    def __init__(self, out_dir: str, n_cores: int = None, username: str = None, password: str = None):
         super().__init__(out_dir)
         self._lp_daac_url = 'https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.061/'
         self._date_regex = r'(?P<year>\d{4})\.(?P<month>\d{2})\.(?P<day>\d{2})\/'
         self._parallel_cores = n_cores if n_cores is not None else os.cpu_count() - 1
-
-    @staticmethod
-    def get_all_available_tiles() -> List[str]:
-        with paramiko.SSHClient() as ssh_client:
-            ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh_client.connect(hostname="fuoco.geog.umd.edu",
-                               username="fire", password="burnt")
-            print("Connected to 'fuoco.geog.umd.edu' ...")
-            # Open the connection to the SFTP
-            with ssh_client.open_sftp() as sftp_client:
-                sftp_client.chdir('/data/MODIS/C61/MCD64A1/HDF')
-                return sftp_client.listdir()
-
-    @staticmethod
-    def _is_file_valid(in_file: str) -> bool:
-        try:
-            rasterio.open(in_file, 'w+', driver='HDF4Image')
-            return True
-        except Exception as _:
-            return False
-
-    def _get_available_year_paths(self) -> List[str]:
-        # Get available years
-        request = requests.get(self._lp_daac_url)
-        soup = BeautifulSoup(request.text, 'html.parser')
-        year_paths = []
-        for link in [link["href"] for link in soup.find_all("a", href=True)]:
-            match = re.match(self._date_regex, link)
-            if match is not None:
-                year_paths.append(link)
-
-        return year_paths
-
-    def _get_available_files(self, year_path: str, tiles: List[str] = None):
-        request = requests.get(urllib.parse.urljoin(self._lp_daac_url, year_path))
-        soup = BeautifulSoup(request.text, 'html.parser')
-        files = []
-        for link in [link["href"] for link in soup.find_all("a", href=True)]:
-            match = re.match(self._land_cover_regex, link)
-            if match is not None:
-
-                if tiles is not None:
-                    group_dict = match.groupdict()
-                    tile = f"h{group_dict['horizontal_tile']}v{group_dict['vertical_tile']}"
-                    if tile not in tiles:
-                        continue
-
-                files.append(link)
-
-        return files
+        self._username = username
+        self._password = password
+        self._file_regex = r'MCD12Q1' + self._post_regex
 
     def _generate_local_hdf_path(self, year: str, remote_name: str) -> str:
         return os.path.join(self._land_cover_dir, year, remote_name)
@@ -550,61 +580,41 @@ class LandCover(Base):
     def _generate_local_hdf_dir(self, year: str) -> str:
         return os.path.join(self._land_cover_dir, year)
 
-    def _download_task(self, request: Tuple[str, str]):
-        link = request[0]
-        dest = request[1]
+    def _create_requests(self, available_year_paths: List[str], tiles: List[str]):
+        download_requests = []
+        for year_path in available_year_paths:
+            year = re.match(self._date_regex, year_path).groupdict()['year']
 
-        if os.path.exists(dest):
-            return
+            available_files = self._get_available_files(year_path, tiles=tiles)
+            for file in available_files:
+                local_file_path = self._generate_local_hdf_path(year, file)
+                os.makedirs(os.path.dirname(local_file_path), exist_ok=True)
+                if os.path.exists(local_file_path):
+                    if not self._verify_hdf_file(local_file_path):
+                        print('Removing', local_file_path)
+                        os.remove(local_file_path)
+                    else:
+                        continue
+                download_requests.append(
+                    (urllib.parse.urljoin(urllib.parse.urljoin(self._lp_daac_url, year_path), file), local_file_path)
+                )
 
-        pm = urllib.request.HTTPPasswordMgrWithDefaultRealm()
-        pm.add_password(None, "https://urs.earthdata.nasa.gov", self._username, self._password)
-        cookie_jar = CookieJar()
-        opener = urllib.request.build_opener(
-            urllib.request.HTTPBasicAuthHandler(pm),
-            urllib.request.HTTPCookieProcessor(cookie_jar)
-        )
-        urllib.request.install_opener(opener)
-        myrequest = urllib.request.Request(link)
-        response = urllib.request.urlopen(myrequest)
-        response.begin()
-        with open(dest, 'wb') as fd:
-            while True:
-                chunk = response.read()
-                if chunk:
-                    fd.write(chunk)
-                else:
-                    break
-
-    def _download_files(self, download_requests):
-        try:
-            with Pool(self._parallel_cores - 1) as pool:
-                for _ in tqdm(pool.imap_unordered(self._download_task, download_requests),
-                              total=len(download_requests)):
-                    pass
-
-        except Exception as pe:
-            try:
-                _ = [self._download_task(q) for q in tqdm(download_requests, position=0, file=sys.stdout)]
-            except Exception as e:
-                template = "Download failed: error type {0}:\n{1!r}"
-                message = template.format(type(e).__name__, e.args)
-                print(message)
+        return download_requests
 
     def _create_annual_mosaic(self, year: str, land_cover_type: LandCoverType = LandCoverType.IGBP):
         output_file = f"lc_mosaic_{land_cover_type.value}_{year}.tif"
         if os.path.exists(output_file):
-            return
+            os.remove(output_file)
 
         # Filter available files for the requested tiles
         lc_files = [self._generate_local_hdf_path(year, f) for f in os.listdir(self._generate_local_hdf_dir(year))
-                    if re.match(self._land_cover_regex, f) is not None]
+                    if re.match(self._file_regex, os.path.basename(f)) is not None]
 
         # Use the sub-dataset name to get the right land cover type
         datasets = []
         for lc_file_path in lc_files:
             with rasterio.open(lc_file_path) as lc_file:
-                datasets.append([sd for sd in lc_file.subdatasets if land_cover_type.value in sd.lower()][0])
+                datasets.append([sd for sd in lc_file.subdatasets if str(land_cover_type.value) in sd.lower()][0])
 
         # Create pointers to the chosen land cover type
         tiles = [rasterio.open(ds) for ds in datasets]
@@ -646,23 +656,9 @@ class LandCover(Base):
         if tiles is None:
             tiles = self.get_all_available_tiles()
 
+        print('Finding available files...')
         available_year_paths = self._get_available_year_paths()
-
-        download_requests = []
-        for year_path in available_year_paths:
-            year = re.match(self._date_regex, year_path).groupdict()['year']
-
-            available_files = self._get_available_files(year_path, tiles=tiles)
-            for file in available_files:
-                local_file_path = self._generate_local_hdf_path(year, file)
-                if os.path.exists(local_file_path):
-                    if not self._is_file_valid(local_file_path):
-                        os.remove(local_file_path)
-                    else:
-                        continue
-                download_requests.append(
-                    (urllib.parse.urljoin(urllib.parse.urljoin(self._lp_daac_url, year_path), file), local_file_path)
-                )
+        download_requests = self._create_requests(available_year_paths, tiles)
 
         self._download_files(download_requests)
 
@@ -685,6 +681,7 @@ class EcoRegion(Base):
         self._ref_cols = ['NA_L3CODE', 'NA_L3NAME', 'NA_L2CODE', 'NA_L2NAME', 'NA_L1CODE', 'NA_L1NAME', 'NA_L3KEY',
                           'NA_L2KEY', 'NA_L1KEY']
         self.eco_region_data_frame: Union[None, gpd.GeoDataFrame] = None
+        self._file_regex = r'MCD64A1' + self._post_regex
 
     @staticmethod
     def _normalize_string(string) -> str:
@@ -775,7 +772,7 @@ class EcoRegion(Base):
                                         f'to download this data before rasterizing the eco region file')
 
             file = [os.path.join(burn_dir, f) for f in glob(os.path.join(burn_dir, "*")) if
-                    re.match(self._burn_hdf_regex, os.path.basename(f)) is not None][0]
+                    re.match(self._file_regex, os.path.basename(f)) is not None][0]
             file_pointer = gdal.Open(file)
             dataset_pointer = file_pointer.GetSubDatasets()[0][0]
             ds = gdal.Open(dataset_pointer)
