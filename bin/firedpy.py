@@ -98,13 +98,15 @@ def main():
                                  "h08v06", "h09v06", "h10v06", "h11v06"],
                         help=TILE_HELP)
     parser.add_argument("--tile_choice", type=TileChoice, help='')
+    parser.add_argument('--tile_name', type=str, help='The name of the tile you would like to choose based'
+                                                      ' on your tile choice')
     parser.add_argument("--daily", type=str, help=DAILY_HELP)
     parser.add_argument("-start_year", type=int, help=START_YR)
     parser.add_argument("-end_year", type=int, help=END_YR)
     parser.add_argument("--full_csv", type=str, help=FULL_CSV)
     parser.add_argument('--n_cores', type=int, help='Number of cores to use for parallel processing.')
     parser.add_argument('--cleanup', type=str,
-                        help='If set then the burn area and landcover files will be removed after each run to save '\
+                        help='If set then the burn area and landcover files will be removed after each run to save ' \
                              ' disk space in between multiple runs')
     args = parser.parse_args()
 
@@ -127,7 +129,8 @@ def main():
 
     if tile_choice == TileChoice.A:
         tile_name = get_tile_name_from_directory(firedpy_parser, os.path.join(PROJECT_DIR, 'ref', 'continents'),
-                                                 "Please enter the continent name:")
+                                                 "Please enter the continent name:") if args.tile_name \
+                                                                                       is None else args.tile_name
         shape_file = os.path.join("ref", "continents", tile_name + ".gpkg")
         print(f"Filtering for MODIS tiles that intersect \n  {shape_file}")
         tiles = shape_to_tiles(shape_file)
@@ -137,7 +140,8 @@ def main():
     elif tile_choice == TileChoice.B:
         tile_name = get_tile_name_from_directory(firedpy_parser,
                                                  os.path.join(PROJECT_DIR, 'ref', 'individual_countries'),
-                                                 "Please enter the country name:")
+                                                 "Please enter the country name:") if args.tile_name \
+                                                                                       is None else args.tile_name
         shape_file = os.path.join('ref', 'individual_countries', tile_name + ".gpkg")
         print(f"Filtering for MODIS tiles that intersect \n  {shape_file}")
         tiles = shape_to_tiles(shape_file)
@@ -146,7 +150,8 @@ def main():
 
     elif tile_choice == TileChoice.C:
         tile_name = get_tile_name_from_directory(firedpy_parser, os.path.join(PROJECT_DIR, 'ref', 'us_states'),
-                                                 "Please enter the state name:")
+                                                 "Please enter the state name:") if args.tile_name \
+                                                                                       is None else args.tile_name
         shape_file = os.path.join('ref', 'us_states', tile_name + ".gpkg")
         print(f"Filtering for MODIS tiles that intersect \n  {shape_file}")
         tiles = shape_to_tiles(shape_file)
@@ -156,7 +161,7 @@ def main():
         tiles = firedpy_parser.prompt_for_argument(
             arg_name='tile_name',
             prompt_override="Please enter tiles as a list of characters (no quotes no spaces)(e.g., h08v04 h09v04 " \
-                            "...):").split(' ')
+                            "...):").split(' ') if args.tile_name is None else args.tile_name
         tile_name = tiles[0]
         eco_region_type = firedpy_parser.prompt_for_argument('eco_region_type')
         eco_region_level = 3 if eco_region_type == EcoRegionType.NA else None
@@ -169,7 +174,8 @@ def main():
         args.spatial_param
     temporal_param = firedpy_parser.prompt_for_argument('temporal_param') if args.temporal_param is None else \
         args.temporal_param
-    shape_type = ShapeType(firedpy_parser.prompt_for_argument('shape_type')) if args.shape_type is None else args.shape_type
+    shape_type = ShapeType(
+        firedpy_parser.prompt_for_argument('shape_type')) if args.shape_type is None else args.shape_type
     shapefile = shape_type != ShapeType.NONE
 
     # Resolve land cover type
