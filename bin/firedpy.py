@@ -86,7 +86,7 @@ def main():
     parser.add_argument("-file_name", dest="file_name", default="fired", type=str, help=FILE_HELP)
     parser.add_argument("-eco_region_type", type=EcoRegionType, help=ECO_HELP)
     parser.add_argument("-eco_region_level", type=int, help=ECO_HELP)
-    parser.add_argument("-land_cover_type", help=LC_HELP, type=LandCoverType)
+    parser.add_argument("-land_cover_type", help=LC_HELP, type=int)
     parser.add_argument("-shape_type", help=SHP_HELP, type=ShapeType)
     parser.add_argument("-spatial", dest="spatial_param", default=5, type=int, help=SP_HELP)
     parser.add_argument("-temporal", dest="temporal_param", default=11, type=int, help=TMP_HELP)
@@ -130,7 +130,7 @@ def main():
     if tile_choice == TileChoice.A:
         tile_name = get_tile_name_from_directory(firedpy_parser, os.path.join(PROJECT_DIR, 'ref', 'continents'),
                                                  "Please enter the continent name:") if args.tile_name \
-                                                                                       is None else args.tile_name
+                                                                                        is None else args.tile_name
         shape_file = os.path.join("ref", "continents", tile_name + ".gpkg")
         print(f"Filtering for MODIS tiles that intersect \n  {shape_file}")
         tiles = shape_to_tiles(shape_file)
@@ -141,7 +141,7 @@ def main():
         tile_name = get_tile_name_from_directory(firedpy_parser,
                                                  os.path.join(PROJECT_DIR, 'ref', 'individual_countries'),
                                                  "Please enter the country name:") if args.tile_name \
-                                                                                       is None else args.tile_name
+                                                                                      is None else args.tile_name
         shape_file = os.path.join('ref', 'individual_countries', tile_name + ".gpkg")
         print(f"Filtering for MODIS tiles that intersect \n  {shape_file}")
         tiles = shape_to_tiles(shape_file)
@@ -151,7 +151,7 @@ def main():
     elif tile_choice == TileChoice.C:
         tile_name = get_tile_name_from_directory(firedpy_parser, os.path.join(PROJECT_DIR, 'ref', 'us_states'),
                                                  "Please enter the state name:") if args.tile_name \
-                                                                                       is None else args.tile_name
+                                                                                    is None else args.tile_name
         shape_file = os.path.join('ref', 'us_states', tile_name + ".gpkg")
         print(f"Filtering for MODIS tiles that intersect \n  {shape_file}")
         tiles = shape_to_tiles(shape_file)
@@ -180,7 +180,8 @@ def main():
 
     # Resolve land cover type
     land_cover_type = (LandCoverType(firedpy_parser.prompt_for_argument('land_cover_type')) if args.land_cover_type is
-                                                                                               None else args.land_cover_type)
+                                                                                               None else
+                       LandCoverType(args.land_cover_type))
 
     cleanup = str_to_bool(args.cleanup) if args.cleanup is not None else firedpy_parser.prompt_for_argument('cleanup')
 
