@@ -14,16 +14,15 @@ if __name__ == '__main__':
                 os.path.join(PROJECT_DIR, 'bin', 'firedpy.py'),
                 "--full_csv", "n",
                 "--n_cores", "1",
-                "--tile_choice", "B",
+                "--tile_choice", "b",
                 "--tile_name", country,
                 "--daily", "y",
-                "--spatial_param", "5",
-                "--temporal_param", "11",
-                "--shape_type", "both",
-                "--land_cover_type", "1",
+                "-spatial", "5",
+                "-temporal", "11",
+                "-shape_type", "both",
+                "-land_cover_type", "1",
                 "--cleanup", "y",
-                "--start_year", "0",
-                "--end_year", "0"
-            ],
-                shell=True)  # Adjust shell=True if needed
+                "-start_year", "0",
+                "-end_year", "0"
+            ])  # Adjust shell=True if needed
             return_code = process.wait()  # Wait for process completion
