@@ -20,7 +20,7 @@ if __name__ == '__main__':
                 "-spatial", "5",
                 "-temporal", "11",
                 "-shape_type", "both",
-                "-land_cover_type", "1",
+                "-land_cover_type", "IGBP",
                 "--cleanup", "y",
                 "-start_year", "0",
                 "-end_year", "0"
