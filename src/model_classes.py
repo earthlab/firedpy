@@ -437,43 +437,37 @@ class ModelBuilder(Base):
 
     def group_by_x(self, events) -> List[List[EventPerimeter]]:
         events_sorted_by_x = sorted(events, key=lambda event: event.min_x)
+
+        for event in events_sorted_by_x:
+            print(f'{event.event_id} {event.min_x} {event.max_x}')
+
         x_groups = [[events_sorted_by_x[0]]]
+        last_group_max_x = x_groups[-1][-1].max_x
 
         for event in events_sorted_by_x[1:]:
-            if event.min_x <= x_groups[-1][-1].max_x + self.sp_buf:  # Overlaps in x with the last group
+            if event.min_x <= last_group_max_x + self.sp_buf:  # Overlaps in x with the last group
                 x_groups[-1].append(event)
+                last_group_max_x = max(last_group_max_x, event.max_x)
             else:
                 x_groups.append([event])
+                last_group_max_x = event.max_x
 
         return x_groups
-
-    def group_by_t(self, events) -> List[List[EventPerimeter]]:
-        t_groups = []
-        for group in events:
-            group_sorted_by_t = sorted(group, key=lambda event: event.min_t)
-            t_group = [[group_sorted_by_t[0]]]
-
-            for event in group_sorted_by_t[1:]:
-                if event.min_t <= t_group[-1][-1].max_t + self.temporal_param:  # Overlaps in y with the last group
-                    t_group[-1].append(event)
-                else:
-                    t_group.append([event])
-
-            t_groups.extend(t_group)
-
-        return t_groups
 
     def group_by_y(self, x_groups) -> List[List[EventPerimeter]]:
         y_groups = []
         for group in x_groups:
             group_sorted_by_y = sorted(group, key=lambda event: event.max_y)
             y_group = [[group_sorted_by_y[0]]]
+            last_group_min_y = y_group[-1][-1].min_y
 
             for event in group_sorted_by_y[1:]:
-                if event.max_y >= y_group[-1][-1].min_y - self.sp_buf:  # Overlaps in y with the last group
+                if event.max_y >= last_group_min_y - self.sp_buf:  # Overlaps in y with the last group
                     y_group[-1].append(event)
+                    last_group_min_y = min(last_group_min_y, event.min_y)
                 else:
                     y_group.append([event])
+                    last_group_min_y = event.min_y
 
             y_groups.extend(y_group)
 
@@ -535,7 +529,21 @@ class ModelBuilder(Base):
         if not edge_events:
             return []
 
-        groups = self.group_by_t(self.group_by_y(self.group_by_x(edge_events)))
+        #edge_events = [e for e in edge_events if e.event_id in [2646, 6441]]
+
+        for e in edge_events:
+            if e.event_id == 2646:
+                print('2646')
+                print(e.min_x, e.max_x, e.min_y, e.min_y)
+            if e.event_id == 6441:
+                print('6441')
+                print(e.min_x, e.max_x, e.min_y, e.min_y)
+
+        groups = self.group_by_y(self.group_by_x(edge_events))
+        #groups = self.group_by_x(edge_events)
+
+        for group in groups:
+            print([g.event_id for g in group])
 
         merged_events = []
         for i, spatial_group in enumerate(groups):
@@ -572,6 +580,10 @@ class ModelBuilder(Base):
             for result in results:
                 fire_events.extend(result)
 
+        # for i, file in enumerate(sorted(self.files)):
+        #     results = _process_file_perimeter((i, file, self._out_dir, self.temporal_param, self.spatial_param))
+        #     fire_events.extend(results)
+
         for i in range(len(fire_events)):
             fire_events[i].event_id = i
 
@@ -579,6 +591,10 @@ class ModelBuilder(Base):
         edge_events = [e for e in fire_events if e.is_edge]
         for edge_event in edge_events:
             edge_event.compute_min_max()
+
+        # for edge_event in edge_events:
+        #     if edge_event.event_id in [11414, 11426]:
+        #         print(edge_event)
 
         merged_edges = self.merge_fire_edge_events(edge_events)
 
@@ -698,13 +714,15 @@ class ModelBuilder(Base):
         lc_files = {lc_years[i]: lc_files[i] for i in range(len(lc_files))}
 
         print(lc_years)
+        print(lc_files)
 
         # Rasterio point querier (will only work here)
         def point_query(row):
             x = row['x']
             y = row['y']
+
             try:
-                val = int([val for val in lc.sample([(x, y)])][0])
+                val = int([val for val in lc.sample([(y, x)])][0])
             except Exception:
                 val = np.nan
             return val
