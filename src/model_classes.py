@@ -158,7 +158,6 @@ class EventPerimeter:
         return self.event_id == other.event_id
 
     def __hash__(self):
-        # Hash the tuple of attributes that you're using for equality
         return hash(self.event_id)
 
 
@@ -438,9 +437,6 @@ class ModelBuilder(Base):
     def group_by_x(self, events) -> List[List[EventPerimeter]]:
         events_sorted_by_x = sorted(events, key=lambda event: event.min_x)
 
-        for event in events_sorted_by_x:
-            print(f'{event.event_id} {event.min_x} {event.max_x}')
-
         x_groups = [[events_sorted_by_x[0]]]
         last_group_max_x = x_groups[-1][-1].max_x
 
@@ -529,21 +525,7 @@ class ModelBuilder(Base):
         if not edge_events:
             return []
 
-        #edge_events = [e for e in edge_events if e.event_id in [2646, 6441]]
-
-        for e in edge_events:
-            if e.event_id == 2646:
-                print('2646')
-                print(e.min_x, e.max_x, e.min_y, e.min_y)
-            if e.event_id == 6441:
-                print('6441')
-                print(e.min_x, e.max_x, e.min_y, e.min_y)
-
         groups = self.group_by_y(self.group_by_x(edge_events))
-        #groups = self.group_by_x(edge_events)
-
-        for group in groups:
-            print([g.event_id for g in group])
 
         merged_events = []
         for i, spatial_group in enumerate(groups):
@@ -580,10 +562,6 @@ class ModelBuilder(Base):
             for result in results:
                 fire_events.extend(result)
 
-        # for i, file in enumerate(sorted(self.files)):
-        #     results = _process_file_perimeter((i, file, self._out_dir, self.temporal_param, self.spatial_param))
-        #     fire_events.extend(results)
-
         for i in range(len(fire_events)):
             fire_events[i].event_id = i
 
@@ -591,10 +569,6 @@ class ModelBuilder(Base):
         edge_events = [e for e in fire_events if e.is_edge]
         for edge_event in edge_events:
             edge_event.compute_min_max()
-
-        # for edge_event in edge_events:
-        #     if edge_event.event_id in [11414, 11426]:
-        #         print(edge_event)
 
         merged_edges = self.merge_fire_edge_events(edge_events)
 
@@ -712,9 +686,6 @@ class ModelBuilder(Base):
                            for f in os.listdir(self._mosaics_dir) if re.match(self._lc_mosaic_re, f)])
         lc_years = [int(re.match(self._lc_mosaic_re, os.path.basename(f)).groupdict()['year']) for f in lc_files]
         lc_files = {lc_years[i]: lc_files[i] for i in range(len(lc_files))}
-
-        print(lc_years)
-        print(lc_files)
 
         # Rasterio point querier (will only work here)
         def point_query(row):
@@ -863,7 +834,9 @@ class ModelBuilder(Base):
 
         self.save_data(gdfd, daily_shp_path, daily_gpkg_path, output_csv_path)
 
-        gdf = gdfd.drop(['did', 'pixels', 'date', 'event_day', 'dy_ar_km2'], axis=1)
+        gdf = gdfd.drop(['did', 'pixels',
+                         #'date',
+                         'event_day', 'dy_ar_km2'], axis=1)
         gdf = gdf.dissolve(by="id", as_index=False)
         print("Calculating perimeter lengths...")
         gdf["tot_perim"] = gdf["geometry"].length

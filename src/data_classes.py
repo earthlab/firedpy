@@ -388,12 +388,13 @@ class BurnData(LPDAAC):
             return int(match.groupdict()['year']), int(match.groupdict()['ordinal_day'])
         return None
 
-    def get_date_range(self) -> List[Tuple[int, int]]:
+    def get_date_range(self, start_year: int = None, end_year: int = None) -> List[Tuple[int, int]]:
         dates = [
             self._extract_date_parts(f) for f in glob(os.path.join(self.hdf_dir, '**', '*'), recursive=True)
         ]
 
-        return sorted([d for d in dates if d is not None])
+        return sorted([d for d in dates if d is not None and (start_year is None or d[0] >= start_year) and (
+                end_year is None or d[0] <= end_year)])
 
     def _write_ncs(self, tiles: List[str]):
         """

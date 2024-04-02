@@ -217,7 +217,6 @@ def main():
                           n_cores=n_cores)
 
     event_perimeters = models.build_events()
-    print(event_perimeters[0].event_id)
 
     # TODO: This can be parallelized
     gdf = models.build_points(event_perimeters, shape_file_path=shape_file)
