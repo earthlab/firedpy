@@ -1,4 +1,6 @@
 import gc
+import hashlib
+
 import math
 import os
 import re
@@ -822,21 +824,29 @@ class ModelBuilder(Base):
         geometry = gdf.buffer(1 + (self._res / 2))
         gdf["geometry"] = geometry
         gdf["geometry"] = gdf.envelope
-        gdf["did"] = gdf["id"].astype(str) + "-" + str(gdf["date"])
         return gdf
+
+    @staticmethod
+    def _create_did_column(df, columns):
+        """Hashes multiple columns in a DataFrame"""
+        df['temp'] = df[columns].apply(lambda row: '_'.join(row.values.astype(str)), axis=1)
+        df['did'] = df['temp'].apply(lambda x: hashlib.md5(x.encode()).hexdigest())
+        df.drop('temp', axis=1, inplace=True)  # Remove temporary column
+        return df
 
     def process_daily_data(self, gdf: gpd.GeoDataFrame, output_csv_path: str, daily_shp_path: str,
                            daily_gpkg_path: str) -> gpd.GeoDataFrame:
         print("Dissolving polygons...")
+
+        gdf = self._create_did_column(gdf, ['date', 'id'])
+
         gdfd = gdf.dissolve(by="did", as_index=False)
         print("Converting polygons to multipolygons...")
         gdfd["geometry"] = gdfd["geometry"].apply(self._as_multi_polygon)
 
         self.save_data(gdfd, daily_shp_path, daily_gpkg_path, output_csv_path)
 
-        gdf = gdfd.drop(['did', 'pixels',
-                         #'date',
-                         'event_day', 'dy_ar_km2'], axis=1)
+        gdf = gdfd.drop(['did', 'pixels', 'date', 'event_day', 'dy_ar_km2'], axis=1)
         gdf = gdf.dissolve(by="id", as_index=False)
         print("Calculating perimeter lengths...")
         gdf["tot_perim"] = gdf["geometry"].length

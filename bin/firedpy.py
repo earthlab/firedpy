@@ -88,8 +88,8 @@ def main():
     parser.add_argument("-eco_region_level", type=int, help=ECO_HELP)
     parser.add_argument("-land_cover_type", help=LC_HELP, type=int)
     parser.add_argument("-shape_type", help=SHP_HELP, type=ShapeType)
-    parser.add_argument("-spatial", dest="spatial_param", default=5, type=int, help=SP_HELP)
-    parser.add_argument("-temporal", dest="temporal_param", default=11, type=int, help=TMP_HELP)
+    parser.add_argument("-spatial", dest="spatial_param", type=int, help=SP_HELP)
+    parser.add_argument("-temporal", dest="temporal_param", type=int, help=TMP_HELP)
     parser.add_argument("-aoi", "--names-list", nargs="+", dest="tiles",
                         default=["h08v04", "h09v04", "h10v04", "h11v04",
                                  "h12v04", "h13v04", "h08v05", "h09v05",
@@ -170,9 +170,9 @@ def main():
         raise ValueError('Invalid tile choice')
 
     daily = firedpy_parser.prompt_for_argument('daily') if args.daily is None else str_to_bool(args.daily)
-    spatial_param = firedpy_parser.prompt_for_argument('spatial_param') if args.spatial_param is None else \
+    spatial_param = firedpy_parser.prompt_for_argument('spatial') if args.spatial_param is None else \
         args.spatial_param
-    temporal_param = firedpy_parser.prompt_for_argument('temporal_param') if args.temporal_param is None else \
+    temporal_param = firedpy_parser.prompt_for_argument('temporal') if args.temporal_param is None else \
         args.temporal_param
     shape_type = ShapeType(
         firedpy_parser.prompt_for_argument('shape_type')) if args.shape_type is None else args.shape_type
@@ -239,8 +239,8 @@ def main():
                     for ext in file_ext]
 
     # Build the polygons
-    date_range = burn_data.get_date_range()
-    base_file_name = f"fired_{tile_name}_to_{date_range[-1][0]}_{date_range[-1][1]}"
+    date_range = burn_data.get_date_range(start_year=start_year, end_year=end_year)
+    base_file_name = f"fired_{tile_name}_{date_range[0][0]}_to_{date_range[-1][0]}"
     daily_base = f"{base_file_name}_daily"
     event_base = f"{base_file_name}_events"
 
@@ -252,7 +252,7 @@ def main():
         os.makedirs(os.path.dirname(daily_shape_path), exist_ok=True)
         if daily_gpkg_path is not None:
             os.makedirs(os.path.dirname(daily_gpkg_path), exist_ok=True)
-        gdf = models.process_daily_data(gdf, csv_path, daily_shape_path, daily_gpkg_path)
+        gdf = models.process_daily_data(gdf, csv_path.replace('.csv', '_daily.csv'), daily_shape_path, daily_gpkg_path)
     else:
         gdf = models.process_event_data(gdf)
 
