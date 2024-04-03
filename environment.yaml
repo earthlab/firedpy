@@ -1,24 +1,20 @@
-name: src
+name: firedpy  # Replace with your desired environment name
 channels:
-  - defaults
+  - default
+  - conda-forge  # Use the conda-forge channel for some packages
 dependencies:
-  - beautifulsoup4
-  - dask
-  - descartes
   - gdal
   - geopandas
-  - fiona
-  - lxml
-  - matplotlib
-  - netcdf4
-  - numpy
   - pandas
-  - pycurl
-  - pyyaml
+  - numpy 
+  - paramiko
   - rasterio
   - requests
-  - toolz
+  - netCDF4
   - tqdm
+  - beautifulsoup4
+  - matplotlib
   - xarray
-  - paramiko
-  - pytest-shutil
+  - shapely
+  - scipy
+  - mock
