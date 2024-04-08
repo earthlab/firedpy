@@ -71,6 +71,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 
 ### Europe
  - [Northern Europe (Iceland, Sweden, Norway, and Denmark)](https://scholar.colorado.edu/concern/datasets/sb397945f)
+ - [Poland](https://scholar.colorado.edu/concern/datasets/6969z264g)
  - [Finland](https://scholar.colorado.edu/concern/datasets/6395w836j)
  - [Russia](https://scholar.colorado.edu/concern/datasets/q811kk87t)
  - [Italy](https://scholar.colorado.edu/concern/datasets/v979v416g)
