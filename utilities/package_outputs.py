@@ -19,25 +19,26 @@ def pacakge_individual_country_outputs():
             shape_files.extend(
                 glob(os.path.join("output", "outputs", "shapefiles", f"fired_{unique_output}{ext}")))
 
-        # Combine all file lists into one
-        shape_file_package = csv_files + read_me + shape_files
-        gpkg_file_package = csv_files + read_me + gpkg_files
+        if csv_files and read_me and shape_files and gpkg_files:
+            # Combine all file lists into one
+            shape_file_package = csv_files + read_me + shape_files
+            gpkg_file_package = csv_files + read_me + gpkg_files
 
-        # Define the output tar file name
-        shape_tar_file_name = os.path.join("output", f"{unique_output}_shp.tar")
-        if os.path.exists(shape_tar_file_name):
-            print(f'{shape_tar_file_name} already exists')
-            continue
-        with tarfile.open(shape_tar_file_name, "w") as tar:
-            for file in shape_file_package:
-                tar.add(file, arcname=os.path.relpath(file, "output"))
-        print(f"Created tar file: {shape_tar_file_name}")
+            # Define the output tar file name
+            shape_tar_file_name = os.path.join("output", f"{unique_output}_shp.tar")
+            if os.path.exists(shape_tar_file_name):
+                print(f'{shape_tar_file_name} already exists')
+                continue
+            with tarfile.open(shape_tar_file_name, "w") as tar:
+                for file in shape_file_package:
+                    tar.add(file, arcname=os.path.relpath(file, "output"))
+            print(f"Created tar file: {shape_tar_file_name}")
 
-        gpkg_tar_file_name = os.path.join("output", f"{unique_output}_gpkg.tar")
-        if os.path.exists(gpkg_tar_file_name):
-            print(f'{gpkg_tar_file_name} already exists')
-            continue
-        with tarfile.open(gpkg_tar_file_name, "w") as tar:
-            for file in gpkg_file_package:
-                tar.add(file, arcname=os.path.basename(file))
-        print(f"Created tar file: {gpkg_tar_file_name}")
+            gpkg_tar_file_name = os.path.join("output", f"{unique_output}_gpkg.tar")
+            if os.path.exists(gpkg_tar_file_name):
+                print(f'{gpkg_tar_file_name} already exists')
+                continue
+            with tarfile.open(gpkg_tar_file_name, "w") as tar:
+                for file in gpkg_file_package:
+                    tar.add(file, arcname=os.path.basename(file))
+            print(f"Created tar file: {gpkg_tar_file_name}")
