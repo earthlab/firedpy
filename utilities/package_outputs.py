@@ -3,7 +3,7 @@ import tarfile
 from glob import glob
 
 
-def pacakge_individual_country_outputs():
+def package_individual_country_outputs():
     unique_outputs = list(set('_'.join(s.split('fired_')[1].split('.csv')[0].split('_')[:-1]) for s in
                               glob("output/fired*.csv")))
 
