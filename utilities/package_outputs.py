@@ -42,3 +42,6 @@ def pacakge_individual_country_outputs():
                 for file in gpkg_file_package:
                     tar.add(file, arcname=os.path.basename(file))
             print(f"Created tar file: {gpkg_tar_file_name}")
+
+            for file in csv_files + read_me + shape_files + gpkg_files:
+                os.remove(file)
