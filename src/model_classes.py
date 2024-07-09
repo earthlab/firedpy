@@ -431,7 +431,8 @@ class ModelBuilder(Base):
         return self._copy_file(lookup, wwf_out_dir_path)
 
     def _copy_cec_file(self) -> str:
-        return self._copy_file(self._project_eco_region_path, self._eco_region_shape_path)
+        return self._copy_file(os.path.join(PROJECT_DIR, 'ref', 'ec_eco', 'NA_CEC_Eco_Level3.gpkg'),
+                               self._eco_region_shape_path)
 
     def _to_kms(self, p: float):
         return (p * self._res ** 2) / 1000000
@@ -659,7 +660,7 @@ class ModelBuilder(Base):
 
         max_date = pd.DataFrame(group[['date', 'pixels']].apply(self._max_growth_date).reset_index())
         max_date = max_date.rename(columns={0: 'mx_grw_dte'})
-        gdf = gdf.merge(max_date, on="id")
+        gdf = gdf.merge(max_date[['id', 'mx_grw_dte']], on="id")
 
         gdf = gdf[['id', 'date', 'ig_date', 'ig_day', 'ig_month',
                    'ig_year', 'last_date', 'event_day', 'event_dur',
