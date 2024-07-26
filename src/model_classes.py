@@ -472,6 +472,22 @@ class ModelBuilder(Base):
 
         return y_groups
 
+    def group_by_t(self, events) -> List[List[EventPerimeter]]:
+        events_sorted_by_t = sorted(events, key=lambda event: event.min_t)
+
+        t_groups = [[events_sorted_by_t[0]]]
+        last_group_max_t = t_groups[-1][-1].max_t
+
+        for event in events_sorted_by_t[1:]:
+            if event.min_t <= last_group_max_t + self.temporal_param:  # Overlaps in x with the last group
+                t_groups[-1].append(event)
+                last_group_max_t = max(last_group_max_t, event.max_t)
+            else:
+                t_groups.append([event])
+                last_group_max_t = event.max_t
+
+        return t_groups
+
     def _create_event_grid_array(self, events: List[EventPerimeter]):
         # Assuming `instances` is your list of class instances and each instance
         # has a `.spacetime_coordinates` attribute that is a list of (y, x, t) tuples.
@@ -492,7 +508,6 @@ class ModelBuilder(Base):
 
         max_y_geom = max_y_event.max_geom_y + self._res
 
-        # Step 2: Convert meter-based coordinates to indices
         width = min_x_event.min_geom_x
         width_index = 0
         while width < max_x:
@@ -505,7 +520,6 @@ class ModelBuilder(Base):
             height -= self._res
             height_index += 1
 
-        # Step 3: Create an empty 3D array
         array_shape = (len(events), height_index+1, width_index+1)
         three_d_array = np.zeros(array_shape, dtype=np.uint16)
 
@@ -514,7 +528,6 @@ class ModelBuilder(Base):
             'y': np.array([math.ceil(max_y_event.max_geom_y - self._res * i) for i in range(height_index + 1)])
         }
 
-        # Step 4: Populate the 3D array with your instances
         for instance_num, instance in enumerate(events):
             for y, x, t in instance.spacetime_coordinates:
                 x_idx = int((x - min_x_event.min_geom_x + 1) / self._res)
@@ -528,16 +541,16 @@ class ModelBuilder(Base):
         if not edge_events:
             return []
 
-        groups = self.group_by_y(self.group_by_x(edge_events))
+        groups = self.group_by_t(self.group_by_y(self.group_by_x(edge_events)))
 
         merged_events = []
-        for i, spatial_group in enumerate(groups):
-            group_array, coordinates = self._create_event_grid_array(spatial_group)
+        for i, group in enumerate(groups):
+            group_array, coordinates = self._create_event_grid_array(group)
             event_grid = EventGrid(out_dir=self._out_dir, input_array=group_array, coordinates=coordinates)
             perimeters = event_grid.get_event_perimeters(progress_position=i,
                                                          progress_description=f'Merging edge tiles for group {i} of'
                                                                               f' {len(groups)}', all_t=True)
-            del event_grid, group_array, coordinates, spatial_group
+            del event_grid, group_array, coordinates, group
             merged_events.extend(perimeters)
 
         return merged_events
