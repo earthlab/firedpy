@@ -226,18 +226,6 @@ class EventGrid(Base):
         else:
             raise ValueError('Must input either nc_file_path or input_array parameter')
 
-        self._edges_lower = set([t for t in range(self.spatial_param)])
-        self._edges_upper = set([self._input_array.shape[1] - t for t in range(self.spatial_param)])
-        self._edges_left = set([t for t in range(self.spatial_param)])
-        self._edges_right = set([self._input_array.shape[2] - t for t in range(self.spatial_param)])
-
-    def _is_edge_position(self, coord) -> bool:
-        """
-        Helper function to compute center and origin.
-        """
-        return (coord[0] in self._edges_lower or coord[0] in self._edges_upper or coord[1] in self._edges_left or
-                coord[1] in self._edges_right)
-
     def _get_spatial_window(self, y, x, array_dims):
         """
         Pull in the spatial window around a detected event and determine its
@@ -288,57 +276,98 @@ class EventGrid(Base):
 
         return list(zip(locs[0], locs[1]))
 
-    def _process_point(self, stack, burn_day, time_idx, x_idx, y_idx):
-        if (self._input_array[time_idx, y_idx, x_idx] > 0 and
-                abs(self._input_array[time_idx, y_idx, x_idx] - burn_day) <= self.temporal_param):
-            stack.append((self._input_array[time_idx, y_idx, x_idx], time_idx, x_idx, y_idx))
-            self._input_array[time_idx, y_idx, x_idx] = 0
-
     def get_event_perimeters(self, progress_position: int = 0, progress_description: str = '', all_t: bool = False):
         """
         Iterate through each cell in the 3D MODIS Burn Date tile and group it
         into fire events using the space-time window.
         """
-        nt, ny, nx = self._input_array.shape
+        available_pairs = self._get_available_cells()
+        nz, ny, nx = self._input_array.shape
+        dims = [ny, nx]
+        perimeters = RandomAccessSet()
+        identified_points = {}
+
         time_index_buffer = max(1, self.temporal_param // 30)
-        perimeters = []
-        progress = tqdm(total=self._input_array.size, position=progress_position, file=sys.stdout,
-                        desc=progress_description)
-        for t in range(nt):
-            for i in range(ny):
-                for j in range(nx):
-                    if self._input_array[t, i, j] > 0:
-                        new_event = EventPerimeter(event_id=self.current_event_id, spacetime_coordinates=set())
-                        stack: deque[Tuple[np.int16, int, int, int]] = deque([(self._input_array[t, i, j], t, i, j)])
-                        self._input_array[t, i, j] = 0
-                        self.current_event_id += 1
-                        while stack:
-                            burn_day, time_start, x_start, y_start = stack.popleft()
-                            new_event.spacetime_coordinates.add(
-                                (self._coordinates["x"][x_start], self._coordinates["y"][y_start], burn_day))
-                            if not new_event.is_edge and self._is_edge_position([y_start, x_start]):
-                                new_event.is_edge = True
-                            for dsi in range(1, self.spatial_param + 1):
-                                x_left = x_start - dsi
-                                if x_left >= 0:
-                                    self._process_point(stack, burn_day, time_start, x_left, y_start)
-                                x_right = x_start + dsi
-                                if x_right < nx:
-                                    self._process_point(stack, burn_day, time_start, x_right, y_start)
-                                y_down = y_start - dsi
-                                if y_down >= 0:
-                                    self._process_point(stack, burn_day, time_start, x_start, y_down)
-                                y_up = y_start + dsi
-                                if y_up < ny:
-                                    self._process_point(stack, burn_day, time_start, x_start, y_up)
-                            for dti in range(1, time_index_buffer + 1):
-                                t_top = time_start + dti
-                                if t_top < nt:
-                                    self._process_point(stack, burn_day, t_top, x_start, y_start)
-                        perimeters.append(new_event)
-                    progress.update(1)
-        progress.close()
-        return perimeters
+
+        for pair in tqdm(available_pairs, position=progress_position, file=sys.stdout, desc=progress_description):
+            y, x = pair
+            top, bottom, left, right, center, origin, is_edge = self._get_spatial_window(y, x, dims)
+            center_y, center_x = center
+
+            window = self._input_array[:, top:bottom + 1, left:right + 1]
+            center_burn = window[:, center_y, center_x]
+
+            valid_center_burn_indices = np.where(center_burn > 0)[0]
+            valid_center_burn_values = center_burn[valid_center_burn_indices]
+
+            for i, burn_value in enumerate(valid_center_burn_values):
+                overlapping_event_ids = RandomAccessSet()
+                events_to_remove = set()
+
+                # In each time slice we have a possible range of 30 days (hdf files are monthly temporal resolution)
+                l = max(0, int(valid_center_burn_indices[i] - time_index_buffer)) if not all_t else 0
+                r = min(nz, int(valid_center_burn_indices[i] + time_index_buffer) + 1) if not all_t else nz
+
+                burn_window = window[l:r, :, :]
+                val_locs = np.where(abs(burn_value - burn_window) <= self.temporal_param)
+                y_locs, x_locs = val_locs[1], val_locs[2]
+                oy, ox = origin
+
+                vals = burn_window[val_locs]
+
+                ys = self._coordinates["y"][oy + y_locs]
+                xs = self._coordinates["x"][ox + x_locs]
+
+                new_spacetime_coords = set()
+                for i, val in enumerate(vals):
+                    c = (np.float32(ys[i]), np.float32(xs[i]), np.uint16(val))
+
+                    if c in identified_points:  # O(1) time
+                        overlapping_event_ids.add(identified_points[c])  # O(1) time
+                    else:
+                        new_spacetime_coords.add(c)
+
+                event = EventPerimeter(event_id=self.current_event_id, spacetime_coordinates=new_spacetime_coords,
+                                       is_edge=is_edge)
+
+                if overlapping_event_ids.list:
+                    to_keep_id = sorted([e for e in overlapping_event_ids.list], key=lambda l: len(
+                        perimeters.get(EventPerimeter(l, set())).spacetime_coordinates))[-1]
+
+                    to_keep = perimeters.get(EventPerimeter(to_keep_id, set()))  # O(1) time
+                    for event_id in overlapping_event_ids.set:
+                        if event_id != to_keep_id:
+                            to_merge = perimeters.get(EventPerimeter(event_id, set()))  # O(1) time
+                            to_keep.add_spacetime_coordinates(to_merge.spacetime_coordinates)
+
+                            to_keep.is_edge = to_keep.is_edge or to_merge.is_edge
+
+                            identified_points.update((p, to_keep_id) for p in to_merge.spacetime_coordinates)
+                            events_to_remove.add(to_merge)
+
+                    to_keep.add_spacetime_coordinates(event.spacetime_coordinates)
+                    to_keep.is_edge = to_keep.is_edge or event.is_edge
+                    identified_points.update((p, to_keep_id) for p in new_spacetime_coords)
+
+                    if to_keep.is_edge:
+                        if to_keep.min_geom_x is None:
+                            to_keep.min_geom_x = self._coordinates['x'][0]
+                        if to_keep.max_geom_y is None:
+                            to_keep.max_geom_y = self._coordinates['y'][0]
+
+                elif event.spacetime_coordinates:
+                    if event.is_edge:
+                        event.min_geom_x = self._coordinates['x'][0]
+                        event.max_geom_y = self._coordinates['y'][0]
+
+                    perimeters.add(event)  # O(1) time
+                    identified_points.update((p, event.event_id) for p in new_spacetime_coords)
+                    self.current_event_id += 1
+
+                for event in events_to_remove:
+                    perimeters.remove(event)
+
+        return perimeters.list
 
 
 class ModelBuilder(Base):
