@@ -473,18 +473,20 @@ class ModelBuilder(Base):
         return y_groups
 
     def group_by_t(self, events) -> List[List[EventPerimeter]]:
-        events_sorted_by_t = sorted(events, key=lambda event: event.min_t)
+        t_groups = []
+        for event_group in events:
+            events_sorted_by_t = sorted(event_group, key=lambda e: e.min_t)
+            t_group = [[events_sorted_by_t[0]]]
+            last_group_max_t = t_group[-1][-1].max_t
 
-        t_groups = [[events_sorted_by_t[0]]]
-        last_group_max_t = t_groups[-1][-1].max_t
-
-        for event in events_sorted_by_t[1:]:
-            if event.min_t <= last_group_max_t + self.temporal_param:  # Overlaps in x with the last group
-                t_groups[-1].append(event)
-                last_group_max_t = max(last_group_max_t, event.max_t)
-            else:
-                t_groups.append([event])
-                last_group_max_t = event.max_t
+            for event in events_sorted_by_t[1:]:
+                if event.min_t <= last_group_max_t + self.temporal_param:  # Overlaps in x with the last group
+                    t_group[-1].append(event)
+                    last_group_max_t = max(last_group_max_t, event.max_t)
+                else:
+                    t_group.append([event])
+                    last_group_max_t = event.max_t
+            t_groups.extend(t_group)
 
         return t_groups
 
