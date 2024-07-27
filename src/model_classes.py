@@ -302,7 +302,8 @@ class EventGrid(Base):
         nt, ny, nx = self._input_array.shape
         time_index_buffer = max(1, self.temporal_param // 30)
         perimeters = []
-        progress = tqdm(self._input_array.size, position=progress_position, file=sys.stdout, desc=progress_description)
+        progress = tqdm(total=self._input_array.size, position=progress_position, file=sys.stdout,
+                        desc=progress_description)
         for t in range(nt):
             for i in range(ny):
                 for j in range(nx):
@@ -336,7 +337,7 @@ class EventGrid(Base):
                                     self._process_point(stack, burn_day, t_top, x_start, y_start)
                         perimeters.append(new_event)
                     progress.update(1)
-
+        progress.close()
         return perimeters
 
 
