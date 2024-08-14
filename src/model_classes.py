@@ -613,7 +613,7 @@ class ModelBuilder(Base):
     def build_points(self, event_perimeter_list: List[EventPerimeter], shape_file_path: str = None):
         # Extract data from EventPerimeter objects and build DataFrame
         df = pd.DataFrame([
-            [event.event_id, coord[0], coord[1], self._convert_unix_day_to_calendar_date(coord[2])]
+            [event.event_id, coord[1], coord[0], self._convert_unix_day_to_calendar_date(coord[2])]
             for event in event_perimeter_list for coord in event.spacetime_coordinates
         ], columns=["id", "x", "y", "date"])
 
@@ -623,7 +623,7 @@ class ModelBuilder(Base):
 
         # Each entry gets a point object from the x and y coordinates.
         print("Converting data frame to spatial object...")
-        df["geometry"] = df[["y", "x"]].apply(lambda x: Point(tuple(x)), axis=1)
+        df["geometry"] = df[["x", "y"]].apply(lambda x: Point(tuple(x)), axis=1)
         gdf = gpd.GeoDataFrame(df, crs=self.crs.proj4, geometry=df["geometry"])
 
         if shape_file_path is not None:
@@ -711,7 +711,7 @@ class ModelBuilder(Base):
             y = row['y']
 
             try:
-                val = int([val for val in lc.sample([(y, x)])][0])
+                val = int([val for val in lc.sample([(x, y)])][0])
             except Exception:
                 val = np.nan
             return val
