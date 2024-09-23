@@ -914,3 +914,116 @@ class ModelBuilder(Base):
             print("Saving file to " + shape_path)
 
 
+class Sentinel2Dataset(Base):
+    def __init__(self, out_dir: str):
+        super().__init__(out_dir)
+
+    @staticmethod
+    def clean_up_data_folder(cleanup_dir_path: str):
+        patterns = [re.compile(pattern) for pattern in [
+            r'^.*_B12_20m\.jp2$',
+            r'^.*_B8A_20m\.jp2$',
+            r'^.*_B0[2348]_10m\.jp2$',
+            r'^.*Sentinel_footprints.geojson',
+            r'^.*MSK_CLASSI_B00.jp2$'
+        ]]
+
+        for root, dirs, files in os.walk(cleanup_dir_path):
+            for filename in files:
+                file_path = os.path.join(root, filename)
+                if any(pattern.match(filename) for pattern in patterns):
+                    continue
+                else:
+                    os.remove(file_path)
+            for dir_name in dirs:
+                dir_path = os.path.join(root, dir_name)
+                if not os.listdir(dir_path):
+                    os.rmdir(dir_path)
+
+    def generate_dataset(self, in_dir: str):
+        # Set fire id and satellite
+        fire_id = 5356
+        satellite = 'Sentinel'
+
+        # Set folders to store output files
+        d_nbr_dir = os.path.join(in_dir, 'dNBR')
+        mask_dir = os.path.join(in_dir, 'mask')
+        rgb_dir = os.path.join(in_dir, 'rgb')
+
+        for dir in [d_nbr_dir, mask_dir, rgb_dir]:
+            os.makedirs(dir, exist_ok=True)
+
+        sentinel2_files = glob(os.path.join(in_dir, '*.SAFE'))
+
+        for i in range(10):
+            clean_up_data_folder(config, fire_id, 'Sentinel')
+
+        fire_events = gpd.read_file(shp_filepath)
+        fire_event_ids = list(fire_events['id'])
+        start_date, end_date = get_fid_dates(fire_id)
+
+        image_DIRs = []
+
+        if satellite == 'Sentinel':
+            for file in file_address:
+                granule_address = glob(os.path.join(file, "GRANULE/*"))[0]
+                try:
+                    image_address = glob(os.path.join(granule_address, "IMG_DATA/R20m/*B12_20m.jp2"))[0]
+                except:
+                    continue
+                image_DIRs.append(image_address)
+
+        else:
+            for file in file_address:
+                try:
+                    image_address = glob(os.path.join(file, "*_B5.TIF"))[0]
+                except:
+                    continue
+                image_DIRs.append(image_address)
+
+        pre_fire_paths, post_fire_paths, in_fire_paths = filter_paths_by_date(start_date, end_date, image_DIRs)
+        print(start_date, pre_fire_paths)
+
+        print(f'No. of pre-fire images: {len(pre_fire_paths)}')
+        print(f'No. of post-fire images: {len(post_fire_paths)}')
+        print(f'No. of during-fire images: {len(in_fire_paths)}')
+
+        labels = ["pre_fire", "post_fire"]
+        nbr_raws = dict.fromkeys(labels, None)
+
+        fire_events = gpd.read_file(shp_filepath)
+        # print(fire_events.crs)
+        mask_geom = fire_events[fire_events['id'] == fire_id]['geometry'].values
+        MASK_IMAGES = False
+
+        n_outputs = 0
+        get_dNBR_mask = True
+        get_RGB = False
+        plot_RGB = False
+        plot_figs = False
+        cloud_mask = False
+
+        # Download RGB scenes
+        if get_RGB:
+            download_RGB_scenes(pre_fire_paths, rgb_dir, satellite, cloud_mask)
+            download_RGB_scenes(post_fire_paths, rgb_dir, satellite, cloud_mask)
+            download_RGB_scenes(in_fire_paths, rgb_dir, satellite, cloud_mask)
+
+        # Download dNBR scenes and segmentation masks, optionally plotting them and/or their respective RGB scenes
+        if get_dNBR_mask:
+            n_outputs += download_dNBR_scenes(pre_fire_paths, post_fire_paths, d_nbr_dir, mask_dir, cloud_mask,
+                                              plot_figs,
+                                              plot_RGB)
+            print('pre-fire with post-fire done.')
+            n_outputs += download_dNBR_scenes(pre_fire_paths, in_fire_paths, d_nbr_dir, mask_dir, cloud_mask, plot_figs,
+                                              plot_RGB)
+            print('pre-fire with in-fire done.')
+            n_outputs += download_dNBR_scenes(in_fire_paths, post_fire_paths, d_nbr_dir, mask_dir, cloud_mask, plot_figs,
+                                              plot_RGB)
+            print('in-fire with post-fire done.')
+            print('Images saved.')
+
+        print(f'\nNumber of dNBR scenes: {n_outputs}')
+
+
+

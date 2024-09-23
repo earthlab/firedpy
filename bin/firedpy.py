@@ -80,6 +80,7 @@ def main():
     start = time.perf_counter()
 
     # Parse arguments
+    # Default arguments
     parser = argparse.ArgumentParser()
     parser.add_argument("-out_dir", dest="out_dir", default=os.path.join(PROJECT_DIR, 'output'),
                         help=DATA_HELP)
@@ -90,24 +91,41 @@ def main():
     parser.add_argument("-shape_type", help=SHP_HELP, type=ShapeType)
     parser.add_argument("-spatial", dest="spatial_param", type=int, help=SP_HELP)
     parser.add_argument("-temporal", dest="temporal_param", type=int, help=TMP_HELP)
-    parser.add_argument("-aoi", "--names-list", nargs="+", dest="tiles",
-                        default=["h08v04", "h09v04", "h10v04", "h11v04",
-                                 "h12v04", "h13v04", "h08v05", "h09v05",
-                                 "h10v05", "h11v05", "h13v04", "h08v05",
-                                 "h09v05", "h10v05", "h11v05", "h12v05",
-                                 "h08v06", "h09v06", "h10v06", "h11v06"],
-                        help=TILE_HELP)
-    parser.add_argument("--tile_choice", type=TileChoice, help='')
-    parser.add_argument('--tile_name', type=str, help='The name of the tile you would like to choose based'
-                                                      ' on your tile choice')
     parser.add_argument("--daily", type=str, help=DAILY_HELP)
-    parser.add_argument("-start_year", type=int, help=START_YR)
-    parser.add_argument("-end_year", type=int, help=END_YR)
     parser.add_argument("--full_csv", type=str, help=FULL_CSV)
     parser.add_argument('--n_cores', type=int, help='Number of cores to use for parallel processing.')
     parser.add_argument('--cleanup', type=str,
                         help='If set then the burn area and landcover files will be removed after each run to save ' \
                              ' disk space in between multiple runs')
+
+    # Create subparsers
+    subparsers = parser.add_subparsers(dest='mode', help='Choose between NRT and non-NRT modes.')
+
+    # Non-NRT parser
+    non_nrt_parser = subparsers.add_parser('non-NRT', help='Non-NRT specific arguments')
+    non_nrt_parser.add_argument("-aoi", "--names-list", nargs="+", dest="tiles",
+                                default=["h08v04", "h09v04", "h10v04", "h11v04",
+                                         "h12v04", "h13v04", "h08v05", "h09v05",
+                                         "h10v05", "h11v05", "h13v04", "h08v05",
+                                         "h09v05", "h10v05", "h11v05", "h12v05",
+                                         "h08v06", "h09v06", "h10v06", "h11v06"],
+                                help=TILE_HELP)
+    non_nrt_parser.add_argument("--tile_choice", type=TileChoice, help='Tile choice')
+    non_nrt_parser.add_argument('--tile_name', type=str, help='Name of the tile based on tile choice')
+    non_nrt_parser.add_argument("-start_year", type=int, help=START_YR)
+    non_nrt_parser.add_argument("-end_year", type=int, help=END_YR)
+
+    # NRT parser
+    nrt_parser = subparsers.add_parser('NRT', help='NRT specific arguments')
+    nrt_parser.add_argument('-aoi', type=str, help='Min lon, min lat, max lon, max lat of area of interest')
+    nrt_parser.add_argument('-start_date', type=str, help='Start date')
+    nrt_parser.add_argument('-end_date', type=str, help='End date')
+
+    # Parse the arguments
+    args = parser.parse_args()
+
+
+
     args = parser.parse_args()
 
     firedpy_parser = FiredpyArgumentParser(os.path.join(PROJECT_DIR, 'data', 'params.txt'))

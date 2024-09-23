@@ -11,6 +11,8 @@ import logging
 import urllib
 from http.cookiejar import CookieJar
 from multiprocessing import Pool
+import zipfile
+import tarfile
 
 import geopandas as gpd
 import numpy as np
@@ -53,6 +55,7 @@ class Base:
         self._shape_file_dir = os.path.join(self._out_dir, "shape_files")
         self._burn_area_dir = os.path.join(self._raster_dir, 'burn_area')
         self._land_cover_dir = os.path.join(self._raster_dir, 'land_cover')
+        self._sentinel_dir = os.path.join(self._out_dir, 'sentinel2')
         self._eco_region_raster_dir = os.path.join(self._raster_dir, 'eco_region')
         self._eco_region_shapefile_dir = os.path.join(self._shape_file_dir, 'eco_region')
         self._tables_dir = os.path.join(out_dir, 'tables')
@@ -800,3 +803,138 @@ class EcoRegion(Base):
         eco_ref.to_csv(self._eco_region_csv_path, index=False)
 
         self.eco_region_data_frame = eco_ref
+
+
+class Sentinel2(Base):
+    def __init__(self, out_dir: str, username: str = None, password: str = None):
+        super().__init__(out_dir)
+        self._username = username
+        self._password = password
+
+    def _get_access_token(self) -> str:
+        data = {
+            "client_id": "cdse-public",
+            "username": self._username,
+            "password": self._password,
+            "grant_type": "password",
+        }
+        try:
+            r = requests.post("https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token",
+                              data=data,
+                              )
+            r.raise_for_status()
+        except Exception as e:
+            raise Exception(
+                f"Keycloak token creation failed. Reponse from the server was: {r.json()}"
+            )
+        return r.json()["access_token"]
+
+    def download_product(self, product, output_file):
+        '''
+        Downloads a product from Sentinel-2 as a ZIP file.
+
+        Requires a pandas Series object containing a product's metadata.
+        Requires an output file name to write the downloaded data.
+        '''
+        product_id = product['Id']
+        timeout = 300
+
+        url = f"https://zipper.dataspace.copernicus.eu/odata/v1/Products({product_id})/$value"
+        headers = {"Authorization": f"Bearer {self._get_access_token()}"}
+        session = requests.Session()
+        session.headers.update(headers)
+
+        try:
+            print(url)
+            with session.get(url, headers=headers, stream=True, timeout=timeout) as response:
+                response.raise_for_status()
+                with open(output_file, 'wb') as file:
+                    for chunk in tqdm(response.iter_content(chunk_size=8192), desc="Downloading"):
+                        if chunk:
+                            file.write(chunk)
+
+        except requests.Timeout:
+            print(f"Skipping product due to timeout.")
+        except requests.RequestException as e:
+            print(f"Error downloading product: {e}")
+
+    @staticmethod
+    def extract_zip_product(output_directory, zip_file):
+        '''
+        Extracts all data from a ZIP file.
+
+        Requires an output directory in which to extract the files.
+        Requires a ZIP file to extract data from.
+        '''
+        with zipfile.ZipFile(zip_file, 'r') as zip_ref:
+            zip_ref.extractall(output_directory)
+
+    @staticmethod
+    def extract_tar_product(tar_file):
+        '''
+        Extracts all data from a TAR file.
+
+        Requires an output directory in which to extract the files.
+        Requires a TAR file to extract data from.
+        '''
+        output_dir = tar_file
+        os.mkdir(output_dir)
+        tar_file += '.tar'
+        try:
+            with tarfile.open(tar_file, 'r') as tar:
+                tar.extractall(output_dir)
+                os.remove(tar_file)
+        except tarfile.TarError as e:
+            print(f'Tarfile extraction failed: {e}')
+
+    def download(self, bounding_box: Tuple[float, float, float, float], start_date: str, end_date: str,
+                 days_buffer: int = 20, max_cloud_cover: int = 10):
+        """
+        """
+        min_lon, min_lat, max_lon, max_lat = bounding_box
+        wkt = (f"POLYGON (({min_lon} {min_lat}, {min_lon} {max_lat}, {max_lon} {max_lat}, {max_lon} {min_lat},"
+               f" {min_lon} {min_lat}))")
+
+        start_date = (datetime.strptime(start_date, "%Y-%m-%d") - dt.timedelta(days=9)).isoformat() + 'Z'
+        end_date = (datetime.strptime(end_date, "%Y-%m-%d") + dt.timedelta(days=9)).isoformat() + 'Z'
+
+        catalogue_odata_url = "https://catalogue.dataspace.copernicus.eu/odata/v1"
+        search_query = (
+            f"{catalogue_odata_url}/Products?$filter=Collection/Name eq 'SENTINEL-2' "
+            f"and Attributes/OData.CSC.StringAttribute/any(att:att/Name eq 'productType' and att/OData.CSC.StringAttribute/Value eq 'S2MSI2A') "
+            f"and OData.CSC.Intersects(area=geography'SRID=4326;{wkt}') "
+            f"and Attributes/OData.CSC.DoubleAttribute/any(att:att/Name eq 'cloudCover' and att/OData.CSC.DoubleAttribute/Value le {max_cloud_cover}) "
+            f"and ContentDate/Start ge {start_date} and ContentDate/Start le {end_date}"
+            f"&$top=1000"
+        )
+
+        response = requests.get(search_query).json()
+        products = pd.DataFrame.from_dict(response["value"])
+        products = products[products['ContentLength'] > 0].reset_index(drop=True)
+
+        # If any sentinel product is found
+        if len(products) > 0:
+            print(f"\n{len(products)} Sentinel products found")
+
+            # Create directories for saving the images or the footprints
+            output_directory = os.path.join(self._sentinel_dir, '_'.join(bounding_box) + '_' + start_date + '_' +
+                                            end_date)
+            os.makedirs(output_directory, exist_ok=True)
+
+            # Zip file to store the downloaded product
+            output_file = os.path.join(output_directory, 'temp_product.zip')
+
+            for i in range(len(products)):
+                product = products.loc[i, :]
+                print(f'Checking product [{i + 1}/{len(products)}]')
+
+                if product['Name'] in os.listdir(output_directory):
+                    print('Product already exists in directory! Skipping...')
+                    continue
+
+                print('Downloading product...')
+                self.download_product(product, output_file)
+                self.extract_zip_product(output_directory, output_file)
+
+        else:
+            print(f"\nNo Sentinel-2 scenes found for bounding box and time range")
