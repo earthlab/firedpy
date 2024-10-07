@@ -354,13 +354,17 @@ class BurnData(LPDAAC):
 
         """
         # Check into the UMD SFTP fuoco server using Paramiko
-        print('Finding available files...')
-        available_year_paths = self._get_available_year_paths(start_year=start_year, end_year=end_year)
-        download_requests = self._create_requests(available_year_paths, tiles)
-        print(download_requests)
+        for tile in tiles:
+            nc_file_name = self._generate_local_nc_path(tile)
+            if os.path.exists(nc_file_name):
+                continue
+            print('Finding available files...')
+            available_year_paths = self._get_available_year_paths(start_year=start_year, end_year=end_year)
+            download_requests = self._create_requests(available_year_paths, [tile])
+            print(download_requests)
 
-        self._download_files(download_requests)
-        self._write_ncs(tiles)
+            self._download_files(download_requests)
+            self._write_ncs([tile])
 
     def _write_modis_template_file(self):
         # Merge one year into a reference mosaic
