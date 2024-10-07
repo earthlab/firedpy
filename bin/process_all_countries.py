@@ -7,7 +7,7 @@ from bin.firedpy import cleanup_intermediate_files
 PROJECT_DIR = os.path.dirname(os.path.dirname(__file__))
 
 if __name__ == '__main__':
-    countries = [c.strip('.gpkg') for c in os.listdir(os.path.join(PROJECT_DIR, 'ref', 'individual_countries'))]
+    countries = [c.rstrip('.gpkg') for c in os.listdir(os.path.join(PROJECT_DIR, 'ref', 'individual_countries'))]
 
     with open('unprocessable.txt', 'r') as file:
         # Append a new line to the file
@@ -37,7 +37,7 @@ if __name__ == '__main__':
                     "-start_year", "0",
                     "-end_year", "0"
                 ])  # Adjust shell=True if needed
-                _ = process.wait(timeout=36 * 60 * 60)  # Wait for process completion
+                _ = process.wait(timeout=8 * 60 * 60)  # Wait for process completion
                 with open('processed.txt', 'a') as file:
                     file.write(f"{country}\n")
             except (sp.TimeoutExpired, MemoryError):
