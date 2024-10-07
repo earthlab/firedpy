@@ -18,6 +18,7 @@ import time
 
 import numpy as np
 import xarray as xr
+from pyproj import Proj, transform
 from shapely import Point, Polygon, MultiPolygon
 from tqdm import tqdm
 import geopandas as gpd
@@ -243,8 +244,7 @@ class EventGrid(Base):
             Helper function to compute center and origin.
             """
             edges_lower = [t for t in range(param)]
-            edges_upper = [dim - t for t in range(param)]
-
+            edges_upper = [dim - t - 1 for t in range(param)]
             is_edge = True
             if coord in edges_lower:
                 center = coord
@@ -598,7 +598,6 @@ class ModelBuilder(Base):
             last_non_edge_id += 1
 
         fire_events = non_edge + merged_edges
-
         gc.collect()
 
         return fire_events
@@ -629,6 +628,18 @@ class ModelBuilder(Base):
         if shape_file_path is not None:
             gdf = self._clip_to_shape_file(gdf, shape_file_path)
         return gdf
+
+    def _modis_to_lat_lon(self, x_sinu, y_sinu):
+        # Define the MODIS sinusoidal projection (SR-ORG:6974)
+        modis_sinu_proj = Proj("+proj=sinu +R=6371007.181 +nadgrids=@null +wktext")
+
+        # Define the WGS84 projection (EPSG:4326)
+        wgs84_proj = Proj(proj="latlong", datum="WGS84")
+
+        # Convert from MODIS sinusoidal to WGS84
+        lon, lat = transform(modis_sinu_proj, wgs84_proj, x_sinu, y_sinu)
+
+        print(f"Longitude: {lon}, Latitude: {lat}")
 
     def add_fire_attributes(self, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         print("Adding fire attributes ...")
@@ -738,12 +749,11 @@ class ModelBuilder(Base):
             lc_file = lc_files[year]
             lc = rasterio.open(lc_file)
             sgdf['lc_code'] = sgdf.apply(point_query, axis=1)
+            sgdf['lc_mode'] = sgdf.groupby('id')['lc_code'].transform(self._mode)
             sgdfs.append(sgdf)
 
         gdf = pd.concat(sgdfs)
         gdf = gdf.reset_index(drop=True)
-        gdf['lc_mode'] = gdf.groupby('id')['lc_code'].transform(self._mode)
-
         # Add in the class description from land_cover tables
         land_cover_path = self._copy_land_cover_ref(land_cover_type)
         lc_table = pd.read_csv(land_cover_path)
@@ -752,7 +762,7 @@ class ModelBuilder(Base):
         gdf['lc_type'] = lc_descriptions[land_cover_type]
 
         gdf.rename({'lc_description': 'lc_desc'}, inplace=True, axis='columns')
-
+        print('C')
         return gdf
 
     def _add_attributes_from_na_cec(self, gdf, eco_region_level):
@@ -871,7 +881,11 @@ class ModelBuilder(Base):
         return gdf
 
     def process_event_data(self, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-        gdf = gdf.drop(['did', 'pixels', 'date', 'event_day', 'dy_ar_km2'], axis=1)
+        gdf = gdf.drop(['pixels', 'date', 'event_day', 'dy_ar_km2'], axis=1)
+        if 'did' in gdf.columns:
+            gdf = gdf.drop(['did'])
+        if 'fid' in gdf.columns:
+            gdf = gdf.drop(['fid'])
 
         print("Dissolving polygons...")
         gdf = gdf.dissolve(by="id", as_index=False)

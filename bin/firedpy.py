@@ -210,7 +210,7 @@ def main():
     eco_region_data.get_eco_region()
 
     burn_data = BurnData(out_dir, username, password, n_cores)
-    burn_data.get_burns(tiles, start_year, end_year)
+    #burn_data.get_burns(tiles, start_year, end_year)
 
     # Create Model Builder object
     models = ModelBuilder(out_dir=out_dir, tiles=tiles, spatial_param=spatial_param, temporal_param=temporal_param,
@@ -224,6 +224,8 @@ def main():
     if land_cover_type != LandCoverType.NONE:
         gdf = models.add_land_cover_attributes(gdf, land_cover_type)
     gdf = models.process_geometry(gdf)
+
+    gdf.to_file('temp_test.gpkg', driver="GPKG")
     gdf = models.add_eco_region_attributes(gdf, eco_region_type, eco_region_level)
 
     def generate_path(proj_dir, base_filename, shape_type: ShapeType):
