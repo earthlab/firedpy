@@ -357,6 +357,7 @@ class BurnData(LPDAAC):
         print('Finding available files...')
         available_year_paths = self._get_available_year_paths(start_year=start_year, end_year=end_year)
         download_requests = self._create_requests(available_year_paths, tiles)
+        print(download_requests)
 
         self._download_files(download_requests)
         self._write_ncs(tiles)
@@ -436,10 +437,21 @@ class BurnData(LPDAAC):
                     proj4 = crs.ExportToProj4()
 
                     # Use one tif (one array) for spatial attributes
+                    metadata = hdf.GetMetadata()
                     array = data.ReadAsArray()
                     ny, nx = array.shape
                     xs = np.arange(nx) * geom[1] + geom[0]
                     ys = np.arange(ny) * geom[5] + geom[3]
+                    lats = np.linspace(
+                        float(metadata['SOUTHBOUNDINGCOORDINATE']),
+                        float(metadata['NORTHBOUNDINGCOORDINATE']),
+                        ny
+                    )
+                    lons = np.linspace(
+                        float(metadata['WESTBOUNDINGCOORDINATE']),
+                        float(metadata['EASTBOUNDINGCOORDINATE']),
+                        nx
+                    )
 
                     # Today's date for attributes
                     todays_date = dt.datetime.today()
@@ -452,10 +464,14 @@ class BurnData(LPDAAC):
                     nco.createDimension("y", ny)
                     nco.createDimension("x", nx)
                     nco.createDimension("time", None)
+                    nco.createDimension('lat', nx)
+                    nco.createDimension('lon', ny)
 
                     # Variables
                     y = nco.createVariable("y", np.float64, ("y",))
                     x = nco.createVariable("x", np.float64, ("x",))
+                    lat = nco.createVariable('lat', np.float64, dimensions=('lat',))
+                    lon = nco.createVariable('lon', np.float64, dimensions=('lon',))
                     times = nco.createVariable("time", np.int16, ("time",))
                     variable = nco.createVariable("value", np.int16,
                                                   ("time", "y", "x"),
@@ -486,6 +502,13 @@ class BurnData(LPDAAC):
                     y.long_name = "y coordinate of projection"
                     y.units = "m"
 
+                    lat.standard_name = 'latitude_coordinate'
+                    lat.long_name = 'latitude coordinate'
+                    lat.units = 'deg'
+                    lon.standard_name = 'longitude_coordinate'
+                    lon.long_name = 'longitude coordinate'
+                    lon.units = 'deg'
+
                     # Other attributes
                     nco.title = "Burn Days"
                     nco.subtitle = "Burn Days Detection by MODIS since 1970."
@@ -506,6 +529,8 @@ class BurnData(LPDAAC):
                     # Write dimension data
                     x[:] = xs
                     y[:] = ys
+                    lon[:] = lons
+                    lat[:] = lats
                     times[:] = days
 
                     # One file a time, write the arrays
