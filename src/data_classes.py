@@ -633,8 +633,6 @@ class LandCover(LPDAAC):
 
     def _create_annual_mosaic(self, year: str, land_cover_type: LandCoverType = LandCoverType.IGBP):
         output_file = f"lc_mosaic_{land_cover_type.value}_{year}.tif"
-        if os.path.exists(output_file):
-            os.remove(output_file)
 
         # Filter available files for the requested tiles
         lc_files = [self._generate_local_hdf_path(year, f) for f in os.listdir(self._generate_local_hdf_dir(year))
@@ -688,14 +686,17 @@ class LandCover(LPDAAC):
 
         print('Finding available files...')
         available_year_paths = self._get_available_year_paths()
-        download_requests = self._create_requests(available_year_paths, tiles)
 
-        self._download_files(download_requests)
-
-        print("Mosaicking/remosaicking land cover tiles...")
         for year_path in tqdm(available_year_paths, position=0, file=sys.stdout):
             year = re.match(self._date_regex, year_path).groupdict()['year']
+            output_file = f"lc_mosaic_{land_cover_type.value}_{year}.tif"
+            if os.path.exists(os.path.join(self._mosaics_dir, output_file)):
+                continue
+            download_requests = self._create_requests([year_path], tiles)
+            self._download_files(download_requests)
             self._create_annual_mosaic(year, land_cover_type)
+
+            print("Mosaicking/remosaicking land cover tiles...")
 
         # Print location
         print(f"Land cover data saved to {self._mosaics_dir}")
