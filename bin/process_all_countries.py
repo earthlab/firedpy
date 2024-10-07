@@ -37,9 +37,10 @@ if __name__ == '__main__':
                     "-start_year", "0",
                     "-end_year", "0"
                 ])  # Adjust shell=True if needed
-                _ = process.wait(timeout=8 * 60 * 60)  # Wait for process completion
-                with open('processed.txt', 'a') as file:
-                    file.write(f"{country}\n")
+                return_code = process.wait(timeout=8 * 60 * 60)  # Wait for process completion
+                if return_code == 0:
+                    with open('processed.txt', 'a') as file:
+                        file.write(f"{country}\n")
             except (sp.TimeoutExpired, MemoryError):
                 # If the process exceeds the timeout, terminate it
                 print("Process took too long, terminating...")
