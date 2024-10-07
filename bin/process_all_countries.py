@@ -20,28 +20,35 @@ if __name__ == '__main__':
         print(processed, unprocessable)
         if country not in processed and country not in unprocessable:
             print(country)
-            process = sp.Popen([
-                sys.executable,
-                os.path.join(PROJECT_DIR, 'bin', 'firedpy.py'),
-                "--full_csv", "n",
-                "--n_cores", "1",
-                "--tile_choice", "b",
-                "--tile_name", country,
-                "--daily", "y",
-                "-spatial", "1",
-                "-temporal", "5",
-                "-shape_type", "both",
-                "-land_cover_type", "1",
-                "--cleanup", "n",
-                "-start_year", "0",
-                "-end_year", "0"
-            ])  # Adjust shell=True if needed
-            return_code = process.wait()  # Wait for process completion
-            print(return_code)
-            if return_code != 0:
+            try:
+                process = sp.Popen([
+                    sys.executable,
+                    os.path.join(PROJECT_DIR, 'bin', 'firedpy.py'),
+                    "--full_csv", "n",
+                    "--n_cores", "1",
+                    "--tile_choice", "b",
+                    "--tile_name", country,
+                    "--daily", "y",
+                    "-spatial", "1",
+                    "-temporal", "5",
+                    "-shape_type", "both",
+                    "-land_cover_type", "1",
+                    "--cleanup", "n",
+                    "-start_year", "0",
+                    "-end_year", "0"
+                ])  # Adjust shell=True if needed
+                _ = process.wait(timeout=36 * 60 * 60)  # Wait for process completion
+                with open('processed.txt', 'a') as file:
+                    file.write(f"{country}\n")
+            except (sp.TimeoutExpired, MemoryError):
+                # If the process exceeds the timeout, terminate it
+                print("Process took too long, terminating...")
+                process.kill()  # Forcefully terminate the process
+                # stdout, stderr = process.communicate()
+                # exit_code = process.returncode
+
                 with open('unprocessable.txt', 'a') as file:
                     file.write(f"{country}\n")
-
                 process = sp.Popen([
                     sys.executable,
                     'gocmd', 'mkdir', f'firedpy/{country}'
@@ -63,6 +70,3 @@ if __name__ == '__main__':
                 _ = process.wait()
 
                 cleanup_intermediate_files(os.path.join(PROJECT_DIR, 'output'))
-            else:
-                with open('processed.txt', 'a') as file:
-                    file.write(f"{country}\n")
