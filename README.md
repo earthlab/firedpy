@@ -46,7 +46,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 
 ### North America
  - Coterminous USA + Alaska: [2001-2021](https://scholar.colorado.edu/concern/datasets/d504rm74m) [2001-2024](https://scholar.colorado.edu/concern/datasets/fx719p11c)
- - [US plus Canada](https://scholar.colorado.edu/concern/datasets/8336h304x)
+ - US plus Canada: [2001-2021](https://scholar.colorado.edu/concern/datasets/8336h304x)
  - [Canada](https://scholar.colorado.edu/concern/datasets/gf06g388c)
  - [Hawaii](https://scholar.colorado.edu/concern/datasets/7h149r06p)
  - [Carribean (Barbados, Bahamas, Cayman Islands, Cuba, Dominican Republic, Haiti, Jamaica, Montserrat, Puerto Rico, Saint Kitts And Nevis, Trinidad And Tobago, British Virgin Islands, Guadeloupe, Saint Barthelemy)](https://scholar.colorado.edu/concern/datasets/x633f230f)
