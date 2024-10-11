@@ -32,7 +32,7 @@ See the issues tab for more bugs, or to report a new bug!
 
 ## Have you used firedpy?
 
-The algorithm and derived data products are under active development. Please take this [survey](https://docs.google.com/forms/d/e/1FAIpQLSe7ycmS0HGIze2T6TIUox8hsu8nlGsxiUMww8SCeWHDZPhB-Q/viewform?usp=sf_link) to help us improve firedpy.
+The algorithm and derived data products are under active development. Please take this [survey](https://docs.google.com/forms/d/e/1FAIpQLSe7ycmS0HGIze2T6TIUox8hsu8nlGsxiUMww8SCeWHDZPhB-Q/viewform?usp=sf_link) to help us improve firedpy. Or just email admahood@gmail.com and Adam will be overjoyed to talk about firedpy.
 
 ## Current status of created products
 
@@ -129,44 +129,44 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 
 ### Asia
 
- - [China](https://scholar.colorado.edu/concern/datasets/qz20st810)
- - [India](https://scholar.colorado.edu/concern/datasets/ht24wk47t)
- - [Central Asia (Turkmenistan, Kazakhstan, Uzbekistan, Kyrgystan, Tajikistan, Afghanistan, and Pakistan)](https://scholar.colorado.edu/concern/datasets/47429b07v)
- - [Middle East (Saudi Arabia, Qatar, Oman, Yemen, United Arab Emirates, Iraq, Jordan, Syria, Israel, Palestine, Lebanon, Egypt)](https://scholar.colorado.edu/concern/datasets/5d86p139h)
- - [Mongolia](https://scholar.colorado.edu/concern/datasets/4x51hk21h)
- - [Caucasus (Armenia, Azerbaijan, Georgia)](https://scholar.colorado.edu/concern/datasets/gf06g385j)
- - [Japan](https://scholar.colorado.edu/concern/datasets/dz010r34v)
- - [South Korea](https://scholar.colorado.edu/concern/datasets/pg15bg177)
- - [North Korea](https://scholar.colorado.edu/concern/datasets/3j333327g)
- - [Taiwan](https://scholar.colorado.edu/concern/datasets/df65v9276)
- - [Sri Lanka](https://scholar.colorado.edu/concern/datasets/9z9030982)
- - [Nepal](https://scholar.colorado.edu/concern/datasets/mk61rj10w)
- - [Bhutan](https://scholar.colorado.edu/concern/datasets/n009w342h)
- - [Bangladesh](https://scholar.colorado.edu/concern/datasets/d791sh33k)
- - [Vietnam](https://scholar.colorado.edu/concern/datasets/h702q7566)
- - [Thailand](https://scholar.colorado.edu/concern/datasets/xs55md39h)
- - [Laos](https://scholar.colorado.edu/concern/datasets/bz60cx389)
- - [Myanmar](https://scholar.colorado.edu/concern/datasets/pk02cb86p)
+ - China: [2001-2021](https://scholar.colorado.edu/concern/datasets/qz20st810)
+ - India: [2001-2021](https://scholar.colorado.edu/concern/datasets/ht24wk47t)
+ - Central Asia (Turkmenistan, Kazakhstan, Uzbekistan, Kyrgystan, Tajikistan, Afghanistan, and Pakistan): [2001-2021](https://scholar.colorado.edu/concern/datasets/47429b07v)
+ - Middle East (Saudi Arabia, Qatar, Oman, Yemen, United Arab Emirates, Iraq, Jordan, Syria, Israel, Palestine, Lebanon, Egypt): [2001-2021](https://scholar.colorado.edu/concern/datasets/5d86p139h)
+ - Mongolia: [2001-2021](https://scholar.colorado.edu/concern/datasets/4x51hk21h)
+ - Caucasus (Armenia, Azerbaijan, Georgia): [2001-2021](https://scholar.colorado.edu/concern/datasets/gf06g385j)
+ - Japan: [2001-2021](https://scholar.colorado.edu/concern/datasets/dz010r34v)
+ - South Korea: [2001-2021](https://scholar.colorado.edu/concern/datasets/pg15bg177)
+ - North Korea: [2001-2021](https://scholar.colorado.edu/concern/datasets/3j333327g)
+ - Taiwan: [2001-2021](https://scholar.colorado.edu/concern/datasets/df65v9276)
+ - Sri Lanka: [2001-2021](https://scholar.colorado.edu/concern/datasets/9z9030982)
+ - Nepal: [2001-2021](https://scholar.colorado.edu/concern/datasets/mk61rj10w)
+ - Bhutan: [2001-2021](https://scholar.colorado.edu/concern/datasets/n009w342h)
+ - Bangladesh: [2001-2021](https://scholar.colorado.edu/concern/datasets/d791sh33k)
+ - Vietnam: [2001-2021](https://scholar.colorado.edu/concern/datasets/h702q7566)
+ - Thailand: [2001-2021](https://scholar.colorado.edu/concern/datasets/xs55md39h)
+ - Laos: [2001-2021](https://scholar.colorado.edu/concern/datasets/bz60cx389)
+ - Myanmar: [2001-2021](https://scholar.colorado.edu/concern/datasets/pk02cb86p)
 
 ### Australia (state by state)
 
- - [Tasmania](https://scholar.colorado.edu/concern/datasets/c534fq19w)
- - [Victoria](https://scholar.colorado.edu/concern/datasets/2r36tz74f)
- - [New South Wales + Capital Territory](https://scholar.colorado.edu/concern/datasets/37720d85c)
- - [Queensland](https://scholar.colorado.edu/concern/datasets/cr56n230n)
- - [South Australia](https://scholar.colorado.edu/concern/datasets/fn107015p)
- - [Western Australia](https://scholar.colorado.edu/concern/datasets/k35695559)
- - [Northern Territory](https://scholar.colorado.edu/concern/datasets/bn9997900)
+ - Tasmania: [2001-2021](https://scholar.colorado.edu/concern/datasets/c534fq19w)
+ - Victoria: [2001-2021](https://scholar.colorado.edu/concern/datasets/2r36tz74f)
+ - New South Wales + Capital Territory: [2001-2021](https://scholar.colorado.edu/concern/datasets/37720d85c)
+ - Queensland: [2001-2021](https://scholar.colorado.edu/concern/datasets/cr56n230n)
+ - South Australia: [2001-2021](https://scholar.colorado.edu/concern/datasets/fn107015p)
+ - Western Australia: [2001-2021](https://scholar.colorado.edu/concern/datasets/k35695559)
+ - Northern Territory: [2001-2021](https://scholar.colorado.edu/concern/datasets/bn9997900)
 
 ### Oceania
 
- - [Philippines](https://scholar.colorado.edu/concern/datasets/7d278v06f)
- - [Papua New Guinea](https://scholar.colorado.edu/concern/datasets/3r074w183)
- - [East Timor](https://scholar.colorado.edu/concern/datasets/j098zc184)
- - [New Zealand](https://scholar.colorado.edu/concern/datasets/9g54xj88f)
- - [Malaysia](https://scholar.colorado.edu/concern/datasets/fq977w13f)
- - [Brunei](https://scholar.colorado.edu/concern/datasets/mp48sd92p)
- - [Indonesia](https://scholar.colorado.edu/concern/datasets/p2676w918)
+ - Philippines: [2001-2021](https://scholar.colorado.edu/concern/datasets/7d278v06f)
+ - Papua New Guinea: [2001-2021](https://scholar.colorado.edu/concern/datasets/3r074w183)
+ - East Timor: [2001-2021](https://scholar.colorado.edu/concern/datasets/j098zc184)
+ - New Zealand: [2001-2021](https://scholar.colorado.edu/concern/datasets/9g54xj88f)
+ - Malaysia: [2001-2021](https://scholar.colorado.edu/concern/datasets/fq977w13f)
+ - Brunei: [2001-2021](https://scholar.colorado.edu/concern/datasets/mp48sd92p)
+ - Indonesia: [2001-2021](https://scholar.colorado.edu/concern/datasets/p2676w918)
 
 
 ## Installation
