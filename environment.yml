@@ -18,3 +18,4 @@ dependencies:
   - shapely
   - scipy
   - mock
+  - libgdal-hdf4

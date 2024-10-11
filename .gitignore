@@ -1,11 +1,18 @@
-/.eggs
-/env
-/build
-/dist
-/firedpy.egg-info
-/data
-/firedpy/data
-/firedpy/__pycache__
+# Eggs
+/.eggs/
+
+# Virtual environments
+/env/
+/envs/
+
+# Build artifacts
+/build/
+/dist/
+*.egg-info/
+
+# Caches
+**/__pycache__/
+
+# Miscellaneous
 /setup2.py
-/proj
-#/data_paper_files
+/proj/

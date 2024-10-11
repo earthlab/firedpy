@@ -42,12 +42,10 @@ Already-created products are linked below. They are housed in the CU Scholar dat
 
 All of the created products have an event-level shapefile in .gpkg and .shp formats. Many countries also have the daily-level shapefile, but these were not created for most countries in Africa and Asia due to computational restrictions. 
 
-![completed countries are below](map_fig.png)
-
 ## Click on a link below to download a fire perimeter dataset for your favorite country
 
 ### North America
- - [Coterminous USA + Alaska](https://scholar.colorado.edu/concern/datasets/d504rm74m)
+ - Coterminous USA + Alaska: [2001-2021](https://scholar.colorado.edu/concern/datasets/d504rm74m) [2001-2024](https://scholar.colorado.edu/concern/datasets/fx719p11c)
  - [US plus Canada](https://scholar.colorado.edu/concern/datasets/8336h304x)
  - [Canada](https://scholar.colorado.edu/concern/datasets/gf06g388c)
  - [Hawaii](https://scholar.colorado.edu/concern/datasets/7h149r06p)
