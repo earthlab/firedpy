@@ -42,8 +42,6 @@ Already-created products are linked below. They are housed in the CU Scholar dat
 
 All of the created products have an event-level shapefile in .gpkg and .shp formats. Many countries also have the daily-level shapefile, but these were not created for most countries in Africa and Asia due to computational restrictions. 
 
-![completed countries are below](data/map_fig.png)
-
 ## Click on a link below to download a fire perimeter dataset for your favorite country
 
 ### North America
