@@ -16,6 +16,6 @@ dependencies:
   - matplotlib==3.9.2
   - xarray==2024.9.0
   - shapely==2.0.6
-  - scipy==2.0.6
+  - scipy==1.14.1
   - mock==5.1.0
   - libgdal-hdf4==3.9.2
