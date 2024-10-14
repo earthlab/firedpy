@@ -3,19 +3,19 @@ channels:
   - default
   - conda-forge  # Use the conda-forge channel for some packages
 dependencies:
-  - gdal
-  - geopandas
-  - pandas
-  - numpy 
-  - paramiko
-  - rasterio
-  - requests
-  - netCDF4
-  - tqdm
-  - beautifulsoup4
-  - matplotlib
-  - xarray
-  - shapely
-  - scipy
-  - mock
-  - libgdal-hdf4
+  - gdal==3.9.2
+  - geopandas==1.0.1
+  - pandas==2.2.3
+  - numpy==2.1.2
+  - paramiko==3.5.0
+  - rasterio==1.4.1
+  - requests==2.32.3
+  - netCDF4==1.7.1
+  - tqdm==4.66.5
+  - beautifulsoup4==4.12.3
+  - matplotlib==3.9.2
+  - xarray==2024.9.0
+  - shapely==2.0.6
+  - scipy==2.0.6
+  - mock==5.1.0
+  - libgdal-hdf4==3.9.2

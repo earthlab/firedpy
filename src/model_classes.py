@@ -793,7 +793,7 @@ class ModelBuilder(Base):
 
         # Find modal eco-region for each event id
         eco = eco[[eco_code, 'geometry']]
-        gdf = gpd.sjoin(gdf, eco, how="left", op="within")
+        gdf = gpd.sjoin(gdf, eco, how="left", predicate="within")
         gdf = gdf.reset_index(drop=True)
         gdf['eco_mode'] = gdf.groupby('id')[eco_code].transform(self._mode)
 
@@ -821,7 +821,7 @@ class ModelBuilder(Base):
 
         # Find modal eco region for each event id
         eco = eco[["ECO_NUM", "ECO_NAME", "geometry"]]
-        gdf = gpd.sjoin(gdf, eco, how="left", op="within")
+        gdf = gpd.sjoin(gdf, eco, how="left", predicate="within")
         gdf = gdf.reset_index(drop=True)
 
         gdf["eco_mode"] = gdf.groupby('id')['ECO_NUM'].transform(self._mode)
