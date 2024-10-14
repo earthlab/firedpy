@@ -20,6 +20,13 @@ Description of the country-level data sets is at:
 
 Mahood, A.L. Lindrooth, E.J., Cook, M.C. and Balch, J.K. Country-level fire perimeter datasets (2001-2021). 2022. Nature Scientific Data, 9(458). https://doi.org/10.1038/s41597-022-01572-3
 
+## Changes
+ - 10/14/2024 FIREDpy V2.0
+    - No longer using setup.py. See new instructions below for running it with Docker or installing it locally.
+    - Improved fire grouping
+    - Improved CLI
+    - Access to MODIS burn area product Version 6.1 with support up to at least 2024 
+
 ### BUG ALERT: 
 
 Many of the data products created in Fall 2021 may be shifted by a half pixel, and may lack a coordinate reference system. 
@@ -178,20 +185,20 @@ There are two ways to install firedpy. Method one is to run it out of a docker c
 #### 1.1 Get the docker container running:
 
 Note, the docker container has changed from `earthlab/firedpy` to `earthlabcu/firedpy`
-
-  - `docker run -t -d earthlabcu/firedpy`
+  - Run the docker container in a detached state (-d) and bind it to an available port on localhost (-p 127.0.0.1:0:7681)
+  - `docker run -d -p 127.0.0.1:0:7681 earthlabcu/firedpy:latest`
  
-  - Call `docker ps` to get the name of the docker container you just created.
-
-  - Then get into the docker container by running docker exec:
+  - Call `docker ps` to get the name of the docker container you just created and the port it is running on.
+  
+  - Then get into the docker container by either running docker exec:
 
     `docker exec -it <silly_name> /bin/bash`
 
-  - Then you will be inside of the docker container in the firedpy directory. Now, enter:
+  - Or access the CLI from your browser. The output from docker ps will look like this:
+    CONTAINER ID   IMAGE                       COMMAND                  CREATED         STATUS                 PORTS                                         NAMES
+    58a8a6ed926a   earthlabcu/firedpy:latest   "/bin/entry.sh ttyd …"   2 minutes ago   Up 2 minutes           127.0.0.1:32768->7681/tcp                     stupefied_hypatia
 
-    `conda activate firedpy`
-
-    And the environment is ready to use.
+    In this example the container is running on the host machine at 127.0.0.1:32768. It may be different when you run it. Access this location in your browser by copy and pasting it into your browser's address bar
 
 #### 1.2 Copy firedpy outputs to your local machine
 
@@ -230,53 +237,48 @@ After creating a new fire product, it might be useful to get it out of the docke
 
   - Create and activate a conda environment:
 
-    `conda env create -f environment.yaml`
+    `conda env create -f environment.yml`
 
     `conda activate firedpy`  
-
-  - Install locally:
-
-    `python setup.py install`
-
 
 ## Use:
   - Run firedpy with no options to be prompted with input questions for each option/attribute
      
-    `firedpy` 
+    `python bin/firedpy.py` or if running from Docker container, simply `firedpy` 
     
   - Or use the following commands in your command line to specify the options/attributes you would like:   
 
   - In your terminal use this command to print out the available options and their descriptions:
 
-    `firedpy --help`
+    `python bin/firedpy.py --help`
 
   - Run firedpy with the default option to download required data and write a data table of classified fire events to a temporary directory. This uses CONUS as the default area of interest with a spatial parameter of 5 pixels (~2.3 km) and 11 days:
 
-    `firedpy --default`
+    `python bin/firedpy.py --default`
 
   - Change the spatial and temporal parameters of the model run:
 
-    `firedpy -spatial 6 -temporal 10`
+    `python bin/firedpy.py -spatial 6 -temporal 10`
 
   - Specify specific tiles and a local project_directory for required data and model outputs:
 
-    `firedpy -spatial 6 -temporal 10 -aoi h11v09 h12v09 -proj_dir /home/<user>/fired_project`
+    `python bin/firedpy.py -spatial 6 -temporal 10 -aoi h11v09 h12v09 -proj_dir /home/<user>/fired_project`
 
   - Write shapefiles as outputs in addition to the data table:
 
-    `firedpy -spatial 6 -temporal 10 -aoi h11v09 h12v09 -proj_dir /home/<user>/fired_project --shapefile`
+    `python bin/firedpy.py -spatial 6 -temporal 10 -aoi h11v09 h12v09 -proj_dir /home/<user>/fired_project --shapefile`
 
   - Add the most common level 3 Ecoregion as an attribute to each event:
 
-    `firedpy -spatial 6 -temporal 10 -aoi h11v09 h12v09 -proj_dir /home/<user>/fired_project --shapefile -ecoregion_level 3`
+    `python bin/firedpy.py bin/firedpy.py -spatial 6 -temporal 10 -aoi h11v09 h12v09 -proj_dir /home/<user>/fired_project --shapefile -ecoregion_level 3`
 
   - Add landcover information and produce the daily burn file
 
-    `firedpy -spatial 6 -temporal 10 -aoi h11v09 h12v09 -proj_dir /home/<user>/fired_project --shapefile -ecoregion_level 3 -landcover_type 1 -daily yes`
+    `python bin/firedpy.py -spatial 6 -temporal 10 -aoi h11v09 h12v09 -proj_dir /home/<user>/fired_project --shapefile -ecoregion_level 3 -landcover_type 1 -daily yes`
 
   For more information about each parameter, use:
 
-    'firedpy --help'
+    'python bin/firedpy.py --help'
     
     
 ### Parameter table (under construction)
@@ -305,7 +307,7 @@ After creating a new fire product, it might be useful to get it out of the docke
  - Continent boundaries are in **ref/continents**
  - United States state boundaries for the United States of America are in **ref/us_states**
  - Australian state boundaries are in **ref/australian_states**
- - For example `firedpy -aoi /home/firedpy/ref/us_states/colorado.gpkg`, and so on. Every space is a '_'. 
+ - For example `python bin/firedpy.py -aoi /home/firedpy/ref/us_states/colorado.gpkg`, and so on. Every space is a '_'. 
  - If using the user input option, when prompted for the name of the continent, country, or state use "_" for spaces. 
  - **Ensure that the input shapefiles are in the modis sinusiodal projection**
 
