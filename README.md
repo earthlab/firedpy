@@ -239,7 +239,9 @@ After creating a new fire product, it might be useful to get it out of the docke
 
     `conda env create -f environment.yml`
 
-    `conda activate firedpy`  
+    `conda activate firedpy`
+  - Add project directory to PYTHONPATH
+     `export PYTHONPATH=<path/to/firedpy/directory>:$PYTHONPATH`
 
 ## Use:
   - Run firedpy with no options to be prompted with input questions for each option/attribute
