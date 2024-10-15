@@ -1,9 +1,13 @@
 import argparse
 import os
+import sys
 import shutil
 import time
 import warnings
 import resource
+
+PROJECT_DIR = os.path.dirname(os.path.dirname(__file__))
+sys.path.append(PROJECT_DIR)
 
 from http.cookiejar import CookieJar
 import urllib.request
@@ -16,8 +20,6 @@ from src.spatial import shape_to_tiles
 from src.enums import EcoRegionType, TileChoice, ShapeType, LandCoverType
 
 warnings.filterwarnings("ignore", category=FutureWarning)
-
-PROJECT_DIR = os.path.dirname(os.path.dirname(__file__))
 
 
 def get_tile_name_from_directory(parser: FiredpyArgumentParser, directory: str, prompt_message: str):
