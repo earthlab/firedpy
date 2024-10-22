@@ -26,14 +26,15 @@ class FiredpyArgumentParser:
         return args
 
     def _save_params(self):
-        # TODO: Think about making this safer so any errors don't overwrite the only existing file
+        new_lines = []
+        for name, data in self.arguments.items():
+            # Convert newlines back to literals before writing
+            prompt_literal = data['prompt'].replace('\n', '\\n')
+            accepted_values = 'none' if data['accepted_values'] is None else '|'.join(data['accepted_values'])
+            new_lines.append("{},{},{},{},{}\n".format(name, prompt_literal, data['type'], data['last_value'],
+                                                 accepted_values))
         with open(self.params_file, 'w') as file:
-            for name, data in self.arguments.items():
-                # Convert newlines back to literals before writing
-                prompt_literal = data['prompt'].replace('\n', '\\n')
-                accepted_values = 'none' if data['accepted_values'] is None else '|'.join(data['accepted_values'])
-                file.write("{},{},{},{},{}\n".format(name, prompt_literal, data['type'], data['last_value'],
-                                                     accepted_values))
+            file.writelines(new_lines)
         self._load_params()
 
     def prompt_for_argument(self, arg_name, prompt_override: str = None, accepted_value_override: List[Any] = None,

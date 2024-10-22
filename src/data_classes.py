@@ -57,7 +57,6 @@ class Base:
         self._eco_region_shapefile_dir = os.path.join(self._shape_file_dir, 'eco_region')
         self._tables_dir = os.path.join(out_dir, 'tables')
 
-        self._mosaics_dir = os.path.join(self._land_cover_dir, 'mosaics')
         self._nc_dir = os.path.join(self._burn_area_dir, 'netcdfs')
         self.hdf_dir = os.path.join(self._burn_area_dir, 'hdfs')
 
@@ -82,7 +81,6 @@ class Base:
             self._eco_region_raster_dir,
             # self._eco_region_shapefile_dir,
             self._tables_dir,
-            self._mosaics_dir,
             self._nc_dir,
             self.hdf_dir
         ]:
@@ -171,6 +169,9 @@ class Base:
     def _generate_local_nc_path(self, tile: str) -> str:
         return os.path.join(self._nc_dir, f"{tile}.nc")
 
+    def _generate_land_cover_mosaic_dir(self, tile: str, year: str) -> str:
+        return os.path.join(self._land_cover_dir, tile,  str(year), 'mosaics')
+
 
 class LPDAAC(Base):
     def __init__(self, out_dir: str):
@@ -206,8 +207,6 @@ class LPDAAC(Base):
     def _download_task(self, request: Tuple[str, str]):
         link = request[0]
         dest = request[1]
-
-        print(link, dest)
 
         if os.path.exists(dest):
             return
@@ -361,7 +360,6 @@ class BurnData(LPDAAC):
             print('Finding available files...')
             available_year_paths = self._get_available_year_paths(start_year=start_year, end_year=end_year)
             download_requests = self._create_requests(available_year_paths, [tile])
-            print(download_requests)
 
             self._download_files(download_requests)
             self._write_ncs([tile])
@@ -604,20 +602,20 @@ class LandCover(LPDAAC):
         self._password = password
         self._file_regex = r'MCD12Q1' + self._post_regex
 
-    def _generate_local_hdf_path(self, year: str, remote_name: str) -> str:
-        return os.path.join(self._land_cover_dir, year, remote_name)
+    def _generate_local_hdf_path(self, tile: str, year: str, remote_name: str) -> str:
+        return os.path.join(self._land_cover_dir, tile, year, remote_name)
 
-    def _generate_local_hdf_dir(self, year: str) -> str:
-        return os.path.join(self._land_cover_dir, year)
+    def _generate_local_hdf_dir(self, tile: str, year: str) -> str:
+        return os.path.join(self._land_cover_dir, tile, year)
 
-    def _create_requests(self, available_year_paths: List[str], tiles: List[str]):
+    def _create_requests(self, available_year_paths: List[str], tile: str):
         download_requests = []
         for year_path in available_year_paths:
             year = re.match(self._date_regex, year_path).groupdict()['year']
 
-            available_files = self._get_available_files(year_path, tiles=tiles)
+            available_files = self._get_available_files(year_path, tiles=[tile])
             for file in available_files:
-                local_file_path = self._generate_local_hdf_path(year, file)
+                local_file_path = self._generate_local_hdf_path(tile, year, file)
                 os.makedirs(os.path.dirname(local_file_path), exist_ok=True)
                 if os.path.exists(local_file_path):
                     if not self._verify_hdf_file(local_file_path):
@@ -631,12 +629,13 @@ class LandCover(LPDAAC):
 
         return download_requests
 
-    def _create_annual_mosaic(self, year: str, land_cover_type: LandCoverType = LandCoverType.IGBP):
+    def _create_annual_mosaic(self, tile: str, year: str, land_cover_type: LandCoverType = LandCoverType.IGBP):
         output_file = f"lc_mosaic_{land_cover_type.value}_{year}.tif"
 
         # Filter available files for the requested tiles
-        lc_files = [self._generate_local_hdf_path(year, f) for f in os.listdir(self._generate_local_hdf_dir(year))
-                    if re.match(self._file_regex, os.path.basename(f)) is not None]
+        lc_files = [self._generate_local_hdf_path(tile, year, f) for f in
+                    os.listdir(self._generate_local_hdf_dir(tile, year)) if
+                    re.match(self._file_regex, os.path.basename(f)) is not None]
 
         # Use the sub-dataset name to get the right land cover type
         datasets = []
@@ -658,7 +657,8 @@ class LandCover(LPDAAC):
                     "transform": transform})
 
         # Save mosaic file
-        with rasterio.open(os.path.join(self._mosaics_dir, output_file), "w+", **crs) as dst:
+        with rasterio.open(os.path.join(self._generate_local_hdf_dir(tile, year), 'mosaics',
+                                        output_file), "w+", **crs) as dst:
             dst.write(mosaic)
 
     def get_land_cover(self, tiles: List[str] = None, land_cover_type: LandCoverType = LandCoverType.IGBP):
@@ -687,20 +687,22 @@ class LandCover(LPDAAC):
         print('Finding available files...')
         available_year_paths = self._get_available_year_paths()
 
-        for year_path in tqdm(available_year_paths, position=0, file=sys.stdout):
-            year = re.match(self._date_regex, year_path).groupdict()['year']
-            output_file = f"lc_mosaic_{land_cover_type.value}_{year}.tif"
-            if os.path.exists(os.path.join(self._mosaics_dir, output_file)):
-                continue
-            download_requests = self._create_requests([year_path], tiles)
-            self._download_files(download_requests)
-            self._create_annual_mosaic(year, land_cover_type)
+        for tile in tiles:
+            for year_path in tqdm(available_year_paths, position=0, file=sys.stdout):
+                year = re.match(self._date_regex, year_path).groupdict()['year']
+                mosaic_dir = self._generate_land_cover_mosaic_dir(tile, year)
+                os.makedirs(mosaic_dir, exist_ok=True)
+                output_file = f"lc_mosaic_{land_cover_type.value}_{year}.tif"
+                if os.path.exists(os.path.join(mosaic_dir, output_file)):
+                    continue
+                download_requests = self._create_requests([year_path], tile)
+                self._download_files(download_requests)
+                self._create_annual_mosaic(tile, year, land_cover_type)
 
-            print("Mosaicking/remosaicking land cover tiles...")
+                print("Mosaicking/remosaicking land cover tiles...")
 
-        # Print location
-        print(f"Land cover data saved to {self._mosaics_dir}")
-
+                # Print location
+                print(f"Land cover data saved to {mosaic_dir}")
 
 class EcoRegion(Base):
     def __init__(self, out_dir: str):

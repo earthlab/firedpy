@@ -1,16 +1,16 @@
 out_dir,Where would you like the output for this run saved?,str,output,none
-full_csv,Enter (true y yes) if you want a full csv. Enter (false n no) if you want a raw csv,bool,True,true|yes|y|false|no|n
-tile_choice,"Would you like the fired product on a) continent b) country c) US state or d) specific MODIS tiles?",str,b,a|b|c|d
-tile_name,f,str,conus_ak,none
+full_csv,Enter (true y yes) if you want a full csv. Enter (false n no) if you want a raw csv,bool,False,true|yes|y|false|no|n
+tile_choice,"Would you like the fired product on a) continent b) country c) US state d) gpkg/shp file path or e) specific MODIS tiles?",str,b,a|b|c|d|e
+tile_name,f,str,albania,none
 eco_region_type,Please enter the eco_region type,str,world,world|na
-daily,Enter (true y yes) if you want to create the daily polygons or (false n no) for just the event-level perimeter for your analysis area,bool,True,true|yes|y|false|no|n
+daily,Enter (true y yes) if you want to create the daily polygons or (false n no) for just the event-level perimeter for your analysis area,bool,False,true|yes|y|false|no|n
 spatial,fPlease enter the number of cells (~463 m resolution) to search for neighboring burn detections in all directions,int,5,none
 temporal,The number of days between events to search for neighboring burn detections,int,11,none
-shape_type,Specify the format of the shapefile you want. Can be 'shp' 'gpkg' or 'both'.,str,both,gpkg|shp|both|none
+shape_type,Specify the format of the shapefile you want. Can be 'shp' 'gpkg' or 'both'.,str,gpkg,gpkg|shp|both|none
 land_cover_type,If you would like to include land cover as an attribute enter the land cover type number you would like to use.\nAvailable land cover categories: \n 0: None \n 1: IGBP global vegetation classification scheme \n 2: University of Maryland (UMD) scheme \n 3: MODIS-derived LAI/fPAR scheme \n 4: MODIS-derived Net Primary Production (NPP) scheme \n 5: Plant Functional Types (PFT) scheme \n,int,1,0|1|2|3|4|5
 username,Enter your NASA Earthdata username,str,erve3705,none
 password,Enter your NASA Earthdata password,str,,none
-start_year,Enter the year you want to start or 0 for all dates,int,0,none
+start_year,Enter the year you want to start or 0 for all dates,int,2022,none
 end_year,Enter the year you want to end or 0 for all dates,int,0,none
-n_cores,Number of cores for parallel processing. Input 0 to use cpu_count - 1,int,3,none
+n_cores,Number of cores for parallel processing. Input 0 to use cpu_count - 1,int,2,none
 cleanup,Cleanup intermediate files? If (true y yes) then the burn area and landcover files will be removed after each run to save disk space in between multiple runs,bool,False,true|yes|y|false|no|n

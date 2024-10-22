@@ -700,7 +700,7 @@ class ModelBuilder(Base):
 
         return gdf
 
-    def add_land_cover_attributes(self, gdf: gpd.GeoDataFrame,
+    def add_land_cover_attributes(self, gdf: gpd.GeoDataFrame, tiles: List[str],
                                   land_cover_type: LandCoverType = LandCoverType.NONE) -> gpd.GeoDataFrame:
         print('Adding land cover attributes...')
 
@@ -710,11 +710,6 @@ class ModelBuilder(Base):
                            LandCoverType.MODIS_LAI: "MODIS-derived LAI/fPAR scheme",
                            LandCoverType.MODIS_BGC: "MODIS-derived Net Primary Production (NPP) scheme",
                            LandCoverType.PFT: "Plant Functional Type (PFT) scheme."}
-
-        lc_files = sorted([os.path.join(self._mosaics_dir, f)
-                           for f in os.listdir(self._mosaics_dir) if re.match(self._lc_mosaic_re, f)])
-        lc_years = [int(re.match(self._lc_mosaic_re, os.path.basename(f)).groupdict()['year']) for f in lc_files]
-        lc_files = {lc_years[i]: lc_files[i] for i in range(len(lc_files))}
 
         # Rasterio point querier (will only work here)
         def point_query(row):
@@ -733,24 +728,34 @@ class ModelBuilder(Base):
         # This works faster when split by year and the pointer is outside
         # This is also not the best way
         sgdfs = []
-        for year in tqdm(burn_years, position=0, file=sys.stdout):
+        for tile in tiles:
+            for year in tqdm(burn_years, position=0, file=sys.stdout):
+                mosaic_dir = self._generate_land_cover_mosaic_dir(tile, year)
+                if not os.path.exists(mosaic_dir):
+                    print(f'No land cover data for {tile} in year {year}')
+                    continue
+                lc_files = sorted([os.path.join(mosaic_dir, f)
+                                   for f in os.listdir(mosaic_dir) if re.match(self._lc_mosaic_re, f)])
+                lc_years = [int(re.match(self._lc_mosaic_re, os.path.basename(f)).groupdict()['year']) for f in
+                            lc_files]
+                lc_files = {lc_years[i]: lc_files[i] for i in range(len(lc_files))}
 
-            sgdf = gdf[gdf['ig_year'] == year]
+                sgdf = gdf[gdf['ig_year'] == year]
 
-            # Now set year one back for land_cover
-            year = year - 1
+                # Now set year one back for land_cover
+                year = year - 1
 
-            # Use previous year's lc
-            if year < min(lc_years):
-                year = min(lc_years)
-            elif year > max(lc_years):
-                year = max(lc_years)
+                # Use previous year's lc
+                if year < min(lc_years):
+                    year = min(lc_years)
+                elif year > max(lc_years):
+                    year = max(lc_years)
 
-            lc_file = lc_files[year]
-            lc = rasterio.open(lc_file)
-            sgdf['lc_code'] = sgdf.apply(point_query, axis=1)
-            sgdf['lc_mode'] = sgdf.groupby('id')['lc_code'].transform(self._mode)
-            sgdfs.append(sgdf)
+                lc_file = lc_files[year]
+                lc = rasterio.open(lc_file)
+                sgdf['lc_code'] = sgdf.apply(point_query, axis=1)
+                sgdf['lc_mode'] = sgdf.groupby('id')['lc_code'].transform(self._mode)
+                sgdfs.append(sgdf)
 
         gdf = pd.concat(sgdfs)
         gdf = gdf.reset_index(drop=True)
@@ -762,7 +767,6 @@ class ModelBuilder(Base):
         gdf['lc_type'] = lc_descriptions[land_cover_type]
 
         gdf.rename({'lc_description': 'lc_desc'}, inplace=True, axis='columns')
-        print('C')
         return gdf
 
     def _add_attributes_from_na_cec(self, gdf, eco_region_level):
