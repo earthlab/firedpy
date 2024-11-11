@@ -83,6 +83,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
  - Central to Southern Europe (Estonia, Latvia, Lithuania, Belarus, Ukraine, Czech Republic, Slovakia, Hungary, Romania, Bulgaria, Montenegro, Bosnia, Turkey, Republic Of Moldova, Serbia, Albania, Slovenia, and North Macedonia): [2001-2021](https://scholar.colorado.edu/concern/datasets/7h149r07z)
  - Greece: [2001-2021](https://scholar.colorado.edu/concern/datasets/bc386k355)
  - UK and Ireland: [2001-2021](https://scholar.colorado.edu/concern/datasets/pc289k33c)
+ - Malta: [November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/sx61dp12d)
 
 ### Africa
 
@@ -114,6 +115,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
  - Malawi: [2001-2021](https://scholar.colorado.edu/concern/datasets/5999n464m)
  - Mali: [2001-2021](https://scholar.colorado.edu/concern/datasets/pr76f4544)
  - Mauritania: [2001-2021](https://scholar.colorado.edu/concern/datasets/x059c864s)
+ - Mauritius: [Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/1831cm54z)
  - Morocco: [2001-2021](https://scholar.colorado.edu/concern/datasets/td96k3751)
  - Mozambique: [2001-2021](https://scholar.colorado.edu/concern/datasets/1n79h5504)
  - Namibia: [2001-2021](https://scholar.colorado.edu/concern/datasets/db78td244)
