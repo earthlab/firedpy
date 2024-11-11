@@ -58,6 +58,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
  - Mexico and Central America (Belize, Guatemala, Honduras, El Salvador, Nicaragua, Costa Rica, Panama): [2001-2021](https://scholar.colorado.edu/concern/datasets/vd66w1102)
  - Aruba: [Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/9880vs496)
  - Montserrat: [Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/3r074w69k)
+ - Antigua and Barbuda: [Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/st74cs33x)
 
 ### South America
  - Bolivia: [2001-2021](https://scholar.colorado.edu/concern/datasets/b2773w83t)
@@ -75,6 +76,9 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 [Entire Western hemisphere from Jan 2017 to March 2020, intended for use in conjunction with GOES16 active fire detections.](https://scholar.colorado.edu/concern/datasets/d217qq78g)
 
 ### Europe
+ - Aland: [Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5138jg697)
+ - Albania: [Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/wp988m53f)
+ - Andorra: [Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/xp68kh87x)
  - Northern Europe (Iceland, Sweden, Norway, and Denmark): [2001-2021](https://scholar.colorado.edu/concern/datasets/sb397945f)
  - Poland: [2001-2021](https://scholar.colorado.edu/concern/datasets/6969z264g)
  - Finland: [2001-2021](https://scholar.colorado.edu/concern/datasets/6395w836j)
@@ -90,6 +94,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 
 ### Africa
 
+ - Algeria: [Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/bc386k800)
  - Angola: [2001-2021](https://scholar.colorado.edu/concern/datasets/t435gf21z)
  - Benin: [2001-2021](https://scholar.colorado.edu/concern/datasets/z603qz58m)
  - Botswana: [2001-2021](https://scholar.colorado.edu/concern/datasets/b8515p69g)
@@ -141,6 +146,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 
 ### Asia
 
+ - Afghanistan: [Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/rj4306237)
  - Armenia: [Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/7h149r64k)
  - Azerbaijan: [Nov 2000 - July 2024]( https://scholar.colorado.edu/concern/datasets/qb98mg90m)
  - China: [2001-2021](https://scholar.colorado.edu/concern/datasets/qz20st810)
