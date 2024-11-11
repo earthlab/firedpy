@@ -56,6 +56,8 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
  - Hawaii: [2001-2021](https://scholar.colorado.edu/concern/datasets/7h149r06p)
  - Carribean (Barbados, Bahamas, Cayman Islands, Cuba, Dominican Republic, Haiti, Jamaica, Montserrat, Puerto Rico, Saint Kitts And Nevis, Trinidad And Tobago, British Virgin Islands, Guadeloupe, Saint Barthelemy): [2001-2021](https://scholar.colorado.edu/concern/datasets/x633f230f)
  - Mexico and Central America (Belize, Guatemala, Honduras, El Salvador, Nicaragua, Costa Rica, Panama): [2001-2021](https://scholar.colorado.edu/concern/datasets/vd66w1102)
+ - Aruba: [Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/9880vs496)
+ - Montserrat: [Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/3r074w69k)
 
 ### South America
  - Bolivia: [2001-2021](https://scholar.colorado.edu/concern/datasets/b2773w83t)
@@ -84,6 +86,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
  - Greece: [2001-2021](https://scholar.colorado.edu/concern/datasets/bc386k355)
  - UK and Ireland: [2001-2021](https://scholar.colorado.edu/concern/datasets/pc289k33c)
  - Malta: [November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/sx61dp12d)
+ - Monaco: [November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/2514nn122)
 
 ### Africa
 
@@ -138,6 +141,8 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 
 ### Asia
 
+ - Armenia: [Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/7h149r64k)
+ - Azerbaijan: [Nov 2000 - July 2024]( https://scholar.colorado.edu/concern/datasets/qb98mg90m)
  - China: [2001-2021](https://scholar.colorado.edu/concern/datasets/qz20st810)
  - India: [2001-2021](https://scholar.colorado.edu/concern/datasets/ht24wk47t)
  - Central Asia (Turkmenistan, Kazakhstan, Uzbekistan, Kyrgystan, Tajikistan, Afghanistan, and Pakistan): [2001-2021](https://scholar.colorado.edu/concern/datasets/47429b07v)
