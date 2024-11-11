@@ -56,13 +56,13 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
  - Hawaii: [2001-2021](https://scholar.colorado.edu/concern/datasets/7h149r06p)
  - Carribean (Barbados, Bahamas, Cayman Islands, Cuba, Dominican Republic, Haiti, Jamaica, Montserrat, Puerto Rico, Saint Kitts And Nevis, Trinidad And Tobago, British Virgin Islands, Guadeloupe, Saint Barthelemy): [2001-2021](https://scholar.colorado.edu/concern/datasets/x633f230f)
  - Mexico and Central America (Belize, Guatemala, Honduras, El Salvador, Nicaragua, Costa Rica, Panama): [2001-2021](https://scholar.colorado.edu/concern/datasets/vd66w1102)
- - Aruba: [Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/9880vs496)
- - Montserrat: [Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/3r074w69k)
- - Antigua and Barbuda: [Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/st74cs33x)
+ - Aruba: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/9880vs496)**
+ - Montserrat: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/3r074w69k)**
+ - Antigua and Barbuda: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/st74cs33x)**
 
 ### South America
  - Bolivia: [2001-2021](https://scholar.colorado.edu/concern/datasets/b2773w83t)
- - Argentina: [2001-2021](https://scholar.colorado.edu/concern/datasets/5t34sk58k)
+ - Argentina: [2001-2021](https://scholar.colorado.edu/concern/datasets/5t34sk58k) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/td96k4315)**
  - Northern South America (Suriname, French Guiana, Guyana): [2001-2021](https://scholar.colorado.edu/concern/datasets/qv33rx839)
  - Chile: [2001-2021](https://scholar.colorado.edu/concern/datasets/qr46r2052)
  - Uruguay: [2001-2021](https://scholar.colorado.edu/concern/datasets/q524jq130)
@@ -76,9 +76,9 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 [Entire Western hemisphere from Jan 2017 to March 2020, intended for use in conjunction with GOES16 active fire detections.](https://scholar.colorado.edu/concern/datasets/d217qq78g)
 
 ### Europe
- - Aland: [Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5138jg697)
- - Albania: [Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/wp988m53f)
- - Andorra: [Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/xp68kh87x)
+ - Aland: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5138jg697)**
+ - Albania: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/wp988m53f)**
+ - Andorra: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/xp68kh87x)**
  - Northern Europe (Iceland, Sweden, Norway, and Denmark): [2001-2021](https://scholar.colorado.edu/concern/datasets/sb397945f)
  - Poland: [2001-2021](https://scholar.colorado.edu/concern/datasets/6969z264g)
  - Finland: [2001-2021](https://scholar.colorado.edu/concern/datasets/6395w836j)
@@ -89,12 +89,12 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
  - Central to Southern Europe (Estonia, Latvia, Lithuania, Belarus, Ukraine, Czech Republic, Slovakia, Hungary, Romania, Bulgaria, Montenegro, Bosnia, Turkey, Republic Of Moldova, Serbia, Albania, Slovenia, and North Macedonia): [2001-2021](https://scholar.colorado.edu/concern/datasets/7h149r07z)
  - Greece: [2001-2021](https://scholar.colorado.edu/concern/datasets/bc386k355)
  - UK and Ireland: [2001-2021](https://scholar.colorado.edu/concern/datasets/pc289k33c)
- - Malta: [November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/sx61dp12d)
- - Monaco: [November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/2514nn122)
+ - Malta: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/sx61dp12d)**
+ - Monaco: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/2514nn122)**
 
 ### Africa
 
- - Algeria: [Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/bc386k800)
+ - Algeria: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/bc386k800)**
  - Angola: [2001-2021](https://scholar.colorado.edu/concern/datasets/t435gf21z)
  - Benin: [2001-2021](https://scholar.colorado.edu/concern/datasets/z603qz58m)
  - Botswana: [2001-2021](https://scholar.colorado.edu/concern/datasets/b8515p69g)
@@ -123,7 +123,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
  - Malawi: [2001-2021](https://scholar.colorado.edu/concern/datasets/5999n464m)
  - Mali: [2001-2021](https://scholar.colorado.edu/concern/datasets/pr76f4544)
  - Mauritania: [2001-2021](https://scholar.colorado.edu/concern/datasets/x059c864s)
- - Mauritius: [Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/1831cm54z)
+ - Mauritius: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/1831cm54z)**
  - Morocco: [2001-2021](https://scholar.colorado.edu/concern/datasets/td96k3751)
  - Mozambique: [2001-2021](https://scholar.colorado.edu/concern/datasets/1n79h5504)
  - Namibia: [2001-2021](https://scholar.colorado.edu/concern/datasets/db78td244)
@@ -146,9 +146,9 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 
 ### Asia
 
- - Afghanistan: [Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/rj4306237)
- - Armenia: [Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/7h149r64k)
- - Azerbaijan: [Nov 2000 - July 2024]( https://scholar.colorado.edu/concern/datasets/qb98mg90m)
+ - Afghanistan: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/rj4306237)**
+ - Armenia: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/7h149r64k)**
+ - Azerbaijan: **[Nov 2000 - July 2024]( https://scholar.colorado.edu/concern/datasets/qb98mg90m)**
  - China: [2001-2021](https://scholar.colorado.edu/concern/datasets/qz20st810)
  - India: [2001-2021](https://scholar.colorado.edu/concern/datasets/ht24wk47t)
  - Central Asia (Turkmenistan, Kazakhstan, Uzbekistan, Kyrgystan, Tajikistan, Afghanistan, and Pakistan): [2001-2021](https://scholar.colorado.edu/concern/datasets/47429b07v)
@@ -167,6 +167,10 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
  - Thailand: [2001-2021](https://scholar.colorado.edu/concern/datasets/xs55md39h)
  - Laos: [2001-2021](https://scholar.colorado.edu/concern/datasets/bz60cx389)
  - Myanmar: [2001-2021](https://scholar.colorado.edu/concern/datasets/pk02cb86p)
+
+### Australia
+
+ - Whole Country: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/x059c9152)**
 
 ### Australia (state by state)
 
