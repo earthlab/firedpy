@@ -52,24 +52,34 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 ### North America
  - Coterminous USA + Alaska: [2001-2021](https://scholar.colorado.edu/concern/datasets/d504rm74m) **[2001-2024](https://scholar.colorado.edu/concern/datasets/fx719p11c)**
  - US plus Canada: [2001-2021](https://scholar.colorado.edu/concern/datasets/8336h304x)
- - Canada: [2001-2021](https://scholar.colorado.edu/concern/datasets/gf06g388c)
+ - Canada: [2001-2021](https://scholar.colorado.edu/concern/datasets/gf06g388c) **[2001-2024](https://scholar.colorado.edu/concern/datasets/0p096866d)**
  - Hawaii: [2001-2021](https://scholar.colorado.edu/concern/datasets/7h149r06p)
  - Carribean (Barbados, Bahamas, Cayman Islands, Cuba, Dominican Republic, Haiti, Jamaica, Montserrat, Puerto Rico, Saint Kitts And Nevis, Trinidad And Tobago, British Virgin Islands, Guadeloupe, Saint Barthelemy): [2001-2021](https://scholar.colorado.edu/concern/datasets/x633f230f)
  - Mexico and Central America (Belize, Guatemala, Honduras, El Salvador, Nicaragua, Costa Rica, Panama): [2001-2021](https://scholar.colorado.edu/concern/datasets/vd66w1102)
  - Aruba: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/9880vs496)**
  - Montserrat: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/3r074w69k)**
  - Antigua and Barbuda: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/st74cs33x)**
+ - Barbados: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/m613n033c)**
+ - Belize: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/q524jq679)**
+ - British Virgin Islands: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/jq085m540)**
+ - Cayman Islands: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/0r967557n)**
+ - Cuba: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5712m8365)**
+ - Curacao: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/ws859h28b)**
+ - Costa Rica: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/mc87pr85g)**
+ - Dominica: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/hd76s170r)**
+ - Dominican Republic: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/1j92g9289)**
+ - El Salvador: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/m613n034n)**
 
 ### South America
  - Bolivia: [2001-2021](https://scholar.colorado.edu/concern/datasets/b2773w83t)
  - Argentina: [2001-2021](https://scholar.colorado.edu/concern/datasets/5t34sk58k) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/td96k4315)**
  - Northern South America (Suriname, French Guiana, Guyana): [2001-2021](https://scholar.colorado.edu/concern/datasets/qv33rx839)
- - Chile: [2001-2021](https://scholar.colorado.edu/concern/datasets/qr46r2052)
+ - Chile: [2001-2021](https://scholar.colorado.edu/concern/datasets/qr46r2052) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/g732db604)**
  - Uruguay: [2001-2021](https://scholar.colorado.edu/concern/datasets/q524jq130)
  - Brazil: [2001-2021](https://scholar.colorado.edu/concern/datasets/05741s90q)
  - Peru: [2001-2021](https://scholar.colorado.edu/concern/datasets/x346d5616)
  - Colombia: [2001-2021](https://scholar.colorado.edu/concern/datasets/mp48sd91d)
- - Ecuador: [2001-2021](https://scholar.colorado.edu/concern/datasets/pc289k34n)
+ - Ecuador: [2001-2021](https://scholar.colorado.edu/concern/datasets/pc289k34n) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5138jg700)**
  - Venezuela: [2001-2021](https://scholar.colorado.edu/concern/datasets/7m01bm95m)
  - Paraguay: [2001-2021](https://scholar.colorado.edu/concern/datasets/rb68xd05p)
  
@@ -79,6 +89,12 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
  - Aland: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5138jg697)**
  - Albania: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/wp988m53f)**
  - Andorra: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/xp68kh87x)**
+ - Belarus: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/r781wh632)**
+ - Belgium: **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/hh63sx489)**
+ - Bosnia and Herzegovina **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/dz010s09q)**
+ - Croatia: **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/kh04dr144)**
+ - Cyprus: **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/tx31qk48f)**
+ - Czechia: **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/fq977w613)**
  - Northern Europe (Iceland, Sweden, Norway, and Denmark): [2001-2021](https://scholar.colorado.edu/concern/datasets/sb397945f)
  - Poland: [2001-2021](https://scholar.colorado.edu/concern/datasets/6969z264g)
  - Finland: [2001-2021](https://scholar.colorado.edu/concern/datasets/6395w836j)
@@ -96,17 +112,20 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 
  - Algeria: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/bc386k800)**
  - Angola: [2001-2021](https://scholar.colorado.edu/concern/datasets/t435gf21z)
- - Benin: [2001-2021](https://scholar.colorado.edu/concern/datasets/z603qz58m)
- - Botswana: [2001-2021](https://scholar.colorado.edu/concern/datasets/b8515p69g)
- - Burundi: [2001-2021](https://scholar.colorado.edu/concern/datasets/3f462659h)
- - Burkina Faso: [2001-2021](https://scholar.colorado.edu/concern/datasets/9g54xj875)
+ - Benin: [2001-2021](https://scholar.colorado.edu/concern/datasets/z603qz58m) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/fb494b180)**
+ - Botswana: [2001-2021](https://scholar.colorado.edu/concern/datasets/b8515p69g) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/nv9354593)**
+ - Burundi: [2001-2021](https://scholar.colorado.edu/concern/datasets/3f462659h) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/vt150k986)**
+ - Burkina Faso: [2001-2021](https://scholar.colorado.edu/concern/datasets/9g54xj875) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/x633f2869)**
+ - Cabo Verde: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/v692t782j)**
  - Cameroon: [2001-2021](https://scholar.colorado.edu/concern/datasets/x920fz208)
  - Central North Africa (Libya, Algeria, Tunisia): [2001-2021](https://scholar.colorado.edu/concern/datasets/8910jv77j)
  - Chad: [2001-2021](https://scholar.colorado.edu/concern/datasets/707958762)
  - Central African Republic: [2001-2021](https://scholar.colorado.edu/concern/datasets/pv63g1576)
+ - Comoros: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/s7526f22t)**
  - Democratic Republic of the Congo: [2001-2021](https://scholar.colorado.edu/concern/datasets/5425kb88g)
- - Djibouti: [2001-2021](https://scholar.colorado.edu/concern/datasets/1831cm01x)
- - Equatorial Guinea: [2001-2021](https://scholar.colorado.edu/concern/datasets/vx021g32b)
+ - Djibouti: [2001-2021](https://scholar.colorado.edu/concern/datasets/1831cm01x) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/rf55z935n)**
+ - Egypt:  **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/vm40xt27j)**
+ - Equatorial Guinea: [2001-2021](https://scholar.colorado.edu/concern/datasets/vx021g32b)  **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/j67315565)**
  - Eritrea: [2001-2021](https://scholar.colorado.edu/concern/datasets/5m60qt182)
  - eSwatini: [2001-2021](https://scholar.colorado.edu/concern/datasets/9w0324116)
  - Ethiopia: [2001-2021](https://scholar.colorado.edu/concern/datasets/z316q2977)
@@ -149,6 +168,8 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
  - Afghanistan: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/rj4306237)**
  - Armenia: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/7h149r64k)**
  - Azerbaijan: **[Nov 2000 - July 2024]( https://scholar.colorado.edu/concern/datasets/qb98mg90m)**
+ - Bahrain: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/c534fq70v)**
+ - Cambodia: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/2r36v0354)**
  - China: [2001-2021](https://scholar.colorado.edu/concern/datasets/qz20st810)
  - India: [2001-2021](https://scholar.colorado.edu/concern/datasets/ht24wk47t)
  - Central Asia (Turkmenistan, Kazakhstan, Uzbekistan, Kyrgystan, Tajikistan, Afghanistan, and Pakistan): [2001-2021](https://scholar.colorado.edu/concern/datasets/47429b07v)
@@ -161,7 +182,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
  - Taiwan: [2001-2021](https://scholar.colorado.edu/concern/datasets/df65v9276)
  - Sri Lanka: [2001-2021](https://scholar.colorado.edu/concern/datasets/9z9030982)
  - Nepal: [2001-2021](https://scholar.colorado.edu/concern/datasets/mk61rj10w)
- - Bhutan: [2001-2021](https://scholar.colorado.edu/concern/datasets/n009w342h)
+ - Bhutan: [2001-2021](https://scholar.colorado.edu/concern/datasets/n009w342h) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/2b88qd74k)**
  - Bangladesh: [2001-2021](https://scholar.colorado.edu/concern/datasets/d791sh33k)
  - Vietnam: [2001-2021](https://scholar.colorado.edu/concern/datasets/h702q7566)
  - Thailand: [2001-2021](https://scholar.colorado.edu/concern/datasets/xs55md39h)
@@ -186,10 +207,10 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 
  - Philippines: [2001-2021](https://scholar.colorado.edu/concern/datasets/7d278v06f)
  - Papua New Guinea: [2001-2021](https://scholar.colorado.edu/concern/datasets/3r074w183)
- - East Timor: [2001-2021](https://scholar.colorado.edu/concern/datasets/j098zc184)
+ - East Timor: [2001-2021](https://scholar.colorado.edu/concern/datasets/j098zc184) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/c247dt86h)**
  - New Zealand: [2001-2021](https://scholar.colorado.edu/concern/datasets/9g54xj88f)
  - Malaysia: [2001-2021](https://scholar.colorado.edu/concern/datasets/fq977w13f)
- - Brunei: [2001-2021](https://scholar.colorado.edu/concern/datasets/mp48sd92p)
+ - Brunei: [2001-2021](https://scholar.colorado.edu/concern/datasets/mp48sd92p) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/0v8382100)**
  - Indonesia: [2001-2021](https://scholar.colorado.edu/concern/datasets/p2676w918)
 
 
