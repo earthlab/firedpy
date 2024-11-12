@@ -192,7 +192,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
  - Mauritius: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/1831cm54z)**
  - Morocco: [2001-2021](https://scholar.colorado.edu/concern/datasets/td96k3751) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/qj72p8679)**
  - Mozambique: [2001-2021](https://scholar.colorado.edu/concern/datasets/1n79h5504) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/2n49t338q)**
- - Namibia: [2001-2021](https://scholar.colorado.edu/concern/datasets/db78td244)
+ - Namibia: [2001-2021](https://scholar.colorado.edu/concern/datasets/db78td244) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5999n508g)**
  - Niger: [2001-2021](https://scholar.colorado.edu/concern/datasets/m039k605q) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/qn59q5683)**
  - Nigeria: [2001-2021](https://scholar.colorado.edu/concern/datasets/cv43nx78p)
  - Republic of the Congo: [2001-2021](https://scholar.colorado.edu/concern/datasets/nk322f305) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/t435gf783)**
@@ -205,7 +205,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
  - South Africa: [2001-2021](https://scholar.colorado.edu/concern/datasets/rf55z8833) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/z603r0092)**
  - South Sudan: [2001-2021](https://scholar.colorado.edu/concern/datasets/b2773w89g)
  - Sudan: [2001-2021](https://scholar.colorado.edu/concern/datasets/g158bj37v) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/9880vs542)**
- - Tanzania: [2001-2021](https://scholar.colorado.edu/concern/datasets/7w62f947x)
+ - Tanzania: [2001-2021](https://scholar.colorado.edu/concern/datasets/7w62f947x) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/76537320w)**
  - Togo: [2001-2021](https://scholar.colorado.edu/concern/datasets/fj236325p) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/qf85nd104)**
  - Tunisia: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/kp78gj27x)**
  - Uganda: [2001-2021](https://scholar.colorado.edu/concern/datasets/hh63sx004) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/7d278v62s)**
