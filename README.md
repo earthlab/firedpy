@@ -133,7 +133,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
  - Norway: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/70795924h)**
  - Poland: [2001-2021](https://scholar.colorado.edu/concern/datasets/6969z264g) **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/4b29b7569)**
  - Portugal: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/f4752j497)**
- - Russia: [2001-2021](https://scholar.colorado.edu/concern/datasets/q811kk87t)
+ - Russia: [2001-2021](https://scholar.colorado.edu/concern/datasets/q811kk87t) **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/f7623f60g)**
  - San Marino: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/zk51vj568)**
  - Serbia: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5h73pz01v)**
  - Slovakia: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/cr56n2793)**
@@ -186,7 +186,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
  - Mauritania: [2001-2021](https://scholar.colorado.edu/concern/datasets/x059c864s)
  - Mauritius: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/1831cm54z)**
  - Morocco: [2001-2021](https://scholar.colorado.edu/concern/datasets/td96k3751) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/qj72p8679)**
- - Mozambique: [2001-2021](https://scholar.colorado.edu/concern/datasets/1n79h5504)
+ - Mozambique: [2001-2021](https://scholar.colorado.edu/concern/datasets/1n79h5504) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/2n49t338q)**
  - Namibia: [2001-2021](https://scholar.colorado.edu/concern/datasets/db78td244)
  - Niger: [2001-2021](https://scholar.colorado.edu/concern/datasets/m039k605q)
  - Nigeria: [2001-2021](https://scholar.colorado.edu/concern/datasets/cv43nx78p)
