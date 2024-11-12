@@ -203,7 +203,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
  - Somalia: [2001-2021](https://scholar.colorado.edu/concern/datasets/xd07gt798) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/q524jq68k)**
  - Somaliland: [2001-2021](https://scholar.colorado.edu/concern/datasets/8c97kr53f) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/08612q175)**
  - South Africa: [2001-2021](https://scholar.colorado.edu/concern/datasets/rf55z8833) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/z603r0092)**
- - South Sudan: [2001-2021](https://scholar.colorado.edu/concern/datasets/b2773w89g)
+ - South Sudan: [2001-2021](https://scholar.colorado.edu/concern/datasets/b2773w89g) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/1g05fd479)**
  - Sudan: [2001-2021](https://scholar.colorado.edu/concern/datasets/g158bj37v) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/9880vs542)**
  - Tanzania: [2001-2021](https://scholar.colorado.edu/concern/datasets/7w62f947x) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/76537320w)**
  - Togo: [2001-2021](https://scholar.colorado.edu/concern/datasets/fj236325p) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/qf85nd104)**
