@@ -135,6 +135,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
  - Portugal: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/f4752j497)**
  - Russia: [2001-2021](https://scholar.colorado.edu/concern/datasets/q811kk87t)
  - San Marino: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/zk51vj568)**
+ - Serbia: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5h73pz01v)**
  - Slovakia: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/cr56n2793)**
  - Slovenia: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/tq57ns75v)**
  - Spain: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/xw42n953k)**
@@ -262,7 +263,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 
 ### Oceania
 
- - Philippines: [2001-2021](https://scholar.colorado.edu/concern/datasets/7d278v06f)
+ - Philippines: [2001-2021](https://scholar.colorado.edu/concern/datasets/7d278v06f) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/b8515q26w)**
  - Papua New Guinea: [2001-2021](https://scholar.colorado.edu/concern/datasets/3r074w183)
  - East Timor: [2001-2021](https://scholar.colorado.edu/concern/datasets/j098zc184) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/c247dt86h)**
  - New Caledonia: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/8w32r765q)**
