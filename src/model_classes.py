@@ -931,4 +931,40 @@ class ModelBuilder(Base):
             gdf.to_file(shape_path)
             print("Saving file to " + shape_path)
 
+    def add_kg_attributes(self, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+        """
+        Assign Köppen-Geiger climate zones to fire events using a single raster file.
 
+        Args:
+            gdf: GeoDataFrame containing 'x', 'y', and 'id'.
+            tif_path: File path to a Köppen-Geiger .tif raster.
+
+        Returns:
+            GeoDataFrame with kg_zone, kg_mode, and kg_desc columns added.
+        """
+        tif_path = os.path.join(PROJECT_DIR, 'data', 'koppen_geiger_tif', '1991_2020', 'koppen_geiger_0p00833333.tif')
+
+        KG_LEGEND = {1: "Af", 2: "Am", 3: "Aw", 4: "BWh", 5: "BWk", 6: "BSh", 7: "BSk", 8: "Csa", 9: "Csb", 10: "Csc",
+            11: "Cwa", 12: "Cwb", 13: "Cwc", 14: "Cfa", 15: "Cfb", 16: "Cfc", 17: "Dsa", 18: "Dsb", 19: "Dsc",
+            20: "Dsd", 21: "Dwa", 22: "Dwb", 23: "Dwc", 24: "Dwd", 25: "Dfa", 26: "Dfb", 27: "Dfc", 28: "Dfd", 29: "ET",
+            30: "EF",
+        }
+
+        sgdf = gdf.copy()
+
+        with rasterio.open(tif_path) as src:
+            # Project GeoDataFrame to match raster CRS
+            if sgdf.crs != src.crs:
+                print(f"Reprojecting from {sgdf.crs} to {src.crs}")
+                sgdf = sgdf.to_crs(src.crs)
+
+            # Extract centroid coordinates from geometry (handles points, polygons, multipolygons)
+            coords = [(geom.centroid.x, geom.centroid.y) for geom in sgdf.geometry]
+
+            sampled_vals = list(src.sample(coords))
+            sgdf['kg_zone'] = [val[0] if val[0] != src.nodata else np.nan for val in sampled_vals]
+
+        sgdf['kg_mode'] = sgdf.groupby('id')['kg_zone'].transform(self._mode)
+        sgdf['kg_desc'] = sgdf['kg_mode'].map(KG_LEGEND)
+
+        return sgdf

@@ -228,8 +228,8 @@ def main():
         gdf = models.add_land_cover_attributes(gdf, tiles, land_cover_type)
     gdf = models.process_geometry(gdf)
 
-    gdf.to_file('temp_test.gpkg', driver="GPKG")
     gdf = models.add_eco_region_attributes(gdf, eco_region_type, eco_region_level)
+    gdf = models.add_kg_attributes(gdf)
 
     def generate_path(proj_dir, base_filename, shape_type: ShapeType):
         """Generate the appropriate file path."""
