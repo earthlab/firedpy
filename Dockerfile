@@ -6,18 +6,6 @@ COPY . /home/firedpy
 RUN rm -rf .git
 WORKDIR /home/firedpy
 
-RUN apt-get update && apt-get install -y --no-install-recommends screen htop curl unzip nano vim tree
-
-# Download AWS CLI v2 and install it
-RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
-    && unzip awscliv2.zip \
-    && ./aws/install
-
-# Clean up the downloaded files and temporary packages
-RUN rm -rf awscliv2.zip ./aws \
-    && apt-get remove -y curl unzip \
-    && apt-get clean
-
 RUN conda update conda --yes \
     && conda config --add channels conda-forge \
     && conda config --set channel_priority strict \
@@ -29,6 +17,9 @@ RUN conda clean --all --yes --force-pkgs-dirs \
     && find /opt/conda/ -follow -type f -name '*.js.map' -delete \
     && conda list
 
+RUN GOCMD_VER=$(curl -L -s https://raw.githubusercontent.com/cyverse/gocommands/main/VERSION.txt) && \
+    curl -L -s "https://github.com/cyverse/gocommands/releases/download/${GOCMD_VER}/gocmd-${GOCMD_VER}-linux-amd64.tar.gz" | tar zxvf -
+
 # Set the PYTHONPATH environment variable
 ENV PYTHONPATH="/home/firedpy"
 
@@ -37,9 +28,10 @@ RUN adduser --disabled-password --gecos "VICE_User" --uid 1000 user  && \
     echo "$LOCAL_USER ALL=NOPASSWD: $PRIV_CMDS" >> /etc/sudoers
 
 RUN apt-get update && \
-    apt-get install -y curl grep sed dpkg wget bzip2 ca-certificates \
+    apt-get install -y grep sed dpkg wget bzip2 ca-certificates \
     libglib2.0-0 libxext6 libsm6 libxrender1 \
     gettext-base git mercurial subversion \
+    screen htop curl unzip nano vim tree \
     tmux && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
