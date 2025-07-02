@@ -214,9 +214,9 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 || Bangladesh|[2001-2021](https://scholar.colorado.edu/concern/datasets/d791sh33k) |**[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5d86p199z)**||
 || Bahrain|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/c534fq70v)**||
 || Cambodia|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/2r36v0354)**||
-|| China| [2001-2021](https://scholar.colorado.edu/concern/datasets/qz20st810) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/tt44pp77n)**||
+|| China| [2001-2021](https://scholar.colorado.edu/concern/datasets/qz20st810) | **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/tt44pp77n)**||
 || India| [2001-2021](https://scholar.colorado.edu/concern/datasets/ht24wk47t)|||
-|| Israel: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5m60qt777)**||
+|| Israel|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5m60qt777)**||
 || Iraq ||||
 || Iran|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/00000172f)**||
 || Japan||[2001-2021](https://scholar.colorado.edu/concern/datasets/dz010r34v)|||
