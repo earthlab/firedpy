@@ -62,7 +62,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 || Mexico || **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5x21th07j)**||
 || Nicaragua || **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/rb68xd57f)**||
 || Panama || **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/6q182m92n)**||
-|| USA plus Canada || [2001-2021](https://scholar.colorado.edu/concern/datasets/8336h304x) **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/0g354g88p)**||
+|| USA plus Canada | [2001-2021](https://scholar.colorado.edu/concern/datasets/8336h304x)| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/0g354g88p)**||
 || USA (Coterminous) + Alaska | [2001-2021](https://scholar.colorado.edu/concern/datasets/d504rm74m) | **[2001-2024](https://scholar.colorado.edu/concern/datasets/fx719p11c)**||
 || Hawaii | [2001-2021](https://scholar.colorado.edu/concern/datasets/7h149r06p)|||
 |Mexico and Central America (Belize, Guatemala, Honduras, El Salvador, Nicaragua, Costa Rica, Panama) || [2001-2021](https://scholar.colorado.edu/concern/datasets/vd66w1102)||
