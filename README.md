@@ -52,7 +52,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 || **Firedpy version**| 1.0|2.0|2.0|
 |-------|---------|----------------------------------------|----------------------------------------|---------------------------|
 | **Region** | **Country** | **V2022 (variable space-time parameters)** | **V2024 (1 pixel 5 days for everything)** | **V2024 (variable ST-params)** |
-| North America |||||
+| **North America** |||||
 || Belize || **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/q524jq679)** ||
 || Canada| [2001-2021](https://scholar.colorado.edu/concern/datasets/gf06g388c) | **[2001-2024](https://scholar.colorado.edu/concern/datasets/0p096866d)** ||
 || Costa Rica || **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/mc87pr85g)** ||
@@ -89,21 +89,20 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
  ||  Trinidad and Tobago||  **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/9c67wp39g)**|| 
  ||  Turks and Caicos||  **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/cv43nz30q)**|| 
  ||  US Virgin Islands||  **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/pv63g214m)**|| 
-
-### South America
- - Argentina: [2001-2021](https://scholar.colorado.edu/concern/datasets/5t34sk58k) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/td96k4315)**
- - Brazil: [2001-2021](https://scholar.colorado.edu/concern/datasets/05741s90q) **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/b8515q25m)**
- - Bolivia: [2001-2021](https://scholar.colorado.edu/concern/datasets/b2773w83t)
- - Chile: [2001-2021](https://scholar.colorado.edu/concern/datasets/qr46r2052) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/g732db604)**
- - Colombia: [2001-2021](https://scholar.colorado.edu/concern/datasets/mp48sd91d) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/8c97ks03f)**
- - Ecuador: [2001-2021](https://scholar.colorado.edu/concern/datasets/pc289k34n) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5138jg700)**
- - Guyana: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5h73pz00k)**
- - Paraguay: [2001-2021](https://scholar.colorado.edu/concern/datasets/rb68xd05p) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/fn1070729)**
- - Peru: [2001-2021](https://scholar.colorado.edu/concern/datasets/x346d5616) **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/wh246t78k)**
- - Suriname: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/n583xw60q)**
- - Uruguay: [2001-2021](https://scholar.colorado.edu/concern/datasets/q524jq130) **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/q237ht604)**
- - Venezuela: [2001-2021](https://scholar.colorado.edu/concern/datasets/7m01bm95m) **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/c534fq76h)**
- - Northern South America (Suriname, French Guiana, Guyana): [2001-2021](https://scholar.colorado.edu/concern/datasets/qv33rx839)
+|**South America** |||||
+||  Argentina| [2001-2021](https://scholar.colorado.edu/concern/datasets/5t34sk58k)| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/td96k4315)**||
+||  Brazil| [2001-2021](https://scholar.colorado.edu/concern/datasets/05741s90q) |**[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/b8515q25m)**||
+||  Bolivia| [2001-2021](https://scholar.colorado.edu/concern/datasets/b2773w83t)|||
+||  Chile| [2001-2021](https://scholar.colorado.edu/concern/datasets/qr46r2052) |**[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/g732db604)**|| 
+||  Colombia| [2001-2021](https://scholar.colorado.edu/concern/datasets/mp48sd91d) |**[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/8c97ks03f)**|| 
+|| Ecuador| [2001-2021](https://scholar.colorado.edu/concern/datasets/pc289k34n)| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5138jg700)**|| 
+||  Guyana|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5h73pz00k)**||
+||  Paraguay| [2001-2021](https://scholar.colorado.edu/concern/datasets/rb68xd05p)| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/fn1070729)**|| 
+||  Peru| [2001-2021](https://scholar.colorado.edu/concern/datasets/x346d5616)| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/wh246t78k)**|| 
+||  Suriname|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/n583xw60q)**|| 
+||  Uruguay| [2001-2021](https://scholar.colorado.edu/concern/datasets/q524jq130) |**[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/q237ht604)**|| 
+||  Venezuela| [2001-2021](https://scholar.colorado.edu/concern/datasets/7m01bm95m) |**[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/c534fq76h)**|| 
+|  Northern South America (Suriname, French Guiana, Guyana)| [2001-2021](https://scholar.colorado.edu/concern/datasets/qv33rx839)|||
 
  
 [Entire Western hemisphere from Jan 2017 to March 2020, intended for use in conjunction with GOES16 active fire detections.](https://scholar.colorado.edu/concern/datasets/d217qq78g)
