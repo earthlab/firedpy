@@ -182,7 +182,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 || Madagascar:| [2001-2021](https://scholar.colorado.edu/concern/datasets/fb494955x) |**[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/pv63g217f)**||
 || Malawi: |[2001-2021](https://scholar.colorado.edu/concern/datasets/5999n464m) |**[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/t722hb67t)**||
 || Mali: |[2001-2021](https://scholar.colorado.edu/concern/datasets/pr76f4544)| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/td96k433q)**||
-|| Mauritania: |[2001-2021](https://scholar.colorado.edu/concern/datasets/x059c864s) **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/v979v479r)**||
+|| Mauritania: |[2001-2021](https://scholar.colorado.edu/concern/datasets/x059c864s)| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/v979v479r)**||
 || Mauritius:|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/1831cm54z)**||
 || Morocco:| [2001-2021](https://scholar.colorado.edu/concern/datasets/td96k3751)| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/qj72p8679)**||
 || Mozambique: |[2001-2021](https://scholar.colorado.edu/concern/datasets/1n79h5504)| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/2n49t338q)**||
