@@ -51,23 +51,22 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 
 
 | Region | Country | V2022 (variable space-time parameters) | V2024 (1 pixel 5 days for everything) | V2024 (variable ST-params) |
+|| Firedpy version| 1.0|2.0|2.0|
 |-------|---------|----------------------------------------|----------------------------------------|---------------------------|
-| ### North America |||||
-|| - Belize: || **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/q524jq679)** ||
-
-
- - Canada: [2001-2021](https://scholar.colorado.edu/concern/datasets/gf06g388c) **[2001-2024](https://scholar.colorado.edu/concern/datasets/0p096866d)**
- - Costa Rica: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/mc87pr85g)**
- - El Salvador: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/m613n034n)**
- - Guatemala: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/nv935460v)**
- - Honduras: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/n296x082p)**
- - Mexico: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5x21th07j)**
- - Nicaragua: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/rb68xd57f)**
- - Panama: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/6q182m92n)**
- - USA plus Canada: [2001-2021](https://scholar.colorado.edu/concern/datasets/8336h304x) **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/0g354g88p)**
- - USA (Coterminous) + Alaska: [2001-2021](https://scholar.colorado.edu/concern/datasets/d504rm74m) **[2001-2024](https://scholar.colorado.edu/concern/datasets/fx719p11c)**
- - Hawaii: [2001-2021](https://scholar.colorado.edu/concern/datasets/7h149r06p)
- - Mexico and Central America (Belize, Guatemala, Honduras, El Salvador, Nicaragua, Costa Rica, Panama): [2001-2021](https://scholar.colorado.edu/concern/datasets/vd66w1102)
+| North America |||||
+|| Belize || **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/q524jq679)** ||
+|| Canada| [2001-2021](https://scholar.colorado.edu/concern/datasets/gf06g388c) | **[2001-2024](https://scholar.colorado.edu/concern/datasets/0p096866d)** ||
+|| Costa Rica || **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/mc87pr85g)** ||
+|| El Salvador || **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/m613n034n)**||
+|| Guatemala || **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/nv935460v)**||
+|| Honduras || **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/n296x082p)**||
+|| Mexico || **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5x21th07j)**||
+|| Nicaragua || **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/rb68xd57f)**||
+|| Panama || **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/6q182m92n)**||
+|| USA plus Canada || [2001-2021](https://scholar.colorado.edu/concern/datasets/8336h304x) **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/0g354g88p)**||
+|| USA (Coterminous) + Alaska | [2001-2021](https://scholar.colorado.edu/concern/datasets/d504rm74m) | **[2001-2024](https://scholar.colorado.edu/concern/datasets/fx719p11c)**||
+|| Hawaii | [2001-2021](https://scholar.colorado.edu/concern/datasets/7h149r06p)|||
+|Mexico and Central America (Belize, Guatemala, Honduras, El Salvador, Nicaragua, Costa Rica, Panama) || [2001-2021](https://scholar.colorado.edu/concern/datasets/vd66w1102)||
 
 ### Carribean Sea
  - Carribean (Barbados, Bahamas, Cayman Islands, Cuba, Dominican Republic, Haiti, Jamaica, Montserrat, Puerto Rico, Saint Kitts And Nevis, Trinidad And Tobago, British Virgin Islands, Guadeloupe, Saint Barthelemy): [2001-2021](https://scholar.colorado.edu/concern/datasets/x633f230f)
