@@ -102,7 +102,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 ||  Suriname|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/n583xw60q)**|| 
 ||  Uruguay| [2001-2021](https://scholar.colorado.edu/concern/datasets/q524jq130) |**[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/q237ht604)**|| 
 ||  Venezuela| [2001-2021](https://scholar.colorado.edu/concern/datasets/7m01bm95m) |**[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/c534fq76h)**|| 
-|  Northern South America (Suriname, French Guiana, Guyana)| [2001-2021](https://scholar.colorado.edu/concern/datasets/qv33rx839)||| 
+|  Northern South America (Suriname, French Guiana, Guyana)|| [2001-2021](https://scholar.colorado.edu/concern/datasets/qv33rx839)||| 
 |Entire Western hemisphere, intended for use in conjunction with GOES16 active fire detections. || [Jan 2017 to March 2020](https://scholar.colorado.edu/concern/datasets/d217qq78g)|||
 | **Europe** |||||
 || Aland|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5138jg697)**||
