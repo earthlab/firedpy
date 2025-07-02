@@ -219,7 +219,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 || Israel|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5m60qt777)**||
 || Iraq ||||
 || Iran|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/00000172f)**||
-|| Japan||[2001-2021](https://scholar.colorado.edu/concern/datasets/dz010r34v)|||
+|| Japan|[2001-2021](https://scholar.colorado.edu/concern/datasets/dz010r34v)|||
 || Kazakhstan|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/1r66j289k)**||
 || Kuwait|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/z316q350j)**||
 || Kyrgyzstan|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/3197xn61c)**||
