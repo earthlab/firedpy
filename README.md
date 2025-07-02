@@ -49,8 +49,13 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 
 ## Click on a link below to download a fire perimeter dataset for your favorite country
 
-### North America
- - Belize: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/q524jq679)**
+
+| Region | Country | V2022 (variable space-time parameters) | V2024 (1 pixel 5 days for everything) | V2024 (variable ST-params) |
+|-------|---------|----------------------------------------|----------------------------------------|---------------------------|
+| ### North America |||||
+|| - Belize: || **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/q524jq679)** ||
+
+
  - Canada: [2001-2021](https://scholar.colorado.edu/concern/datasets/gf06g388c) **[2001-2024](https://scholar.colorado.edu/concern/datasets/0p096866d)**
  - Costa Rica: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/mc87pr85g)**
  - El Salvador: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/m613n034n)**
