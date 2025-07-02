@@ -206,11 +206,11 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 || Zambia:| [2001-2021](https://scholar.colorado.edu/concern/datasets/6108vc441) |**[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/qv33rz46c)**||
 || Zimbabwe| [2001-2021](https://scholar.colorado.edu/concern/datasets/f7623d95c)| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/np193b769)**||
 | Central North Africa (Libya, Algeria, Tunisia)|| [2001-2021](https://scholar.colorado.edu/concern/datasets/8910jv77j)|||
-|**Asia**|||||
-||Afghanistan || **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/rj4306237)** ||
-|| Armenia: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/7h149r64k)**
-|| Azerbaijan: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/qb98mg90m)**
-|| Bhutan: [2001-2021](https://scholar.colorado.edu/concern/datasets/n009w342h) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/2b88qd74k)**
+| **Asia** |||||
+|| Afghanistan || **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/rj4306237)** ||
+|| Armenia: ||**[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/7h149r64k)**||
+|| Azerbaijan:|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/qb98mg90m)**||
+|| Bhutan:| [2001-2021](https://scholar.colorado.edu/concern/datasets/n009w342h) |**[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/2b88qd74k)**
 || Bangladesh: [2001-2021](https://scholar.colorado.edu/concern/datasets/d791sh33k) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5d86p199z)**
 || Bahrain: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/c534fq70v)**
 || Cambodia: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/2r36v0354)**
