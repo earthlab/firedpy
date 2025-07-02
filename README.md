@@ -263,7 +263,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 | **Oceania** ||
 ||Philippines| [2001-2021](https://scholar.colorado.edu/concern/datasets/7d278v06f) |**[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/b8515q26w)**||
  || Papua New Guinea| [2001-2021](https://scholar.colorado.edu/concern/datasets/3r074w183) |**[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/bk128c732)**||
- || East Timor|| [2001-2021](https://scholar.colorado.edu/concern/datasets/j098zc184) |**[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/c247dt86h)**||
+ || East Timor| [2001-2021](https://scholar.colorado.edu/concern/datasets/j098zc184) |**[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/c247dt86h)**||
  || New Caledonia|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/8w32r765q)**||
  || New Zealand| [2001-2021](https://scholar.colorado.edu/concern/datasets/9g54xj88f)| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/h989r495c)**||
  || Malaysia| [2001-2021](https://scholar.colorado.edu/concern/datasets/fq977w13f)| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/3484zj46h)**||
