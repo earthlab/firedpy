@@ -102,7 +102,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 ||  Suriname|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/n583xw60q)**|| 
 ||  Uruguay| [2001-2021](https://scholar.colorado.edu/concern/datasets/q524jq130) |**[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/q237ht604)**|| 
 ||  Venezuela| [2001-2021](https://scholar.colorado.edu/concern/datasets/7m01bm95m) |**[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/c534fq76h)**|| 
-|  Northern South America (Suriname, French Guiana, Guyana)|| [2001-2021](https://scholar.colorado.edu/concern/datasets/qv33rx839)||| 
+|  Northern South America |Suriname, French Guiana, Guyana| [2001-2021](https://scholar.colorado.edu/concern/datasets/qv33rx839)||| 
 |Entire Western hemisphere, intended for use in conjunction with GOES16 active fire detections. || [Jan 2017 to March 2020](https://scholar.colorado.edu/concern/datasets/d217qq78g)|||
 | **Europe** |||||
 || Aland|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5138jg697)**||
@@ -145,11 +145,11 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 || Switzerland|| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/1g05fd42x)**||
 || Ukraine|| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/08612q18f)**||
 || United Kingdom|| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/sf268684c)**||
-| UK and Ireland|| [2001-2021](https://scholar.colorado.edu/concern/datasets/pc289k33c)|||
-| Spain & Portugal|| [2001-2021](https://scholar.colorado.edu/concern/datasets/gb19f7006)|||
-| Western Europe (France, Germany, Poland, Switzerland, Belgium, Netherlands, Luxembourg and Austria) || [2001-2021](https://scholar.colorado.edu/concern/datasets/v692t736f)|||
- | Central to Southern Europe (Estonia, Latvia, Lithuania, Belarus, Ukraine, Czech Republic, Slovakia, Hungary, Romania, Bulgaria, Montenegro, Bosnia, Turkey, Republic Of Moldova, Serbia, Albania, Slovenia, and North Macedonia)|| [2001-2021](https://scholar.colorado.edu/concern/datasets/7h149r07z)|||
- | Northern Europe (Iceland, Sweden, Norway, and Denmark)|| [2001-2021](https://scholar.colorado.edu/concern/datasets/sb397945f)|||
+|The British Isles|UK and Ireland| [2001-2021](https://scholar.colorado.edu/concern/datasets/pc289k33c)|||
+|The Iberian Peninsula| Spain & Portugal| [2001-2021](https://scholar.colorado.edu/concern/datasets/gb19f7006)|||
+| Western Europe |France, Germany, Poland, Switzerland, Belgium, Netherlands, Luxembourg and Austria| [2001-2021](https://scholar.colorado.edu/concern/datasets/v692t736f)|||
+ | Central to Southern Europe |Estonia, Latvia, Lithuania, Belarus, Ukraine, Czech Republic, Slovakia, Hungary, Romania, Bulgaria, Montenegro, Bosnia, Turkey, Republic Of Moldova, Serbia, Albania, Slovenia, and North Macedonia| [2001-2021](https://scholar.colorado.edu/concern/datasets/7h149r07z)|||
+ | Northern Europe |Iceland, Sweden, Norway, and Denmark| [2001-2021](https://scholar.colorado.edu/concern/datasets/sb397945f)|||
 | **Africa**|||||
 || Algeria:|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/bc386k800)**||
 || Angola:| [2001-2021](https://scholar.colorado.edu/concern/datasets/t435gf21z) |**[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/d504rn23b)**||
@@ -205,7 +205,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 || Uganda:| [2001-2021](https://scholar.colorado.edu/concern/datasets/hh63sx004)| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/7d278v62s)**||
 || Zambia:| [2001-2021](https://scholar.colorado.edu/concern/datasets/6108vc441) |**[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/qv33rz46c)**||
 || Zimbabwe| [2001-2021](https://scholar.colorado.edu/concern/datasets/f7623d95c)| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/np193b769)**||
-| Central North Africa (Libya, Algeria, Tunisia)|| [2001-2021](https://scholar.colorado.edu/concern/datasets/8910jv77j)|||
+| Central North Africa |Libya, Algeria, Tunisia| [2001-2021](https://scholar.colorado.edu/concern/datasets/8910jv77j)|||
 | **Asia** |||||
 || Afghanistan || **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/rj4306237)** ||
 || Armenia ||**[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/7h149r64k)**||
@@ -247,9 +247,9 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 || Uzbekistan|| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/ff365704w)**||
 || Vietnam| [2001-2021](https://scholar.colorado.edu/concern/datasets/h702q7566)| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/rn301342p)**||
 || Yemen|| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/qb98mg91w)**||
-| Caucasus (Armenia, Azerbaijan, Georgia)|| [2001-2021](https://scholar.colorado.edu/concern/datasets/gf06g385j)|||
-| Central Asia (Turkmenistan, Kazakhstan, Uzbekistan, Kyrgystan, Tajikistan, Afghanistan, and Pakistan)|| [2001-2021](https://scholar.colorado.edu/concern/datasets/47429b07v)|||
-| Middle East (Saudi Arabia, Qatar, Oman, Yemen, United Arab Emirates, Iraq, Jordan, Syria, Israel, Palestine, Lebanon, Egypt)|| [2001-2021](https://scholar.colorado.edu/concern/datasets/5d86p139h)|||
+| Caucasus |Armenia, Azerbaijan, Georgia| [2001-2021](https://scholar.colorado.edu/concern/datasets/gf06g385j)|||
+| Central Asia |Turkmenistan, Kazakhstan, Uzbekistan, Kyrgystan, Tajikistan, Afghanistan, and Pakistan| [2001-2021](https://scholar.colorado.edu/concern/datasets/47429b07v)|||
+| Middle East |Saudi Arabia, Qatar, Oman, Yemen, United Arab Emirates, Iraq, Jordan, Syria, Israel, Palestine, Lebanon, Egypt| [2001-2021](https://scholar.colorado.edu/concern/datasets/5d86p139h)|||
 | **Australia**|||||
 || Whole Country || **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/x059c9152)** ||
 || **(state by state)** ||||
