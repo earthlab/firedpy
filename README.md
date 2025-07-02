@@ -206,51 +206,50 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 || Zambia:| [2001-2021](https://scholar.colorado.edu/concern/datasets/6108vc441) |**[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/qv33rz46c)**||
 || Zimbabwe| [2001-2021](https://scholar.colorado.edu/concern/datasets/f7623d95c)| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/np193b769)**||
 | Central North Africa (Libya, Algeria, Tunisia)|| [2001-2021](https://scholar.colorado.edu/concern/datasets/8910jv77j)|||
-
-### Asia
-
- - Afghanistan: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/rj4306237)**
- - Armenia: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/7h149r64k)**
- - Azerbaijan: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/qb98mg90m)**
- - Bhutan: [2001-2021](https://scholar.colorado.edu/concern/datasets/n009w342h) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/2b88qd74k)**
- - Bangladesh: [2001-2021](https://scholar.colorado.edu/concern/datasets/d791sh33k) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5d86p199z)**
- - Bahrain: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/c534fq70v)**
- - Cambodia: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/2r36v0354)**
- - China: [2001-2021](https://scholar.colorado.edu/concern/datasets/qz20st810) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/tt44pp77n)**
- - India: [2001-2021](https://scholar.colorado.edu/concern/datasets/ht24wk47t)
- - Israel: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5m60qt777)**
- - Iran: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/00000172f)**
- - Japan: [2001-2021](https://scholar.colorado.edu/concern/datasets/dz010r34v)
- - Kazakhstan: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/1r66j289k)**
- - Kuwait: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/z316q350j)**
- - Kyrgyzstan: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/3197xn61c)**
- - Lebanon: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/qj72p8661)**
- - Laos: [2001-2021](https://scholar.colorado.edu/concern/datasets/bz60cx389) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/gq67js85b)**
- - Macao: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/3f4627044)**
- - Mongolia: [2001-2021](https://scholar.colorado.edu/concern/datasets/4x51hk21h) **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5t34sm20v)**
- - Myanmar: [2001-2021](https://scholar.colorado.edu/concern/datasets/pk02cb86p) **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/bv73c2197)**
- - Nepal: [2001-2021](https://scholar.colorado.edu/concern/datasets/mk61rj10w) **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/c534fq757)**
- - North Korea: [2001-2021](https://scholar.colorado.edu/concern/datasets/3j333327g) **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/f7623f59q)**
- - Oman: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/nz806134g)**
- - Pakistan: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/8g84mn93n)**
- - Palestine: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/nc580p37t)**
- - Qatar: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/j098zc672)**
- - Russia: [2001-2021](https://scholar.colorado.edu/concern/datasets/q811kk87t) **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/f7623f60g)**
- - Saudi Arabia: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/g732db61d)**
- - South Korea: [2001-2021](https://scholar.colorado.edu/concern/datasets/pg15bg177) **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/kw52j990z)**
- - Sri Lanka: [2001-2021](https://scholar.colorado.edu/concern/datasets/9z9030982) **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/ws859h30c)**
- - Syria: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/765373194)**
- - Taiwan: [2001-2021](https://scholar.colorado.edu/concern/datasets/df65v9276) **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/6t053h714)**
- - Tajikistan: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/9k41zg39z)**
- - Thailand: [2001-2021](https://scholar.colorado.edu/concern/datasets/xs55md39h) **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/qj72p868k)**
- - Turkmenistan: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/4m90dx24j)**
- - United Arab Emirates: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5138jg718)**
- - Uzbekistan: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/ff365704w)**
- - Vietnam: [2001-2021](https://scholar.colorado.edu/concern/datasets/h702q7566) **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/rn301342p)**
- - Yemen: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/qb98mg91w)**
- - Caucasus (Armenia, Azerbaijan, Georgia): [2001-2021](https://scholar.colorado.edu/concern/datasets/gf06g385j)
- - Central Asia (Turkmenistan, Kazakhstan, Uzbekistan, Kyrgystan, Tajikistan, Afghanistan, and Pakistan): [2001-2021](https://scholar.colorado.edu/concern/datasets/47429b07v)
- - Middle East (Saudi Arabia, Qatar, Oman, Yemen, United Arab Emirates, Iraq, Jordan, Syria, Israel, Palestine, Lebanon, Egypt): [2001-2021](https://scholar.colorado.edu/concern/datasets/5d86p139h)
+|**Asia**|||||
+||Afghanistan || **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/rj4306237)** ||
+|| Armenia: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/7h149r64k)**
+|| Azerbaijan: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/qb98mg90m)**
+|| Bhutan: [2001-2021](https://scholar.colorado.edu/concern/datasets/n009w342h) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/2b88qd74k)**
+|| Bangladesh: [2001-2021](https://scholar.colorado.edu/concern/datasets/d791sh33k) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5d86p199z)**
+|| Bahrain: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/c534fq70v)**
+|| Cambodia: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/2r36v0354)**
+|| China: [2001-2021](https://scholar.colorado.edu/concern/datasets/qz20st810) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/tt44pp77n)**
+|| India: [2001-2021](https://scholar.colorado.edu/concern/datasets/ht24wk47t)
+|| Israel: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5m60qt777)**
+|| Iraq ||||
+|| Iran|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/00000172f)**
+|| Japan||[2001-2021](https://scholar.colorado.edu/concern/datasets/dz010r34v)|||
+|| Kazakhstan: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/1r66j289k)**
+|| Kuwait: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/z316q350j)**
+|| Kyrgyzstan: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/3197xn61c)**
+|| Lebanon: **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/qj72p8661)**
+|| Laos: [2001-2021](https://scholar.colorado.edu/concern/datasets/bz60cx389) **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/gq67js85b)**
+|| Macao: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/3f4627044)**
+|| Mongolia: [2001-2021](https://scholar.colorado.edu/concern/datasets/4x51hk21h) **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5t34sm20v)**
+|| Myanmar: [2001-2021](https://scholar.colorado.edu/concern/datasets/pk02cb86p) **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/bv73c2197)**
+|| Nepal: [2001-2021](https://scholar.colorado.edu/concern/datasets/mk61rj10w) **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/c534fq757)**
+|| North Korea: [2001-2021](https://scholar.colorado.edu/concern/datasets/3j333327g) **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/f7623f59q)**
+|| Oman: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/nz806134g)**
+|| Pakistan: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/8g84mn93n)**
+|| Palestine: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/nc580p37t)**
+|| Qatar: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/j098zc672)**
+|| Russia: [2001-2021](https://scholar.colorado.edu/concern/datasets/q811kk87t) **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/f7623f60g)**
+|| Saudi Arabia: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/g732db61d)**||
+|| South Korea: [2001-2021](https://scholar.colorado.edu/concern/datasets/pg15bg177) **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/kw52j990z)**||
+|| Sri Lanka: [2001-2021](https://scholar.colorado.edu/concern/datasets/9z9030982) **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/ws859h30c)**||
+|| Syria: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/765373194)**||
+|| Taiwan: [2001-2021](https://scholar.colorado.edu/concern/datasets/df65v9276) **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/6t053h714)**||
+|| Tajikistan: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/9k41zg39z)**||
+|| Thailand: [2001-2021](https://scholar.colorado.edu/concern/datasets/xs55md39h) **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/qj72p868k)**||
+|| Turkmenistan: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/4m90dx24j)**||
+|| United Arab Emirates: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5138jg718)**||
+|| Uzbekistan: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/ff365704w)**||
+|| Vietnam: [2001-2021](https://scholar.colorado.edu/concern/datasets/h702q7566) **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/rn301342p)**||
+|| Yemen: **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/qb98mg91w)**||
+| Caucasus (Armenia, Azerbaijan, Georgia)|| [2001-2021](https://scholar.colorado.edu/concern/datasets/gf06g385j)|||
+| Central Asia (Turkmenistan, Kazakhstan, Uzbekistan, Kyrgystan, Tajikistan, Afghanistan, and Pakistan)|| [2001-2021](https://scholar.colorado.edu/concern/datasets/47429b07v)|||
+| Middle East (Saudi Arabia, Qatar, Oman, Yemen, United Arab Emirates, Iraq, Jordan, Syria, Israel, Palestine, Lebanon, Egypt)|| [2001-2021](https://scholar.colorado.edu/concern/datasets/5d86p139h)|||
 
 ### Australia
 
