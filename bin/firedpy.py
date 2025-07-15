@@ -208,13 +208,15 @@ def main():
     end_year = None if end_year == 0 else end_year
 
     if land_cover_type != LandCoverType.NONE:
-        print('Retrieving landcover...')
+        print('\nRetrieving landcover ...')
         land_cover = LandCover(out_dir, n_cores=n_cores, username=username, password=password)
         land_cover.get_land_cover(tiles, land_cover_type)
 
     eco_region_data = EcoRegion(out_dir)
     eco_region_data.get_eco_region()
 
+    print('\nRetrieving burn data ...')
+    test_earthdata_credentials(username, password) # test this again to be sure
     burn_data = BurnData(out_dir, username, password, n_cores)
     burn_data.get_burns(tiles, start_year, end_year)
 
