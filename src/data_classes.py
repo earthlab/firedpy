@@ -26,6 +26,10 @@ from bs4 import BeautifulSoup
 
 from src.enums import LandCoverType
 
+import warnings
+from rasterio.errors import NotGeoreferencedWarning
+warnings.filterwarnings("ignore", category=NotGeoreferencedWarning)
+
 PROJECT_DIR = os.path.dirname(os.path.dirname(__file__))
 
 logging.basicConfig(filename='app.log', level=logging.ERROR,
@@ -207,7 +211,7 @@ class LPDAAC(Base):
         link = request[0]
         dest = request[1]
 
-        print(link, dest)
+        # print(link, dest)
 
         if os.path.exists(dest):
             return
@@ -246,17 +250,16 @@ class LPDAAC(Base):
     def _download_files(self, download_requests):
         try:
             with Pool(self._parallel_cores - 1) as pool:
-                for _ in tqdm(pool.imap_unordered(self._download_task, download_requests),
-                              total=len(download_requests)):
-                    pass
-
+                pool.map(self._download_task, download_requests)
         except Exception as pe:
             try:
-                _ = [self._download_task(q) for q in tqdm(download_requests, position=0, file=sys.stdout)]
+                tqdm.write("Parallel download failed, falling back to sequential...")
+                for q in download_requests:
+                    self._download_task(q)
             except Exception as e:
                 template = "Download failed: error type {0}:\n{1!r}"
                 message = template.format(type(e).__name__, e.args)
-                print(message)
+                tqdm.write(message)
 
     def _get_available_year_paths(self, start_year: int = None, end_year: int = None) -> List[str]:
         # Get available years
@@ -612,10 +615,9 @@ class LandCover(LPDAAC):
     def _generate_local_hdf_dir(self, year: str) -> str:
         return os.path.join(self._land_cover_dir, year)
 
-    def _query_cmr_granules(self, year: int, tiles: List[str]) -> List[str]:
+    def _query_cmr_granules(self, tiles: List[str]) -> Dict[str, List[str]]:
         """
         Method for generating a list of granule IDs based on MODIS tiles.
-        :param year:
         :param tiles:
         :return: Dictionary of granule IDs grouped by year
         """
@@ -643,7 +645,7 @@ class LandCover(LPDAAC):
             for item in items:
                 granule_id = item["title"]
                 if any(tile in granule_id for tile in tile_patterns):
-                    year = granule_id.split(".")[1][:4]
+                    year = granule_id.split('.')[1][1:5]
                     granules_by_year.setdefault(year, []).append(granule_id)
             params["page_num"] += 1
 
@@ -652,7 +654,7 @@ class LandCover(LPDAAC):
     def _create_requests(self, granules: List[str]):
         download_requests = []
         for granule in granules:
-            year = granule.split('.')[1][:4]
+            year = granule.split('.')[1][1:5]
             remote_file = f"{granule}.hdf"
             local_file_path = self._generate_local_hdf_path(year, remote_file)
             os.makedirs(os.path.dirname(local_file_path), exist_ok=True)
@@ -728,23 +730,26 @@ class LandCover(LPDAAC):
         if tiles is None:
             tiles = self.get_all_available_tiles()
 
-        print("Querying granules across all years...")
+        print("Querying MCD12Q1 granules ...")
         granules_by_year = self._query_cmr_granules(tiles)
+        years = sorted(granules_by_year.keys())
 
-        for year, granules in granules_by_year.items():
-            output_file = f"lc_mosaic_{land_cover_type.value}_{year}.tif"
-            if os.path.exists(os.path.join(self._mosaics_dir, output_file)):
-                continue
+        with tqdm(total=len(years), desc="", dynamic_ncols=True) as pbar:
+            for year in years:
+                pbar.set_description_str(f"Downloading and mosaicking [{year}]")
+                output_file = f"lc_mosaic_{land_cover_type.value}_{year}.tif"
+                if os.path.exists(os.path.join(self._mosaics_dir, output_file)):
+                    pbar.update(1)
+                    continue
 
-            print(f"Downloading data for {year}...")
-            download_requests = self._create_requests(granules)
-            self._download_files(download_requests)
+                granules = granules_by_year[year]
+                download_requests = self._create_requests(granules)
+                self._download_files(download_requests)
+                self._create_annual_mosaic(str(year), land_cover_type)
+                pbar.update(1)
 
-            print(f"Mosaicking land cover tiles for {year}...")
-            self._create_annual_mosaic(str(year), land_cover_type)
-
-        print(f"Land cover data saved to {self._mosaics_dir}")
-
+        tqdm.write(f"\nCompleted for all years: [{min(years)}-{max(years)}]")
+        tqdm.write(f"\nLandcover data saved to: {self._mosaics_dir}")
 
 class EcoRegion(Base):
     def __init__(self, out_dir: str):

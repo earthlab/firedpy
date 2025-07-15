@@ -48,7 +48,8 @@ def test_earthdata_credentials(username: str, password: str) -> None:
     # base URL for the MCD12Q1 (landcover) product
     base_url = 'https://data.lpdaac.earthdatacloud.nasa.gov/lp-prod-public/MCD12Q1.061/'
     # granule-specific URL for testing
-    url = 'MCD12Q1.A2019001.h10v09.061.2022169160720/BROWSE.MCD12Q1.A2019001.h10v09.061.2022169160720.1.jpg'
+    granule_url = 'MCD12Q1.A2019001.h10v09.061.2022169160720/BROWSE.MCD12Q1.A2019001.h10v09.061.2022169160720.1.jpg'
+    url = base_url + granule_url
 
     password_manager = urllib.request.HTTPPasswordMgrWithDefaultRealm()
     password_manager.add_password(None, "https://urs.earthdata.nasa.gov", username, password)

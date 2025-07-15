@@ -3,11 +3,11 @@ import re
 import sys
 import requests
 import urllib.parse
-from tqdm import tqdm
 from typing import List, Dict
 from http.cookiejar import CookieJar
 import rasterio
 from rasterio.merge import merge
+from tqdm import tqdm
 
 # Assume LPDAAC and LandCoverType are defined elsewhere in your codebase
 class LandCover(LPDAAC):
@@ -24,6 +24,9 @@ class LandCover(LPDAAC):
 
     def _generate_local_hdf_dir(self, year: str) -> str:
         return os.path.join(self._land_cover_dir, year)
+
+    def _extract_year_from_granule(self, granule_id: str) -> str:
+        return granule_id.split('.')[1][1:5]
 
     def _query_cmr_granules(self, tiles: List[str]) -> Dict[str, List[str]]:
         cmr_url = "https://cmr.earthdata.nasa.gov/search/granules.json"
@@ -50,7 +53,7 @@ class LandCover(LPDAAC):
             for item in items:
                 granule_id = item["title"]
                 if any(tile in granule_id for tile in tile_patterns):
-                    year = granule_id.split(".")[1][:4]
+                    year = self._extract_year_from_granule(granule_id)
                     granules_by_year.setdefault(year, []).append(granule_id)
             params["page_num"] += 1
 
@@ -59,7 +62,7 @@ class LandCover(LPDAAC):
     def _create_requests(self, granules: List[str]):
         download_requests = []
         for granule in granules:
-            year = granule.split('.')[1][:4]
+            year = self._extract_year_from_granule(granule)
             remote_file = f"{granule}.hdf"
             local_file_path = self._generate_local_hdf_path(year, remote_file)
             os.makedirs(os.path.dirname(local_file_path), exist_ok=True)
@@ -102,16 +105,17 @@ class LandCover(LPDAAC):
         print("Querying granules across all years...")
         granules_by_year = self._query_cmr_granules(tiles)
 
-        for year, granules in granules_by_year.items():
+        for year in tqdm(sorted(granules_by_year.keys()), desc="Processing years", dynamic_ncols=True):
+            tqdm.write(f"Downloading data for {year}...")
+            granules = granules_by_year[year]
             output_file = f"lc_mosaic_{land_cover_type.value}_{year}.tif"
             if os.path.exists(os.path.join(self._mosaics_dir, output_file)):
                 continue
 
-            print(f"Downloading data for {year}...")
             download_requests = self._create_requests(granules)
             self._download_files(download_requests)
 
-            print(f"Mosaicking land cover tiles for {year}...")
+            tqdm.write(f"Mosaicking land cover tiles for {year}...")
             self._create_annual_mosaic(str(year), land_cover_type)
 
         print(f"Land cover data saved to {self._mosaics_dir}")
