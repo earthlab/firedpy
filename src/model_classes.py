@@ -276,7 +276,11 @@ class EventGrid(Base):
 
         return list(zip(locs[0], locs[1]))
 
-    def get_event_perimeters(self, progress_position: int = 0, progress_description: str = '', all_t: bool = False):
+    def get_event_perimeters(self,
+                             progress_position: int = 0,
+                             progress_description: str = '',
+                             show_progress: bool = True,
+                             all_t: bool = False):
         """
         Iterate through each cell in the 3D MODIS Burn Date tile and group it
         into fire events using the space-time window.
@@ -289,7 +293,14 @@ class EventGrid(Base):
 
         time_index_buffer = max(1, self.temporal_param // 30)
 
-        for pair in tqdm(available_pairs, position=progress_position, file=sys.stdout, desc=progress_description):
+        iterator = available_pairs
+        if show_progress:
+            iterator = tqdm(available_pairs,
+                            position=progress_position,
+                            file=sys.stdout,
+                            desc=progress_description)
+
+        for pair in iterator:
             y, x = pair
             top, bottom, left, right, center, origin, is_edge = self._get_spatial_window(y, x, dims)
             center_y, center_x = center
@@ -546,12 +557,12 @@ class ModelBuilder(Base):
         groups = self.group_by_t(self.group_by_y(self.group_by_x(edge_events)))
 
         merged_events = []
-        for i, group in enumerate(groups):
+        for group in tqdm(groups, desc='Merging edge events', file=sys.stdout):
             group_array, coordinates = self._create_event_grid_array(group)
             event_grid = EventGrid(out_dir=self._out_dir, input_array=group_array, coordinates=coordinates)
-            perimeters = event_grid.get_event_perimeters(progress_position=i,
-                                                         progress_description=f'Merging edge tiles for group {i} of'
-                                                                              f' {len(groups)}', all_t=True)
+
+            perimeters = event_grid.get_event_perimeters(all_t=True, show_progress=False)
+
             del event_grid, group_array, coordinates, group
             merged_events.extend(perimeters)
 
@@ -563,7 +574,7 @@ class ModelBuilder(Base):
         them all together for a seamless set of wildfire events.
 
         """
-        print('Building fire event perimeters')
+        print('\nBuilding fire event perimeters ...')
 
         fire_events = []
 
@@ -577,6 +588,7 @@ class ModelBuilder(Base):
             results = pool.imap_unordered(_process_file_perimeter, args)
 
             # As each file is processed, results will be appended to the fire_events list
+            results = list(pool.imap_unordered(_process_file_perimeter, args))
             for result in results:
                 fire_events.extend(result)
 
@@ -589,6 +601,7 @@ class ModelBuilder(Base):
             edge_event.compute_min_max()
 
         merged_edges = self.merge_fire_edge_events(edge_events)
+        print("\n")
 
         del edge_events
 
@@ -598,6 +611,8 @@ class ModelBuilder(Base):
             last_non_edge_id += 1
 
         fire_events = non_edge + merged_edges
+
+        del results
         gc.collect()
 
         return fire_events
@@ -621,7 +636,7 @@ class ModelBuilder(Base):
         df["y"] = df["y"] + (self.geom[-1] / 2)
 
         # Each entry gets a point object from the x and y coordinates.
-        print("Converting data frame to spatial object...")
+        print("Converting data frame to spatial object...\n")
         df["geometry"] = df[["x", "y"]].apply(lambda x: Point(tuple(x)), axis=1)
         gdf = gpd.GeoDataFrame(df, crs=self.crs.proj4, geometry=df["geometry"])
 
@@ -735,7 +750,7 @@ class ModelBuilder(Base):
         sgdfs = []
         for year in tqdm(burn_years, position=0, file=sys.stdout):
 
-            sgdf = gdf[gdf['ig_year'] == year]
+            sgdf = gdf[gdf['ig_year'] == year].copy()
 
             # Now set year one back for land_cover
             year = year - 1
@@ -762,7 +777,6 @@ class ModelBuilder(Base):
         gdf['lc_type'] = lc_descriptions[land_cover_type]
 
         gdf.rename({'lc_description': 'lc_desc'}, inplace=True, axis='columns')
-        print('C')
         return gdf
 
     def _add_attributes_from_na_cec(self, gdf, eco_region_level):
@@ -846,7 +860,7 @@ class ModelBuilder(Base):
         return gdf
 
     def process_geometry(self, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-        print("Creating buffer...")
+        print("\nCreating pixel geometry (buffer)...")
         geometry = gdf.buffer(1 + (self._res / 2))
         gdf["geometry"] = geometry
         gdf["geometry"] = gdf.envelope
@@ -862,19 +876,19 @@ class ModelBuilder(Base):
 
     def process_daily_data(self, gdf: gpd.GeoDataFrame, output_csv_path: str, daily_shp_path: str,
                            daily_gpkg_path: str) -> gpd.GeoDataFrame:
-        print("Dissolving polygons...")
+        print("Creating daily polygons (dissolving) ...")
 
         gdf = self._create_did_column(gdf, ['date', 'id'])
 
         gdfd = gdf.dissolve(by="did", as_index=False)
-        print("Converting polygons to multipolygons...")
+        # print("Converting polygons to multipolygons...")
         gdfd["geometry"] = gdfd["geometry"].apply(self._as_multi_polygon)
 
         self.save_data(gdfd, daily_shp_path, daily_gpkg_path, output_csv_path)
 
         gdf = gdfd.drop(['did', 'pixels', 'date', 'event_day', 'dy_ar_km2'], axis=1)
         gdf = gdf.dissolve(by="id", as_index=False)
-        print("Calculating perimeter lengths...")
+        # print("Calculating perimeter lengths...")
         gdf["tot_perim"] = gdf["geometry"].length
         gdf["geometry"] = gdf["geometry"].apply(self._as_multi_polygon)
 
@@ -887,11 +901,11 @@ class ModelBuilder(Base):
         if 'fid' in gdf.columns:
             gdf = gdf.drop(['fid'])
 
-        print("Dissolving polygons...")
+        # print("Dissolving polygons...")
         gdf = gdf.dissolve(by="id", as_index=False)
-        print("Calculating perimeter lengths...")
+        # print("Calculating perimeter lengths...")
         gdf["tot_perim"] = gdf["geometry"].length
-        print("Converting polygons to multipolygons...")
+        # print("Converting polygons to multipolygons...")
         gdf["geometry"] = gdf["geometry"].apply(self._as_multi_polygon)
 
         return gdf
@@ -910,14 +924,16 @@ class ModelBuilder(Base):
     @staticmethod
     def save_data(gdf: gpd.GeoDataFrame, shape_path: str = None, gpkg_path: str = None, csv_path: str = None):
         if csv_path:
+            print('\nWriting tabular fire events (csv) ...')
             gdf.to_csv(csv_path, index=False)
 
         if gpkg_path is not None:
+            print('\nWriting spatial fire events ...')
             gdf.to_file(gpkg_path, driver="GPKG")
             print("Saving file to " + gpkg_path)
 
         if shape_path is not None:
-            print('Writing shape file')
+            print('\nWriting spatial fire events ...')
             if 'date' in gdf.columns:
                 gdf['date'] = [str(d) for d in gdf['date']]
             gdf['ig_date'] = [str(d) for d in gdf['ig_date']]

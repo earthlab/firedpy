@@ -208,7 +208,7 @@ def main():
     end_year = None if end_year == 0 else end_year
 
     if land_cover_type != LandCoverType.NONE:
-        print('\nRetrieving landcover ...')
+        print('\nRetrieving landcover data ...')
         land_cover = LandCover(out_dir, n_cores=n_cores, username=username, password=password)
         land_cover.get_land_cover(tiles, land_cover_type)
 
@@ -228,13 +228,16 @@ def main():
 
     # TODO: This can be parallelized
     gdf = models.build_points(event_perimeters, shape_file_path=shape_file)
+    # add in the fire attributes
     gdf = models.add_fire_attributes(gdf)
+    # add in the ecoregion information:
+    gdf = models.add_eco_region_attributes(gdf, eco_region_type, eco_region_level)
+    # add in the landcover
     if land_cover_type != LandCoverType.NONE:
         gdf = models.add_land_cover_attributes(gdf, land_cover_type)
     gdf = models.process_geometry(gdf)
 
-    gdf.to_file('temp_test.gpkg', driver="GPKG")
-    gdf = models.add_eco_region_attributes(gdf, eco_region_type, eco_region_level)
+    # gdf.to_file('temp_test.gpkg', driver="GPKG") # testing
 
     def generate_path(proj_dir, base_filename, shape_type: ShapeType):
         """Generate the appropriate file path."""

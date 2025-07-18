@@ -406,12 +406,14 @@ class BurnData(LPDAAC):
         :return:
         """
 
+        print(f"Querying MCD64A1 granules for [{len(tiles)}] tile(s) ...")
+
         for tile in tiles:
             nc_file_name = self._generate_local_nc_path(tile)
             if os.path.exists(nc_file_name):
+                print("\tBurn data NetCDF already exists, skipping")
                 continue
 
-            tqdm.write(f"Querying MCD64A1 granules for [{len(tiles)}] tile(s) ...")
             granules_by_year = self._query_cmr_granules([tile])
 
             # Flatten granule list and filter by year
