@@ -16,3 +16,11 @@
 # Miscellaneous
 /setup2.py
 /proj/
+
+# Ignore outputs folder
+output/*
+
+# Ignore PyCharm files
+*.idea
+app.log
+temp_test.gpkg

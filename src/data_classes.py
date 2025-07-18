@@ -310,7 +310,10 @@ class BurnData(LPDAAC):
         self._modis_template_path = os.path.join(out_dir, 'rasters', 'mosaic_template.tif')
         self._record_start_year = 2000
         self._parallel_cores = n_cores if n_cores is not None else os.cpu_count() - 1
-        self._file_regex = r'MCD64A1\.A\d{7}\.h\d{2}v\d{2}\.061\.\d{13}\.hdf'
+        self._file_regex = (
+            r'MCD64A1\.A(?P<year>\d{4})(?P<ordinal_day>\d{3})\.'
+            r'h\d{2}v\d{2}\.061\.\d{13}\.hdf'
+        )
         self._username = username
         self._password = password
 
@@ -476,19 +479,23 @@ class BurnData(LPDAAC):
         """
         # Build the net cdfs here
         fill_value = -9999
+        # loop through tile IDs (MODIS tile)
         for tile_id in tiles:
             try:
                 nc_file_name = self._generate_local_nc_path(tile_id)
                 if os.path.exists(nc_file_name):
                     continue
+                print("nc_file_name: ",nc_file_name)
 
                 hdf_dir = self._generate_local_burn_hdf_dir(tile_id)
+                print("hdf_dir: ",hdf_dir)
 
                 files = sorted([os.path.join(hdf_dir, f) for f in os.listdir(hdf_dir) if self._extract_date_parts(f)
                                 is not None], key=self._extract_date_parts)
 
                 if not files:
                     print(f'No hdf files for tile {tile_id} in {hdf_dir}')
+                print(f"Processing [{len(files)}] hdf files.")
 
                 # Skip if it exists already
                 if os.path.exists(nc_file_name):
