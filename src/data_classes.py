@@ -23,8 +23,13 @@ from rasterio.merge import merge
 from tqdm import tqdm
 import requests
 from bs4 import BeautifulSoup
+from urllib.error import HTTPError, URLError
 
 from src.enums import LandCoverType
+
+import warnings
+from rasterio.errors import NotGeoreferencedWarning
+warnings.filterwarnings("ignore", category=NotGeoreferencedWarning)
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(__file__))
 
@@ -204,32 +209,36 @@ class LPDAAC(Base):
         return True
 
     def _download_task(self, request: Tuple[str, str]):
-        link = request[0]
-        dest = request[1]
-
-        print(link, dest)
+        url, dest = request
 
         if os.path.exists(dest):
             return
 
-        pm = urllib.request.HTTPPasswordMgrWithDefaultRealm()
-        pm.add_password(None, "https://urs.earthdata.nasa.gov", self._username, self._password)
-        cookie_jar = CookieJar()
-        opener = urllib.request.build_opener(
-            urllib.request.HTTPBasicAuthHandler(pm),
-            urllib.request.HTTPCookieProcessor(cookie_jar)
-        )
-        urllib.request.install_opener(opener)
-        myrequest = urllib.request.Request(link)
-        response = urllib.request.urlopen(myrequest)
-        response.begin()
-        with open(dest, 'wb') as fd:
-            while True:
-                chunk = response.read()
-                if chunk:
-                    fd.write(chunk)
-                else:
-                    break
+        session = requests.Session()
+        session.auth = (self._username, self._password)
+        session.headers.update({
+            "User-Agent": "firedpy/1.0 (https://github.com/earthlab/firedpy/)",
+            "Accept": "*/*"
+        })
+
+        try:
+            # Get file with redirect and auth handling
+            response = session.get(url, stream=True, timeout=60)
+            if response.status_code == 401:
+                print(f"🔐 Unauthorized for {url}")
+            response.raise_for_status()
+
+            # Write to disk
+            os.makedirs(os.path.dirname(dest), exist_ok=True)
+            with open(dest, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+
+        except requests.exceptions.HTTPError as e:
+            print(f"HTTPError for {url}: {e.response.status_code} {e.response.reason}")
+        except Exception as e:
+            print(f"Unexpected error for {url}: {str(e)}")
 
     @staticmethod
     def get_all_available_tiles() -> List[str]:
@@ -246,17 +255,16 @@ class LPDAAC(Base):
     def _download_files(self, download_requests):
         try:
             with Pool(self._parallel_cores - 1) as pool:
-                for _ in tqdm(pool.imap_unordered(self._download_task, download_requests),
-                              total=len(download_requests)):
-                    pass
-
+                pool.map(self._download_task, download_requests)
         except Exception as pe:
             try:
-                _ = [self._download_task(q) for q in tqdm(download_requests, position=0, file=sys.stdout)]
+                tqdm.write("Parallel download failed, falling back to sequential...")
+                for q in download_requests:
+                    self._download_task(q)
             except Exception as e:
                 template = "Download failed: error type {0}:\n{1!r}"
                 message = template.format(type(e).__name__, e.args)
-                print(message)
+                tqdm.write(message)
 
     def _get_available_year_paths(self, start_year: int = None, end_year: int = None) -> List[str]:
         # Get available years
@@ -297,12 +305,15 @@ class LPDAAC(Base):
 class BurnData(LPDAAC):
     def __init__(self, out_dir: str, username: str, password: str, n_cores: int = None):
         super().__init__(out_dir)
-        self._lp_daac_url = 'https://e4ftl01.cr.usgs.gov/MOTA/MCD64A1.061/'
-        self._base_sftp_folder = os.path.join('data', 'MODIS', 'C61', 'MCD64A1', 'HDF')
+        self._lp_daac_url = 'https://data.lpdaac.earthdatacloud.nasa.gov/lp-prod-protected/MCD64A1.061/'
+        # self._base_sftp_folder = os.path.join('data', 'MODIS', 'C61', 'MCD64A1', 'HDF')
         self._modis_template_path = os.path.join(out_dir, 'rasters', 'mosaic_template.tif')
         self._record_start_year = 2000
         self._parallel_cores = n_cores if n_cores is not None else os.cpu_count() - 1
-        self._file_regex = r'MCD64A1' + self._post_regex
+        self._file_regex = (
+            r'MCD64A1\.A(?P<year>\d{4})(?P<ordinal_day>\d{3})\.'
+            r'h\d{2}v\d{2}\.061\.\d{13}\.hdf'
+        )
         self._username = username
         self._password = password
 
@@ -312,58 +323,120 @@ class BurnData(LPDAAC):
     def _generate_local_hdf_path(self, tile: str, hdf_name: str) -> str:
         return os.path.join(self.hdf_dir, tile, hdf_name)
 
-    def _create_requests(self, available_year_paths: List[str], tiles: List[str]):
-        download_requests = []
-        for year_path in available_year_paths:
+    def _extract_year_from_granule(self, granule_id: str) -> str:
+        return granule_id.split('.')[1][1:5]
 
-            available_files = self._get_available_files(year_path, tiles=tiles)
-            for file in available_files:
-                match = re.match(self._file_regex, file)
-                tile = self._generate_tile(match.groupdict())
-                local_file_path = self._generate_local_hdf_path(tile, file)
-                os.makedirs(os.path.dirname(local_file_path), exist_ok=True)
-                if os.path.exists(local_file_path):
-                    if not self._verify_hdf_file(local_file_path):
-                        print('Removing', local_file_path)
-                        os.remove(local_file_path)
-                    else:
+    def _query_cmr_granules(self, tiles: List[str]) -> Dict[str, List[str]]:
+        """
+        Method for generating a list of granule IDs based on MODIS tiles.
+        :param tiles:
+        :return: Dictionary of granule IDs grouped by year
+        """
+        if tiles is None:
+            tiles = self.get_all_available_tiles()
+
+        cmr_url = "https://cmr.earthdata.nasa.gov/search/granules.json"
+        short_name = "MCD64A1"
+        version = "061"
+
+        tile_patterns = [f"h{tile[1:3]}v{tile[4:]}" for tile in tiles]
+
+        params = {
+            "short_name": short_name,
+            "version": version,
+            "provider": "LPCLOUD",
+            "page_size": 2000,
+            "page_num": 1,
+        }
+
+        granules_by_year = {}
+        while True:
+            response = requests.get(cmr_url, params=params)
+            response.raise_for_status()
+            items = response.json()["feed"]["entry"]
+            if not items:
+                break
+
+            for item in items:
+                granule_id = item["title"]  # e.g. MCD64A1.A2000121.h09v05.061.2021200000000
+                if any(tile in granule_id for tile in tile_patterns):
+                    year = granule_id.split('.')[1][1:5]
+
+                    # Get the proper HTTPS link to the HDF file
+                    links = item.get("links", [])
+                    hrefs = [l["href"] for l in links if "data#" in l["rel"] and l["href"].endswith(".hdf")]
+                    if not hrefs:
                         continue
-                download_requests.append(
-                    (urllib.parse.urljoin(urllib.parse.urljoin(self._lp_daac_url, year_path), file), local_file_path)
-                )
+
+                    url = hrefs[0]
+                    filename = os.path.basename(url)
+
+                    granules_by_year.setdefault(year, []).append((url, filename))
+
+            params["page_num"] += 1
+
+        return granules_by_year
+
+    def _create_requests(self, granule_entries: List[Tuple[str, str]]):
+        download_requests = []
+        for url, filename in granule_entries:
+            tile = filename.split('.')[2]
+            local_file_path = self._generate_local_hdf_path(tile, filename)
+            os.makedirs(os.path.dirname(local_file_path), exist_ok=True)
+
+            if os.path.exists(local_file_path):
+                if not self._verify_hdf_file(local_file_path):
+                    print('Removing', local_file_path)
+                    os.remove(local_file_path)
+                else:
+                    continue
+
+            download_requests.append((url, local_file_path))
 
         return download_requests
 
     def get_burns(self, tiles: List[str], start_year: int = None, end_year: int = None):
         """
-        This will download the MODIS burn event data set tiles and create a
+        Method for downloading the MODIS burn event data set tiles, creating a
         singular mosaic to use as a template file for coordinate reference
-        information and geometries.
-
-        User manual:
-            http://modis-fire.umd.edu/files/MODIS_C6_BA_User_Guide_1.2.pdf
-
-        Update 02/2021 -> fuoco server transitioned to SFTP Dec 2020
-            Update src to use Paramiko SSHClient / SFTPClient
-            Server-side changes are described in the user manual linked above
-
-        SFTP:
-            sftp://fire:burnt@fuoco.geog.umd.edu/gfed4/MCD64A1/C6/
-            username: fire
-            password: burnt
-
+        information and geometries
+        :param tiles:
+        :param start_year:
+        :param end_year:
+        :return:
         """
-        # Check into the UMD SFTP fuoco server using Paramiko
+
+        print(f"Querying MCD64A1 granules for [{len(tiles)}] tile(s) ...")
+
         for tile in tiles:
             nc_file_name = self._generate_local_nc_path(tile)
             if os.path.exists(nc_file_name):
+                print("\tBurn data NetCDF already exists, skipping")
                 continue
-            print('Finding available files...')
-            available_year_paths = self._get_available_year_paths(start_year=start_year, end_year=end_year)
-            download_requests = self._create_requests(available_year_paths, [tile])
-            print(download_requests)
 
-            self._download_files(download_requests)
+            granules_by_year = self._query_cmr_granules([tile])
+
+            # Flatten granule list and filter by year
+            all_granules = []
+            for year, granules in granules_by_year.items():
+                if start_year and int(year) < start_year:
+                    continue
+                if end_year and int(year) > end_year:
+                    continue
+                all_granules.extend(granules)
+
+            # Create download requests
+            download_requests = self._create_requests(all_granules)
+
+            # tqdm.write(f"Downloading {len(download_requests)} granules for tile {tile}...")
+            with tqdm(total=len(download_requests), desc=f"Downloading {tile}", position=0, dynamic_ncols=True) as pbar:
+                for i, req in enumerate(download_requests):
+                    try:
+                        self._download_task(req)
+                    except Exception as e:
+                        tqdm.write(f"Failed to download {req[0]}: {str(e)}")
+                    pbar.update(1)
+
             self._write_ncs([tile])
 
     def _write_modis_template_file(self):
@@ -408,19 +481,23 @@ class BurnData(LPDAAC):
         """
         # Build the net cdfs here
         fill_value = -9999
+        # loop through tile IDs (MODIS tile)
         for tile_id in tiles:
             try:
                 nc_file_name = self._generate_local_nc_path(tile_id)
                 if os.path.exists(nc_file_name):
                     continue
+                print("nc_file_name: ",nc_file_name)
 
                 hdf_dir = self._generate_local_burn_hdf_dir(tile_id)
+                print("hdf_dir: ",hdf_dir)
 
                 files = sorted([os.path.join(hdf_dir, f) for f in os.listdir(hdf_dir) if self._extract_date_parts(f)
                                 is not None], key=self._extract_date_parts)
 
                 if not files:
                     print(f'No hdf files for tile {tile_id} in {hdf_dir}')
+                print(f"Processing [{len(files)}] hdf files.")
 
                 # Skip if it exists already
                 if os.path.exists(nc_file_name):
@@ -597,12 +674,14 @@ class BurnData(LPDAAC):
 class LandCover(LPDAAC):
     def __init__(self, out_dir: str, n_cores: int = None, username: str = None, password: str = None):
         super().__init__(out_dir)
-        self._lp_daac_url = 'https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.061/'
-        self._date_regex = r'(?P<year>\d{4})\.(?P<month>\d{2})\.(?P<day>\d{2})\/'
+        # self._lp_daac_url = 'https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.061/' # doesn't work? Use below (MC, July 25)
+        self._lp_daac_url = 'https://data.lpdaac.earthdatacloud.nasa.gov/lp-prod-protected/MCD12Q1.061/'
+        # self._date_regex = r'(?P<year>\d{4})\.(?P<month>\d{2})\.(?P<day>\d{2})\/' # this is no longer part of the URL
         self._parallel_cores = n_cores if n_cores is not None else os.cpu_count() - 1
         self._username = username
         self._password = password
-        self._file_regex = r'MCD12Q1' + self._post_regex
+        # self._file_regex = r'MCD12Q1' + self._post_regex # this no longer meets the file convention (MC, July 25)
+        self._file_regex = r'MCD12Q1\.A\d{7}\.h\d{2}v\d{2}\.061\.\d{13}\.hdf'
 
     def _generate_local_hdf_path(self, year: str, remote_name: str) -> str:
         return os.path.join(self._land_cover_dir, year, remote_name)
@@ -610,54 +689,99 @@ class LandCover(LPDAAC):
     def _generate_local_hdf_dir(self, year: str) -> str:
         return os.path.join(self._land_cover_dir, year)
 
-    def _create_requests(self, available_year_paths: List[str], tiles: List[str]):
-        download_requests = []
-        for year_path in available_year_paths:
-            year = re.match(self._date_regex, year_path).groupdict()['year']
+    def _query_cmr_granules(self, tiles: List[str]) -> Dict[str, List[str]]:
+        """
+        Method for generating a list of granule IDs based on MODIS tiles.
+        :param tiles:
+        :return: Dictionary of granule IDs grouped by year
+        """
+        if tiles is None:
+            tiles = self.get_all_available_tiles()
 
-            available_files = self._get_available_files(year_path, tiles=tiles)
-            for file in available_files:
-                local_file_path = self._generate_local_hdf_path(year, file)
-                os.makedirs(os.path.dirname(local_file_path), exist_ok=True)
-                if os.path.exists(local_file_path):
-                    if not self._verify_hdf_file(local_file_path):
-                        print('Removing', local_file_path)
-                        os.remove(local_file_path)
-                    else:
-                        continue
-                download_requests.append(
-                    (urllib.parse.urljoin(urllib.parse.urljoin(self._lp_daac_url, year_path), file), local_file_path)
-                )
+        # define the CMR URL and inputs
+        cmr_url = "https://cmr.earthdata.nasa.gov/search/granules.json"
+        short_name = "MCD12Q1"
+        version = "061"
+
+        tile_patterns = [f"h{tile[1:3]}v{tile[4:]}" for tile in tiles]  # e.g., 'h10v09'
+
+        params = {
+            "short_name": short_name,
+            "version": version,
+            "provider": "LPCLOUD",
+            "page_size": 2000,
+            "page_num": 1,
+        }
+
+        granules_by_year = {}
+        while True:
+            response = requests.get(cmr_url, params=params)
+            response.raise_for_status()
+            items = response.json()["feed"]["entry"]
+            if not items:
+                break
+            for item in items:
+                granule_id = item["title"]
+                if any(tile in granule_id for tile in tile_patterns):
+                    year = granule_id.split('.')[1][1:5]
+                    granules_by_year.setdefault(year, []).append(granule_id)
+            params["page_num"] += 1
+
+        return granules_by_year
+
+    def _create_requests(self, granules: List[str]):
+        download_requests = []
+        for granule in granules:
+            year = granule.split('.')[1][1:5]
+            remote_file = f"{granule}.hdf"
+            local_file_path = self._generate_local_hdf_path(year, remote_file)
+            os.makedirs(os.path.dirname(local_file_path), exist_ok=True)
+
+            if os.path.exists(local_file_path):
+                if not self._verify_hdf_file(local_file_path):
+                    print('Removing corrupt file:', local_file_path)
+                    os.remove(local_file_path)
+                else:
+                    continue
+
+            url = f"{self._lp_daac_url}{granule}/{remote_file}"
+            download_requests.append((url, local_file_path))
 
         return download_requests
 
     def _create_annual_mosaic(self, year: str, land_cover_type: LandCoverType = LandCoverType.IGBP):
+        """
+        Create annual mosaic landcover geotiffs from the downloaded HDF files.
+        :param year:
+        :param land_cover_type: User-defined landcover type (IGBP default)
+        :return: Annual mosaic GeoTIFF
+        """
+        # define the output geotiff file name
         output_file = f"lc_mosaic_{land_cover_type.value}_{year}.tif"
-
-        # Filter available files for the requested tiles
+        # gather a list of the granules
         lc_files = [self._generate_local_hdf_path(year, f) for f in os.listdir(self._generate_local_hdf_dir(year))
                     if re.match(self._file_regex, os.path.basename(f)) is not None]
 
-        # Use the sub-dataset name to get the right land cover type
+        # extract the correct subdatasets from the HDF file
+        # here we find the correct landcover model
         datasets = []
         for lc_file_path in lc_files:
             with rasterio.open(lc_file_path) as lc_file:
                 datasets.append([sd for sd in lc_file.subdatasets if str(land_cover_type.value) in sd.lower()][0])
 
-        # Create pointers to the chosen land cover type
+        # open the raster datasets and grab metadata
         tiles = [rasterio.open(ds) for ds in datasets]
-
-        # Mosaic them together
         mosaic, transform = merge(tiles)
-
-        # Get coordinate reference information
+        # copy the metadata and update projection information
         crs = tiles[0].meta.copy()
-        crs.update({"driver": "GTIFF",
-                    "height": mosaic.shape[1],
-                    "width": mosaic.shape[2],
-                    "transform": transform})
+        crs.update(
+            {"driver": "GTiff",
+             "height": mosaic.shape[1],
+             "width": mosaic.shape[2],
+             "transform": transform}
+        )
 
-        # Save mosaic file
+        # write out the mosaic file.
         with rasterio.open(os.path.join(self._mosaics_dir, output_file), "w+", **crs) as dst:
             dst.write(mosaic)
 
@@ -679,27 +803,31 @@ class LandCover(LPDAAC):
            aster-ultimate-2018-winter-olympics-observer/.
 
         Update 10/2020: Python workflow updated to 3.X specific per documentation
-
+        Update 07/2025: Integration with the CMR API for granule lists by year (M. Cook)
         """
         if tiles is None:
             tiles = self.get_all_available_tiles()
 
-        print('Finding available files...')
-        available_year_paths = self._get_available_year_paths()
+        print("Querying MCD12Q1 granules ...")
+        granules_by_year = self._query_cmr_granules(tiles)
+        years = sorted(granules_by_year.keys())
 
-        for year_path in tqdm(available_year_paths, position=0, file=sys.stdout):
-            year = re.match(self._date_regex, year_path).groupdict()['year']
-            output_file = f"lc_mosaic_{land_cover_type.value}_{year}.tif"
-            if os.path.exists(os.path.join(self._mosaics_dir, output_file)):
-                continue
-            download_requests = self._create_requests([year_path], tiles)
-            self._download_files(download_requests)
-            self._create_annual_mosaic(year, land_cover_type)
+        with tqdm(total=len(years), desc="", dynamic_ncols=True) as pbar:
+            for year in years:
+                pbar.set_description_str(f"Downloading and mosaicking granules for [{year}]")
+                output_file = f"lc_mosaic_{land_cover_type.value}_{year}.tif"
+                if os.path.exists(os.path.join(self._mosaics_dir, output_file)):
+                    pbar.update(1)
+                    continue
 
-            print("Mosaicking/remosaicking land cover tiles...")
+                granules = granules_by_year[year]
+                download_requests = self._create_requests(granules)
+                self._download_files(download_requests)
+                self._create_annual_mosaic(str(year), land_cover_type)
+                pbar.update(1)
 
-        # Print location
-        print(f"Land cover data saved to {self._mosaics_dir}")
+        tqdm.write(f"\tCompleted for all years: [{min(years)}-{max(years)}]")
+        tqdm.write(f"\tLandcover data saved to: {self._mosaics_dir}")
 
 
 class EcoRegion(Base):

@@ -45,7 +45,11 @@ def str_to_bool(s: str):
 def test_earthdata_credentials(username: str, password: str) -> None:
     # Earthdata Login
     # test url for correct user/password
-    url = "https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.061/2019.01.01/BROWSE.MCD12Q1.A2019001.h10v09.061.2022169160720.1.jpg"
+    # base URL for the MCD12Q1 (landcover) product
+    base_url = 'https://data.lpdaac.earthdatacloud.nasa.gov/lp-prod-public/MCD12Q1.061/'
+    # granule-specific URL for testing
+    granule_url = 'MCD12Q1.A2019001.h10v09.061.2022169160720/BROWSE.MCD12Q1.A2019001.h10v09.061.2022169160720.1.jpg'
+    url = base_url + granule_url
 
     password_manager = urllib.request.HTTPPasswordMgrWithDefaultRealm()
     password_manager.add_password(None, "https://urs.earthdata.nasa.gov", username, password)
@@ -204,13 +208,15 @@ def main():
     end_year = None if end_year == 0 else end_year
 
     if land_cover_type != LandCoverType.NONE:
-        print('Retrieving landcover...')
+        print('\nRetrieving landcover data ...')
         land_cover = LandCover(out_dir, n_cores=n_cores, username=username, password=password)
         land_cover.get_land_cover(tiles, land_cover_type)
 
     eco_region_data = EcoRegion(out_dir)
     eco_region_data.get_eco_region()
 
+    print('\nRetrieving burn data ...')
+    test_earthdata_credentials(username, password) # test this again to be sure
     burn_data = BurnData(out_dir, username, password, n_cores)
     burn_data.get_burns(tiles, start_year, end_year)
 
@@ -222,13 +228,16 @@ def main():
 
     # TODO: This can be parallelized
     gdf = models.build_points(event_perimeters, shape_file_path=shape_file)
+    # add in the fire attributes
     gdf = models.add_fire_attributes(gdf)
+    # add in the ecoregion information:
+    gdf = models.add_eco_region_attributes(gdf, eco_region_type, eco_region_level)
+    # add in the landcover
     if land_cover_type != LandCoverType.NONE:
         gdf = models.add_land_cover_attributes(gdf, land_cover_type)
     gdf = models.process_geometry(gdf)
 
-    gdf.to_file('temp_test.gpkg', driver="GPKG")
-    gdf = models.add_eco_region_attributes(gdf, eco_region_type, eco_region_level)
+    # gdf.to_file('temp_test.gpkg', driver="GPKG") # testing
 
     def generate_path(proj_dir, base_filename, shape_type: ShapeType):
         """Generate the appropriate file path."""
