@@ -17,7 +17,6 @@ if __name__ == '__main__':
         processed = [f.strip('\n') for f in file.readlines()]
 
     for country in countries:
-        print(processed, unprocessable)
         if country not in processed and country not in unprocessable:
             print(country)
             try:
@@ -41,6 +40,10 @@ if __name__ == '__main__':
                 if return_code == 0:
                     with open('processed.txt', 'a') as file:
                         file.write(f"{country}\n")
+                else:
+                    with open('unprocessable.txt', 'a') as file:
+                        file.write(f"{country}\n")
+                    cleanup_intermediate_files(os.path.join(PROJECT_DIR, 'output'))
             except (sp.TimeoutExpired, MemoryError):
                 # If the process exceeds the timeout, terminate it
                 print("Process took too long, terminating...")

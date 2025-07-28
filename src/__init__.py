@@ -53,13 +53,11 @@ SP_HELP = ("""
     """)
 TILE_HELP = ("""
     You may specify the tiles as a list of characters (no quotes no spaces)
-    (e.g., h08v04 h09v04 ...) or leave this blank to default to tiles
-    covering the Contiguous United States. Specify "all" to use all
-    available MODIS tiles. Alternatively, provide a path to a shapefile
-    with either a ".shp" or ".gpkg" extension to use intersecting MODIS
+    (e.g., h08v04 h09v04 ...). Alternatively, provide a path to a shapefile
+    with either a ".shp" or ".gpkg" extension to use its intersecting MODIS
     tiles. In the src directory, you can access any of the 50 states by specifying ref/us_states/state_name.gpkg,
     all 7 continents by specifying ref/continents/continent_name.gpkg, and a country by ref/individual_countries/country_name.gpkg.
-    A list of all avalible countries can be found in the ReadMe.
+    A list of all available countries can be found in the ReadMe.
     """)
 TMP_HELP = ("""
     The number of days to search for neighboring burn detections. Defaults
