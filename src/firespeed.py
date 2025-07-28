@@ -5,6 +5,16 @@ import geopandas as gpd
 import pyproj
 
 
+def auto_density_func(density_param, shape):
+    ### thinking on this is we want the density per-square to remain similar...?
+    ### so density to go with the sqrt of n_points
+    ### arbitrarily set pt density to 1...
+    n_pts = len(shape)
+    max_bins = int(math.sqrt(n_pts)/density_param)
+    print("bin density verification:", len(shape), "pts, ", len(shape)/(max_bins * max_bins), "LD")
+
+    return max_bins
+
 def computefirespeed(fire_gdf):
     transformer = pyproj.Transformer.from_crs(fire_gdf.crs, "EPSG:4326", always_xy=True)
     geod = pyproj.Geod(ellps="WGS84")
@@ -103,6 +113,11 @@ def compute_max_vector(perim_inner_geoms, perim_outer_geoms, inner_coords, inter
             bins_y = math.ceil((bbox[3] - bbox[1])/maxbins)
             ### bin resolution is bigger of these values since we want square bins
             bin_res = max(bins_x, bins_y)
+            ### record this param somewhere...
+            adparam = 0.1
+            bin_res = math.ceil(max(bbox[2] - bbox[0], bbox[3] - bbox[1]) / min(auto_density_func(adparam, perim_outer_geoms[poly_outer].simplify(0.05).exterior.coords),
+                                                                        auto_density_func(adparam, perim_inner_geoms[poly_inner].exterior.coords)))
+            
             ### compute actual number of bins with bin resolution 
             grid_size = (math.ceil((bbox[2] - bbox[0])/bin_res), math.ceil((bbox[3] - bbox[1])/bin_res))
             grid_spatial = (grid_size[0] * bin_res, grid_size[1] * bin_res)

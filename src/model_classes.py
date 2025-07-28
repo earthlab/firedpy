@@ -880,6 +880,8 @@ class ModelBuilder(Base):
         gdf["geometry"] = gdf["geometry"].apply(self._as_multi_polygon)
 
         print("Calculating maximum travel vectors ...")
+        ### save GDF for sanity check --- REMOVE THIS
+        gdf.to_file('verification.gpkg', driver='GPKG', layer='pre_comp_fs')
         fs_orig_x, fs_orig_y, fs_dest_x, fs_dest_y, fs_max_dist, fs_speed = computefirespeed(gdf)
 
         ### fire speed test code -- add dummy variables for max travel vector
