@@ -67,6 +67,8 @@ def compute_max_vector(perim_inner_geoms, perim_outer_geoms, inner_coords, inter
     ### does computing this beforehand speed things up? maybe a bit
     root2 = round(math.sqrt(2), 5)
 
+    verify_outer = False
+
     result_dist = []
     result_coord_pair = []
     result_poly_pair = []
@@ -101,6 +103,8 @@ def compute_max_vector(perim_inner_geoms, perim_outer_geoms, inner_coords, inter
         poly_min_dist = float("inf")
         poly_coordpair = None
         poly_pair = None
+
+        verify_inner = False
 
         for poly_inner in polyids:
             ### compute inner bounding box...
@@ -154,6 +158,8 @@ def compute_max_vector(perim_inner_geoms, perim_outer_geoms, inner_coords, inter
 
             sample_pair = None
             sample_dist = float("-inf")
+
+            nothing_found_flag = True
 
             ### finally ... we can do binned nearest neighbors
             ### do root2 rings... focus on points in outer perim
@@ -209,6 +215,12 @@ def compute_max_vector(perim_inner_geoms, perim_outer_geoms, inner_coords, inter
                     elif not root2_set:
                         ring = root2_dist-2
                     ring += 1
+                ### what to do if we don't find points...
+                if ring_sqs is None:
+                    ### go to next step before we error
+                    continue
+                else:
+                    nothing_found_flag = False
                 ### for each outer box (occu_loc) we have a series of points (len(bins_1[][])) -- 
                 ###     for each point we have a series of inner boxes (ring_sqs[][][i/j])
                 ###         for each inner box we have a series of points --- measure distances and find min
@@ -250,19 +262,32 @@ def compute_max_vector(perim_inner_geoms, perim_outer_geoms, inner_coords, inter
                 if sdist > sample_dist:
                     sample_dist = sdist
                     sample_pair = spair
+            if nothing_found_flag:
+                continue
             ### at this point we have the furthest nearest-neighbor for this polygon pair
             if sample_dist < poly_min_dist:
                 poly_min_dist = sample_dist
                 poly_coordpair = sample_pair
                 poly_pair = (poly_inner, poly_outer)
+                verify_inner = True
         ### aggregate over all outer polygons
-        result_dist.append(poly_min_dist)
-        result_coord_pair.append(poly_coordpair)
-        result_poly_pair.append(poly_pair)
-    max_loc = np.argmax(result_dist)
-    maximum_distance = result_dist[max_loc]
-    max_dist_origin = result_coord_pair[max_loc][0]
-    max_dist_destination = result_coord_pair[max_loc][1]
+        if verify_inner:
+            result_dist.append(poly_min_dist)
+            result_coord_pair.append(poly_coordpair)
+            result_poly_pair.append(poly_pair)
+            verify_outer = True
+        else:
+            continue
+    if verify_outer:
+        max_loc = np.argmax(result_dist)
+        maximum_distance = result_dist[max_loc]
+        max_dist_origin = result_coord_pair[max_loc][0]
+        max_dist_destination = result_coord_pair[max_loc][1]
+    else:
+        max_loc = None
+        maximum_distance = np.nan
+        max_dist_origin = None
+        max_dist_destination = None
     return maximum_distance, max_dist_origin, max_dist_destination, outer_coords
 
 ### fire distance computations
