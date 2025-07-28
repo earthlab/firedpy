@@ -92,13 +92,6 @@ def main():
     parser.add_argument("-shape_type", help=SHP_HELP, type=ShapeType)
     parser.add_argument("-spatial", dest="spatial_param", type=int, help=SP_HELP)
     parser.add_argument("-temporal", dest="temporal_param", type=int, help=TMP_HELP)
-    parser.add_argument("-aoi", "--names-list", nargs="+", dest="tiles",
-                        default=["h08v04", "h09v04", "h10v04", "h11v04",
-                                 "h12v04", "h13v04", "h08v05", "h09v05",
-                                 "h10v05", "h11v05", "h13v04", "h08v05",
-                                 "h09v05", "h10v05", "h11v05", "h12v05",
-                                 "h08v06", "h09v06", "h10v06", "h11v06"],
-                        help=TILE_HELP)
     parser.add_argument("--tile_choice", type=TileChoice, help='')
     parser.add_argument('--tile_name', type=str, help='The name of the tile you would like to choose based'
                                                       ' on your tile choice')
@@ -160,6 +153,14 @@ def main():
         eco_region_type, eco_region_level = EcoRegionType.NA, 3
 
     elif tile_choice == TileChoice.D:
+        shape_file = input('Please enter the GPKG or shapefile path:')
+        print(f"Filtering for MODIS tiles that intersect \n  {shape_file}")
+        tiles = shape_to_tiles(shape_file)
+        tile_name = os.path.basename(shape_file).rstrip('.gpkg').rstrip('.shp')
+        eco_region_type = firedpy_parser.prompt_for_argument('eco_region_type')
+        eco_region_level = 3 if eco_region_type == EcoRegionType.NA else None
+
+    elif tile_choice == TileChoice.E:
         tiles = firedpy_parser.prompt_for_argument(
             arg_name='tile_name',
             prompt_override="Please enter tiles as a list of characters (no quotes no spaces)(e.g., h08v04 h09v04 " \
@@ -196,7 +197,7 @@ def main():
               " variables.")
         username = firedpy_parser.prompt_for_argument('username')
         password = firedpy_parser.prompt_for_argument('password', sensitive=True)
-        test_earthdata_credentials(username, password)
+        print("✅ EarthAccess will handle authentication automatically")
 
     start_year = firedpy_parser.prompt_for_argument('start_year') if args.start_year is None else args.start_year
     end_year = firedpy_parser.prompt_for_argument('end_year') if args.end_year is None else args.end_year
@@ -224,11 +225,13 @@ def main():
     gdf = models.build_points(event_perimeters, shape_file_path=shape_file)
     gdf = models.add_fire_attributes(gdf)
     if land_cover_type != LandCoverType.NONE:
-        gdf = models.add_land_cover_attributes(gdf, land_cover_type)
+        gdf = models.add_land_cover_attributes(gdf, tiles, land_cover_type)
     gdf = models.process_geometry(gdf)
 
-    gdf.to_file('temp_test.gpkg', driver="GPKG")
     gdf = models.add_eco_region_attributes(gdf, eco_region_type, eco_region_level)
+    # Calculate fire spread speed and maximum travel vectors
+
+    gdf = models.add_kg_attributes(gdf)
 
     def generate_path(proj_dir, base_filename, shape_type: ShapeType):
         """Generate the appropriate file path."""
