@@ -40,7 +40,7 @@ def computefirespeed(fire_gdf):
         ### return maximum_distance, max_dist_origin, max_dist_destination
         max_fire_dist, max_origin, max_destination, prev_step = compute_max_vector(fire_gdf["geometry"][i-1].geoms, fire_gdf["geometry"][i].geoms, prev_step, 
                                                                                    inter_matrix, buffer=200, maxbins=200, slop=2)
-        orig_x.append(max_origin[0])
+        orig_x.append(max_origin[0])    ### error is here
         orig_y.append(max_origin[1])
         dest_x.append(max_destination[0])
         dest_y.append(max_destination[1])
@@ -60,7 +60,7 @@ def computefirespeed(fire_gdf):
     return orig_x, orig_y, dest_x, dest_y, result_max_dist, result_speed
 
 
-def compute_max_vector(perim_inner_geoms, perim_outer_geoms, inner_coords, inter_matrix, buffer, maxbins, slop):
+def compute_max_vector(perim_inner_geoms, perim_outer_geoms, inner_coords, inter_matrix, buffer, maxbins, slop, debug=False):
     ### distance computation 2 -- binned
     outer_coords = []
 
@@ -124,6 +124,8 @@ def compute_max_vector(perim_inner_geoms, perim_outer_geoms, inner_coords, inter
             
             ### compute actual number of bins with bin resolution 
             grid_size = (math.ceil((bbox[2] - bbox[0])/bin_res), math.ceil((bbox[3] - bbox[1])/bin_res))
+            if debug:
+                print("- debug -", grid_size)
             grid_spatial = (grid_size[0] * bin_res, grid_size[1] * bin_res)
             grid_offset = ((grid_spatial[0] - (bbox[2] - bbox[0]))/2, (grid_spatial[1] - (bbox[3] - bbox[1]))/2)
 
@@ -154,10 +156,14 @@ def compute_max_vector(perim_inner_geoms, perim_outer_geoms, inner_coords, inter
                 outer_occu[outer_ids[0], outer_ids[1]] = True
             
             ### compute the list of ids of occupied outer bins...
-            outer_where = np.argwhere(outer_occu == True) 
+            outer_where = np.argwhere(outer_occu == True)
 
             sample_pair = None
             sample_dist = float("-inf")
+
+            if debug:
+                print("- debug -", inner_bins, outer_bins)
+                print("- debug -", inner_occu, outer_occu)
 
             nothing_found_flag = True
 
@@ -171,6 +177,7 @@ def compute_max_vector(perim_inner_geoms, perim_outer_geoms, inner_coords, inter
                 ### start with this loose upper bound because this is the furthest we can possibly iterate 
                 ### ...because there are only so many bins...
                 root2_dist = maxbins ### needs some work... to tighten upper bound?
+                root2_dist = max(grid_size)
                 root2_set = True
                 ring = 0
                 ring_sqs = None
@@ -178,8 +185,14 @@ def compute_max_vector(perim_inner_geoms, perim_outer_geoms, inner_coords, inter
                 ### while the ring is within the upper bound
                 while ring < root2_dist:
                     ### get shortlist of occupied bins (inner perim) within the ring
-                    temp = np.argwhere(inner_occu[max(occu_loc[0]-ring, 0): min(occu_loc[0]+ring+1, grid_size[0] - 1), 
-                                            max(occu_loc[1]-ring, 0): min(occu_loc[1]+ring+1, grid_size[1] - 1)]==True)
+                    #[[list([0, 1, 2, 3])]] [[list([0, 1, 2, 3])]]
+                    #[[ True]] [[ True]]
+                    if debug:
+                        print("- debug -", max(occu_loc[0]-ring, 0), min(occu_loc[0]+ring+1, grid_size[0] - 1), max(occu_loc[1]-ring, 0), min(occu_loc[1]+ring+1, grid_size[1] - 1))
+                    temp = np.argwhere(inner_occu[max(occu_loc[0]-ring, 0): min(occu_loc[0]+ring+1, grid_size[0]), 
+                                            max(occu_loc[1]-ring, 0): min(occu_loc[1]+ring+1, grid_size[1])]==True)
+                    #print("- temp:")
+                    #print(temp)
                     ### if there are occupied bins in this ring (and we can assume we haven't found an occupied bin yet),
                     ### ... we can cap the number of rings with a loose-ish upper bound of the L-inf distance
                     ### in which we could find a point with a smaller L2-distance
@@ -218,6 +231,8 @@ def compute_max_vector(perim_inner_geoms, perim_outer_geoms, inner_coords, inter
                 ### what to do if we don't find points...
                 if ring_sqs is None:
                     ### go to next step before we error
+                    if debug:
+                        print("- debug - no rings found on this occu_loc", ring, root2_dist)
                     continue
                 else:
                     nothing_found_flag = False
@@ -284,6 +299,16 @@ def compute_max_vector(perim_inner_geoms, perim_outer_geoms, inner_coords, inter
         max_dist_origin = result_coord_pair[max_loc][0]
         max_dist_destination = result_coord_pair[max_loc][1]
     else:
+        if debug:
+            print("- debug - no pairs found!")
+            fig, axs = plt.subplots(1, 1, figsize=(10, 5))
+            axs.set_aspect('equal', 'datalim')
+            for iii in range(len(perim_outer_geoms)):
+                axs.fill(perim_outer_geoms[iii].exterior.xy[0], perim_outer_geoms[iii].exterior.xy[1], alpha=0.2, fc='r', ec='none')
+                axs.scatter(perim_outer_geoms[iii].exterior.xy[0],perim_outer_geoms[iii].exterior.xy[1], c="r", alpha=0.2)
+            for jjj in range(len(perim_inner_geoms)):
+                axs.fill(perim_inner_geoms[jjj].exterior.xy[0], perim_inner_geoms[jjj].exterior.xy[1], alpha=0.2, fc='b', ec='none')
+                axs.scatter(perim_inner_geoms[jjj].exterior.xy[0],perim_inner_geoms[jjj].exterior.xy[1], c="b", alpha=0.2)
         max_loc = None
         maximum_distance = np.nan
         max_dist_origin = None
