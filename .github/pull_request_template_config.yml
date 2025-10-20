@@ -1,0 +1,8 @@
+blank_issues_enabled: false # I do think we should require PR templates for everything but we can alter this if people feel differently
+contact_links:
+  #- name: GitHub Discussions
+  #  url: https://github.com/your-username/firedpy/discussions
+  #  about: Please ask questions and discuss ideas here before opening a PR.
+  - name: Documentation
+    url: https://firedpy.readthedocs.io/
+    about: Check the documentation for usage guides and API reference.

@@ -18,6 +18,7 @@ class TileChoice(enum.Enum):
     B = 'b'
     C = 'c'
     D = 'd'
+    E = 'e'
 
 
 class LandCoverType(enum.IntEnum):
