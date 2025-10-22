@@ -7,22 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [UNRELEASED] - YYY-MM-DD
+## [2.0.0] - 2023
 
 ### Added
-- 
+- Temporal range: Nov 2000 - July 2024
+- Parameters
+    - CONUS
+        - Temporal: 5 days
+        - Spatial: 1 pixel
+    - GLOBAL
+        - Temporal: 5 days
+        - Sptail: 1 pixel
 
 ### Changed
-- Landcover data source
-
+- Changed spatial and temporal aggregtation to 5 days, 1 pixels for all countries
+- Bug fixes
+- Optimized edge case algorithm
+- New MODIS v6.1
+- Extended time series
 
 ---
 
-## [1.0.0] - 2024-01-15
+## [1.0.0] - 2022
 
 ### Added
-- Initial release of FIREDpy
-- Core fire detection and analysis algorithms
+- Initial FIREDpy release
+- Temporal range: 2001 - 2021
+- Parameters
+    - CONUS
+        - Temporal: 11 days
+        - Spatial: 5 pixels
+    - GLOBAL
+        - Temporal: variable
+        - Sptail: variable
+- Validations: CONUS burned area comparison using MTBS and NIFC perimeters
 
 ---
 
