@@ -2,9 +2,13 @@
 
 Thank you for your interest in contributing to firedpy! This document provides guidelines for both internal Earth Lab team members and external contributors.
 
+---
+
 ## Prerequisites
 - Python 3.8 or higher
 - Git
+
+---
 
 ## Development Workflows
 
@@ -14,7 +18,7 @@ Thank you for your interest in contributing to firedpy! This document provides g
 1. **Contact the team**: Reach out to Nate, Aashish, or Adam to request a development branch
 2. **Branch creation**: A dev branch will be created for you, cloned from `main`
 3. **Clone your dev branch**: `git clone https://github.com/earthlab/firedpy.git -b your-dev-branch`
-4. **Set up environment**: Follow the development setup steps below
+4. **Set up environment**: Follow the set-up steps in the [README.md](README.md)
 
 #### Development Process
 1. **Work on your `[your-initials]-dev` branch**: Make all changes on your assigned development branch
@@ -49,39 +53,88 @@ main (production)
 3. **Review process**: Internal team members will review your PRs
 4. **Testing**: Ensure all tests pass before requesting review
 
+---
 
 ## How to Contribute
 
-### Reporting Issues
-Before creating an issue, please:
-1. Search existing issues to avoid duplicates
-2. Use the an issue template (Bug Report, Feature Request, or Question)
-3. Provide as much detail as possible!
+### Issues
 
-### Suggesting Enhancements
-When suggesting new features:
-1. Use the Feature Request template
-2. Provide scientific context and use cases
-3. Consider implementation and dependencies
-4. Think about validation approaches (if applicable)
+#### **Issue Templates**
+We use GitHub issue templates for reporting:
 
-### Code Contributions
+- **[Bug Report Template](.github/ISSUE_TEMPLATE/bug_report.md)** - For reporting bugs with scientific context
+- **[Question Template](.github/ISSUE_TEMPLATE/question.md)** - For usage help and methodology questions
 
-#### Pull Request Process
-1. PR your dev branch / fork into `nonprod` (be sure to a template, either 'major' or 'minor')
-2. Tag relevant [issues]
-3. Request review from maintainers (Adam or Aashish)
+#### **Issue Review Process**
+During each meeting, we'll review open issues and assign the following flags and attributes.
 
-#### Coding Standards
+#### **Flags / Labels** (chat came up with these - do we like?)
+| Label | Meaning |
+|--------|----------|
+| `prio:high` | Urgent or core algorithm changes (e.g., Fire Speed integration) |
+| `prio:medium` | Secondary features or refactors |
+| `prio:low` | Documentation, small cleanups |
+| `type:bug` | Errors, failing tests, incorrect outputs |
+| `type:feat` | New feature requests |
+| `type:docs` | Documentation improvements |
+| `type:perf` | Performance optimizations |
+| `type:infra` | Build, branch organization, or repo maintenance |
+| `area:io` | Data ingestion and preprocessing |
+| `area:metrics` | Fire metrics (speed, FRP, etc.) |
+| `area:agg` | Aggregation and spatial/temporal grouping |
+| `area:docs` | User or API documentation |
+| `good first issue` | Suitable for onboarding new contributors |
+
+---
+
+## Enhancements
+
+#### **Enhancement Requests**
+Use the **[Feature Request Template](.github/ISSUE_TEMPLATE/feature_request.md)** for suggesting new functionality.
+See the [DEVELOPMENT.md](DEVELOPMENT.md) for a list of current development priorities.
+
+---
+
+## Pull Requests
+
+#### **PR Templates**
+We use different PR templates based on the scope of changes:
+
+- **[Major Change/Release Template](.github/pull_request_template_major.md)** - For major features, breaking changes, or new releases
+- **[Minor Fix/Update Template](.github/pull_request_template_minor.md)** - For small bug fixes and documentation updates
+
+#### **PR Workflow**
+- **Internal team**: PR your `[your-initials]-dev` branch into `nonprod`
+- **External contributors**: PR your feature branch into `nonprod`
+- Use template based on change scope
+- Tag relevant issues in PR description
+- Request review from maintainers (Adam or Aashish)
+
+---
+
+## Assigning Issues
+- Each issue should have **one primary owner** and optional collaborators.
+- Use GitHub **Projects** (Kanban view) to track issue progress:
+  - `To Do`
+  - `In Progress`
+  - `Done`
+
+---
+
+## Coding Standards
 - Follow PEP 8 style guidelines
 - Use meaningful variable and function names
 - Annotate your code!
 - Write tests for new functionality
 
-### Documentation
+---
+
+## Documentation
 - Update docstrings for any new functions
 - Add usage examples for new features
 - Update README if needed
+
+---
 
 ## Scientific Guidelines
 
@@ -95,30 +148,7 @@ When suggesting new features:
 - Provide example workflows
 - Consider backward compatibility
 
-## Issue and PR Templates
-
-This repository uses GitHub templates to standardize issue reporting and pull requests:
-
-### Issue Templates
-- **Bug Report**: For reporting bugs with scientific context
-- **Feature Request**: For suggesting new functionality
-- **Question**: For usage help and methodology questions
-
-### Pull Request Templates
-- **General**: For most changes (concise template)
-- **Major Change/Release**: For major features, breaking changes, or new releases
-- **Minor Fix/Update**: For small bug fixes and documentation updates
-
-### Template Selection Guidelines
-- **Internal team members**: Use appropriate template based on change scope
-- **External contributors**: Use General template for most changes, Major template for significant features
-
-## Getting Help
-
-- Check the documentation first
-- Search existing issues
-- Use GitHub Discussions for general questions
-- Use the Question template for specific help requests
+---
 
 ## Recognition
 
