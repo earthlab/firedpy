@@ -199,7 +199,8 @@ See **[CONTRIBUTING.md](CONTRIBUTING.md)** for guidelines on:
 | **Jennifer Balch** | | | |
 | **Erick Verleye** | Software developer | | |
 | **Travis Williams** | Software development | | Moved FIREDpy into production version 1 |
-| **Nathan Mc** | | | |
+| **Joe McGlinchy** |
+| **Nathan Mietkiewicz** | | | |
 | **Ty Tuff** | Contributor | | Algorithm development, math help |
 | **Cibele Amaral** | | | |
 ---
