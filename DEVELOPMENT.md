@@ -190,10 +190,16 @@ See **[CONTRIBUTING.md](CONTRIBUTING.md)** for guidelines on:
 | **Adam Mahood** | Project Lead | Final reviews for merges into `main` | |
 | **Aashish Mukund** | Software developer | Backup reviews and algorithm development | |
 | **Maxwell Cook** | Contributor | | EarthAccess fixes, ICS-209+ integration, cFRP workflow development |
-| **Kyle Manly** | Contributor | Köppen Region spatial/temporal optimization | EarthAccess fixes |
+| **Kyle Manley** | Contributor | Köppen Region spatial/temporal optimization | EarthAccess fixes |
 | **Nicole Hemming-Schroeder** | Contributor | | Fire speed algorithm conceptualization and development |
 | **Danielle Losos** | Contributor | Fire speed testing | |
 | **Jerry Gammie** | Contributor | Fire speed - python conversion | Fire speed python code |
 | **Nate Hofford** | Coordinator/Contributor | Meeting facilitation, cFRP integration | |
-
+| **Lise St. Denis** | Contributor | | Intial algorithm development |
+| **Jennifer Balch** | | | |
+| **Erick Verleye** | Software developer | | |
+| **Travis Williams** | Software development | | Moved FIREDpy into production version 1 |
+| **Nathan Mc** | | | |
+| **Ty Tuff** | Contributor | | Algorithm development, math help |
+| **Cibele Amaral** | | | |
 ---
