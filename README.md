@@ -39,7 +39,7 @@ See the issues tab for more bugs, or to report a new bug!
 
 ## Have you used firedpy?
 
-The algorithm and derived data products are under active development. Please take this [survey](https://docs.google.com/forms/d/e/1FAIpQLSe7ycmS0HGIze2T6TIUox8hsu8nlGsxiUMww8SCeWHDZPhB-Q/viewform?usp=sf_link) to help us improve firedpy. Or just email admahood@gmail.com and Adam will be overjoyed to talk about firedpy.
+The algorithm and derived data products are under active development. Please take this [survey](https://docs.google.com/forms/d/e/1FAIpQLSe7ycmS0HGIze2T6TIUox8hsu8nlGsxiUMww8SCeWHDZPhB-Q/viewform?usp=sf_link) to help us improve firedpy. Or just email admahood@duck.com and Adam will be overjoyed to talk about firedpy.
 
 ## Current status of created products
 
