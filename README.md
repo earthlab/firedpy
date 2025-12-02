@@ -20,6 +20,15 @@ Description of the country-level data sets is at:
 
 Mahood, A.L. Lindrooth, E.J., Cook, M.C. and Balch, J.K. Country-level fire perimeter datasets (2001-2021). 2022. Nature Scientific Data, 9(458). https://doi.org/10.1038/s41597-022-01572-3
 
+## FIREDpy Citation
+Balch, J. K., St. Denis, L. A., Mahood, A. L., Mietkiewicz, N. P., Williams, T. P., McGlinchy J,
+and Cook, M. C. 2020. FIRED (Fire Events Delineation): An open, flexible algorithm & database
+of U.S. fire events derived from the MODIS burned area product (2001-19). Remote
+Sensing, 12(21), 3498; https://doi.org/10.3390/rs12213498
+
+## Data Sharing Agreement
+FIREDpy is currently in active development, and newer versions of the algorithm and data products are shared on an individual basis. All data products generated from unpublished versions of FIREDpy require permission from PI Jennifer K. Balch prior to use in publications, presentations, or public dissemination. These conversations ensure appropriate acknowledgment of the development team's contributions and proper context for the algorithm's current capabilities and limitations. For data requests or collaboration inquiries, please contact Nate Hofford (nate.hofford@colorado.edu), University of Colorado Boulder.
+
 ## Changes
  - 10/14/2024 FIREDpy V2.0
     - No longer using setup.py. See new instructions below for running it with Docker or installing it locally.
