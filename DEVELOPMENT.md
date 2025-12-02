@@ -20,61 +20,6 @@ This outlines how we will use the **biweekly FIRED development meetings** to str
 
 ---
 
-## Issues
-
-### **Issue Templates**
-We use GitHub issue templates for reporting:
-
-- **[Bug Report Template](.github/ISSUE_TEMPLATE/bug_report.md)** - For reporting bugs with scientific context
-- **[Feature Request Template](.github/ISSUE_TEMPLATE/feature_request.md)** - For suggesting new functionality  
-- **[Question Template](.github/ISSUE_TEMPLATE/question.md)** - For usage help and methodology questions
-
-### **Issue Review Process**
-During each meeting, we'll review open issues and assign the following flags and attributes.
-
-### **Flags / Labels** (chat came up with these - do we like?)
-| Label | Meaning |
-|--------|----------|
-| `prio:high` | Urgent or core algorithm changes (e.g., Fire Speed integration) |
-| `prio:medium` | Secondary features or refactors |
-| `prio:low` | Documentation, small cleanups |
-| `type:bug` | Errors, failing tests, incorrect outputs |
-| `type:feat` | New feature requests |
-| `type:docs` | Documentation improvements |
-| `type:perf` | Performance optimizations |
-| `type:infra` | Build, branch organization, or repo maintenance |
-| `area:io` | Data ingestion and preprocessing |
-| `area:metrics` | Fire metrics (speed, FRP, etc.) |
-| `area:agg` | Aggregation and spatial/temporal grouping |
-| `area:docs` | User or API documentation |
-| `good first issue` | Suitable for onboarding new contributors |
-
----
-
-## Pull Requests
-
-### **PR Templates**
-We use different PR templates based on the scope of changes:
-
-- **[Major Change/Release Template](.github/pull_request_template_major.md)** - For major features, breaking changes, or new releases
-- **[Minor Fix/Update Template](.github/pull_request_template_minor.md)** - For small bug fixes and documentation updates
-
-### **PR Workflow**
-- **Internal team**: PR your `[your-initials]-dev` branch into `nonprod`
-- **External contributors**: PR your feature branch into `nonprod`
-- Use template based on change scope
-- Tag relevant issues in PR description
-- Request review from maintainers (Adam or Aashish)
-
-## Assigning Issues
-- Each issue should have **one primary owner** and optional collaborators.
-- Use GitHub **Projects** (Kanban view) to track issue progress:
-  - `To Do`
-  - `In Progress`
-  - `Done`
-
----
-
 ## Project Tracking
 
 ### **FIREDpy Development Kanban Tracker**
@@ -183,6 +128,7 @@ See **[CONTRIBUTING.md](CONTRIBUTING.md)** for guidelines on:
 - Development workflows for internal team members vs external contributors
 - Branch naming conventions and development workflows
 - Code standards and testing requirements 
+- Templates for questions, bugs, enhancements, and pull-requests
 
 ### **Development Team Roles** (need people to update with their contributions / add previous contributors)
 | Name | Role | Responsibilities | Contributions |
