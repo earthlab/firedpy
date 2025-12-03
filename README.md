@@ -27,7 +27,7 @@ of U.S. fire events derived from the MODIS burned area product (2001-19). Remote
 Sensing, 12(21), 3498; https://doi.org/10.3390/rs12213498
 
 ## Data Sharing Agreement
-FIREDpy is currently in active development, and newer versions of the algorithm and data products are shared on an individual basis. All data products generated from unpublished versions of FIREDpy require permission from PI Jennifer K. Balch prior to use in publications, presentations, or public dissemination. These conversations ensure appropriate acknowledgment of the development team's contributions and proper context for the algorithm's current capabilities and limitations. For data requests or collaboration inquiries, please contact Nate Hofford (nate.hofford@colorado.edu), University of Colorado Boulder.
+FIREDpy is currently in active development, and newer versions of the algorithm and data products are shared on an individual basis. All data products generated from unpublished versions of FIREDpy require permission from PI Jennifer K. Balch prior to use in publications, presentations, or public dissemination. These conversations ensure appropriate acknowledgment of the development team's contributions and proper context for the algorithm's current capabilities and limitations. Please use the above citation for attributing credit. For data requests or collaboration inquiries, please contact Nate Hofford (nate.hofford@colorado.edu), University of Colorado Boulder.
 
 ## Changes
  - 10/14/2024 FIREDpy V2.0
