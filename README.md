@@ -303,8 +303,10 @@ Note, the docker container has changed from `earthlab/firedpy` to `earthlabcu/fi
     `docker exec -it <silly_name> /bin/bash`
 
   - Or access the CLI from your browser. The output from docker ps will look like this:
-    CONTAINER ID   IMAGE                       COMMAND                  CREATED         STATUS                 PORTS                                         NAMES
-    58a8a6ed926a   earthlabcu/firedpy:latest   "/bin/entry.sh ttyd …"   2 minutes ago   Up 2 minutes           127.0.0.1:32768->7681/tcp                     stupefied_hypatia
+
+    |CONTAINER ID |  IMAGE        |               COMMAND      |            CREATED    |     STATUS       |         PORTS                |                         NAMES|
+    |:----|||||||
+    |58a8a6ed926a |  earthlabcu/firedpy:latest | "/bin/entry.sh ttyd …" | 2 minutes ago |  Up 2 minutes  | 127.0.0.1:32768->7681/tcp     |                stupefied_hypatia|
 
     In this example the container is running on the host machine at 127.0.0.1:32768. It may be different when you run it. Access this location in your browser by copy and pasting it into your browser's address bar
 
