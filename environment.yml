@@ -19,3 +19,4 @@ dependencies:
   - scipy==1.14.1
   - mock==5.1.0
   - libgdal-hdf4==3.9.2
+  - earthaccess
