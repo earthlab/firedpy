@@ -29,6 +29,7 @@ import rasterio
 
 from src.enums import LandCoverType, EcoRegionType
 from src.data_classes import Base
+from src.firespeed import computefirespeed
 
 import cProfile
 import pstats
@@ -881,6 +882,20 @@ class ModelBuilder(Base):
         print("Calculating perimeter lengths...")
         gdf["tot_perim"] = gdf["geometry"].length
         gdf["geometry"] = gdf["geometry"].apply(self._as_multi_polygon)
+
+        print("Calculating maximum travel vectors ...")
+        ### save GDF for sanity check --- REMOVE THIS
+        gdf.to_file('verification.gpkg', driver='GPKG', layer='pre_comp_fs')
+        fs_orig_x, fs_orig_y, fs_dest_x, fs_dest_y, fs_max_dist, fs_speed = computefirespeed(gdf)
+
+        ### fire speed test code -- add dummy variables for max travel vector
+        ### characterized by origin x, y and destination x, y
+        gdf["max_vec_origin_x"] = fs_orig_x
+        gdf["max_vec_origin_y"] = fs_orig_y
+        gdf["max_vec_dest_x"] = fs_dest_x
+        gdf["max_vec_dest_y"] = fs_dest_y
+        gdf["fire_distance"] = fs_max_dist
+        gdf["fire_speed"] = fs_speed
 
         return gdf
 
