@@ -1,7 +1,7 @@
 
 [![DOI](https://zenodo.org/badge/214283770.svg)](https://zenodo.org/badge/latestdoi/214283770) [![Docker Automated build](https://img.shields.io/docker/automated/earthlab/firedpy?style=plastic)](https://hub.docker.com/repository/docker/earthlab/firedpy/builds) ![GitHub contributors](https://img.shields.io/github/contributors/earthlab/firedpy) [![GitHub issues](https://img.shields.io/github/issues/earthlab/firedpy)](https://github.com/earthlab/firedpy/issues) ![GitHub commit activity](https://img.shields.io/github/commit-activity/w/earthlab/firedpy) 
 
-# FIREDpy - FIRe Event Delineation for python
+# FIREDpy - FIRe Event Delineation for Python
 
 A Python Command Line Interface for classifying fire events from the Collection 6 MODIS Burned Area Product.
 
@@ -19,6 +19,15 @@ Sensing, 12(21), 3498; https://doi.org/10.3390/rs12213498
 Description of the country-level data sets is at: 
 
 Mahood, A.L. Lindrooth, E.J., Cook, M.C. and Balch, J.K. Country-level fire perimeter datasets (2001-2021). 2022. Nature Scientific Data, 9(458). https://doi.org/10.1038/s41597-022-01572-3
+
+## FIREDpy Citation
+Balch, J. K., St. Denis, L. A., Mahood, A. L., Mietkiewicz, N. P., Williams, T. P., McGlinchy J,
+and Cook, M. C. 2020. FIRED (Fire Events Delineation): An open, flexible algorithm & database
+of U.S. fire events derived from the MODIS burned area product (2001-19). Remote
+Sensing, 12(21), 3498; https://doi.org/10.3390/rs12213498
+
+## Data Sharing Agreement
+FIREDpy is currently in active development, and newer versions of the algorithm and data products are shared on an individual basis. All data products generated from unpublished versions of FIREDpy require permission from PI Jennifer K. Balch prior to use in publications, presentations, or public dissemination. These conversations ensure appropriate acknowledgment of the development team's contributions and proper context for the algorithm's current capabilities and limitations. Please use the above citation for attributing credit. For data requests or collaboration inquiries, please contact Nate Hofford (nate.hofford@colorado.edu), University of Colorado Boulder.
 
 ## Changes
  - 10/14/2024 FIREDpy V2.0
@@ -39,7 +48,7 @@ See the issues tab for more bugs, or to report a new bug!
 
 ## Have you used firedpy?
 
-The algorithm and derived data products are under active development. Please take this [survey](https://docs.google.com/forms/d/e/1FAIpQLSe7ycmS0HGIze2T6TIUox8hsu8nlGsxiUMww8SCeWHDZPhB-Q/viewform?usp=sf_link) to help us improve firedpy. Or just email admahood@gmail.com and Adam will be overjoyed to talk about firedpy.
+The algorithm and derived data products are under active development. Please take this [survey](https://docs.google.com/forms/d/e/1FAIpQLSe7ycmS0HGIze2T6TIUox8hsu8nlGsxiUMww8SCeWHDZPhB-Q/viewform?usp=sf_link) to help us improve firedpy. Or just email admahood@duck.com and Adam will be overjoyed to talk about firedpy.
 
 ## Current status of created products
 
@@ -294,10 +303,13 @@ Note, the docker container has changed from `earthlab/firedpy` to `earthlabcu/fi
     `docker exec -it <silly_name> /bin/bash`
 
   - Or access the CLI from your browser. The output from docker ps will look like this:
-    CONTAINER ID   IMAGE                       COMMAND                  CREATED         STATUS                 PORTS                                         NAMES
-    58a8a6ed926a   earthlabcu/firedpy:latest   "/bin/entry.sh ttyd …"   2 minutes ago   Up 2 minutes           127.0.0.1:32768->7681/tcp                     stupefied_hypatia
 
-    In this example the container is running on the host machine at 127.0.0.1:32768. It may be different when you run it. Access this location in your browser by copy and pasting it into your browser's address bar
+|CONTAINER ID |  IMAGE |                     COMMAND                |   CREATED    |     STATUS       |         PORTS                |                         NAMES|
+|-------------|----------------------------|------------------------|---------------|------------------|-----------------------------|------------------------------|
+|58a8a6ed926a |  earthlabcu/firedpy:latest | "/bin/entry.sh ttyd …" | 2 minutes ago |  Up 2 minutes  | 127.0.0.1:32768->7681/tcp     |                stupefied_hypatia|
+
+
+In this example the container is running on the host machine at 127.0.0.1:32768. It may be different when you run it. Access this location in your browser by copy and pasting it into your browser's address bar
 
 #### 1.2 Copy firedpy outputs to your local machine
 
@@ -329,7 +341,9 @@ After creating a new fire product, it might be useful to get it out of the docke
   - Ensure your anaconda setup has **conda-forge**, **channel_priority** set to **strict**, and **update your conda**.
 
     `conda update conda --yes`
+    
     `conda config --add channels conda-forge`
+    
     `conda config --set channel_priority strict`
     
   - You must have all packages listed in the environment.yaml installed using 'conda install -c conda-forge <package_name>'

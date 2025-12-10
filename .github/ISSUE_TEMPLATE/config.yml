@@ -1,0 +1,8 @@
+blank_issues_enabled: true # set to false if you don't want people creating blank issues - I think they should have the option though
+contact_links:
+  #- name: GitHub Discussions # can uncomment if we want to use this
+  #  url: https://github.com/your-username/firedpy/discussions
+  #  about: Please ask questions and discuss ideas here before opening an issue.
+  - name: Documentation
+    url: https://firedpy.readthedocs.io/
+    about: Check the documentation for usage guides and API reference.
