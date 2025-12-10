@@ -101,7 +101,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 |**South America** |||||
 ||  Argentina| [2001-2021](https://scholar.colorado.edu/concern/datasets/5t34sk58k)| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/td96k4315)**||
 ||  Brazil| [2001-2021](https://scholar.colorado.edu/concern/datasets/05741s90q) |**[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/b8515q25m)**||
-||  Bolivia| [2001-2021](https://scholar.colorado.edu/concern/datasets/b2773w83t)|||
+||  Bolivia| [2001-2021](https://scholar.colorado.edu/concern/datasets/b2773w83t)|**[November 2000 - December 2024](https://scholar.colorado.edu/concern/datasets/2f75r992r)**||
 ||  Chile| [2001-2021](https://scholar.colorado.edu/concern/datasets/qr46r2052) |**[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/g732db604)**|| 
 ||  Colombia| [2001-2021](https://scholar.colorado.edu/concern/datasets/mp48sd91d) |**[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/8c97ks03f)**|| 
 || Ecuador| [2001-2021](https://scholar.colorado.edu/concern/datasets/pc289k34n)| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5138jg700)**|| 
