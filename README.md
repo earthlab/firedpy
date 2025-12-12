@@ -340,13 +340,15 @@ After creating a new fire product, it might be useful to get it out of the docke
     
   - Ensure your anaconda setup has **conda-forge**, **channel_priority** set to **strict**, and **update your conda**.
 
-    `conda update conda --yes`
-    
     `conda config --add channels conda-forge`
     
     `conda config --set channel_priority strict`
-    
-  - You must have all packages listed in the environment.yaml installed using 'conda install -c conda-forge <package_name>'
+
+    `conda update conda --yes`
+
+  - You must have all packages listed in the environment.yaml installed using
+  
+    'conda install -c conda-forge <package_name>'
 
   - Create and activate a conda environment:
 
