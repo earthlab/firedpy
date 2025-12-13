@@ -182,7 +182,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 || The Gambia:| [2001-2021](https://scholar.colorado.edu/concern/datasets/pn89d7911)|**[Nov 2000 - December 2024](https://scholar.colorado.edu/concern/datasets/3t945s634)**||
 || Ghana: |[2001-2021](https://scholar.colorado.edu/concern/datasets/2r36tz735)|**[Nov 2000 - December 2024](https://scholar.colorado.edu/concern/datasets/79408001x)**||
 || Guinea: |[2001-2021](https://scholar.colorado.edu/concern/datasets/05741s910)| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/02870x464)**||
-|| Guinea-Bissau:| [2001-2021](https://scholar.colorado.edu/concern/datasets/nc580n858)|||
+|| Guinea-Bissau:| [2001-2021](https://scholar.colorado.edu/concern/datasets/nc580n858)|**[Nov 2000 - December 2024](https://scholar.colorado.edu/concern/datasets/k643b3048)**||
 || Ivory Coast: |[2001-2021](https://scholar.colorado.edu/concern/datasets/vq27zp62f)|||
 || Kenya:| [2001-2021](https://scholar.colorado.edu/concern/datasets/1j92g871c) |**[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/v405sc03w)**||
 || Lesotho:| [2001-2021](https://scholar.colorado.edu/concern/datasets/cr56n229w) | **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/w6634543v)**||
