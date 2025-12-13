@@ -197,7 +197,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 || Mozambique: |[2001-2021](https://scholar.colorado.edu/concern/datasets/1n79h5504)| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/2n49t338q)**||
 || Namibia: |[2001-2021](https://scholar.colorado.edu/concern/datasets/db78td244)| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5999n508g)**||
 || Niger:| [2001-2021](https://scholar.colorado.edu/concern/datasets/m039k605q) |**[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/qn59q5683)**||
-|| Nigeria: |[2001-2021](https://scholar.colorado.edu/concern/datasets/cv43nx78p)|||
+|| Nigeria: |[2001-2021](https://scholar.colorado.edu/concern/datasets/cv43nx78p)|**[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/j6731584b)**||
 || Republic of the Congo: |[2001-2021](https://scholar.colorado.edu/concern/datasets/nk322f305)| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/t435gf783)**||
 || Rwanda:| [2001-2021](https://scholar.colorado.edu/concern/datasets/st74cr782)| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/jw827d403)**||
 || Sao Tome and Principe: ||**[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/2227mr49g)**||
