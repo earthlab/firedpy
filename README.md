@@ -179,7 +179,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 || eSwatini:| [2001-2021](https://scholar.colorado.edu/concern/datasets/9w0324116)| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/2j62s642s)**||
 || Ethiopia:| [2001-2021](https://scholar.colorado.edu/concern/datasets/z316q2977)| **[Nov 2000 - December 2024](https://scholar.colorado.edu/concern/datasets/0c483m44k)**||
 || Gabon: |[2001-2021](https://scholar.colorado.edu/concern/datasets/2z10wr67h)| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5x21th08t)**||
-|| The Gambia:| [2001-2021](https://scholar.colorado.edu/concern/datasets/pn89d7911)|||
+|| The Gambia:| [2001-2021](https://scholar.colorado.edu/concern/datasets/pn89d7911)|**[Nov 2000 - December 2024](https://scholar.colorado.edu/concern/datasets/3t945s634)**||
 || Ghana: |[2001-2021](https://scholar.colorado.edu/concern/datasets/2r36tz735)|||
 || Guinea: |[2001-2021](https://scholar.colorado.edu/concern/datasets/05741s910)| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/02870x464)**||
 || Guinea-Bissau:| [2001-2021](https://scholar.colorado.edu/concern/datasets/nc580n858)|||
