@@ -60,7 +60,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 
 || **Firedpy version**| 1.0|2.0|2.0|
 |-------|---------|----------------------------------------|----------------------------------------|---------------------------|
-| **Region** | **Country** | **V2022 (variable space-time parameters)** | **V2024 (1 pixel 5 days for everything)** | **V2024 (variable ST-params)** |
+| **Region** | **Country** | **V2022 (variable space-time parameters)** | **V2024S1T5 (1 pixel 5 days for everything)** | **V2024VST (variable ST-params)** |
 | **North America** |||||
 || Belize || **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/q524jq679)** ||
 || Canada| [2001-2021](https://scholar.colorado.edu/concern/datasets/gf06g388c) | **[2001-2024](https://scholar.colorado.edu/concern/datasets/0p096866d)** ||
