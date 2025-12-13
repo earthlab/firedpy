@@ -75,7 +75,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 || USA (Coterminous) + Alaska | [2001-2021](https://scholar.colorado.edu/concern/datasets/d504rm74m) | **[2001-2024](https://scholar.colorado.edu/concern/datasets/fx719p11c)**||
 || Hawaii | [2001-2021](https://scholar.colorado.edu/concern/datasets/7h149r06p)|||
 |Mexico and Central America |Belize, Guatemala, Honduras, El Salvador, Nicaragua, Costa Rica, Panama| [2001-2021](https://scholar.colorado.edu/concern/datasets/vd66w1102)||
-|Carribean Sea |||||
+|**Carribean Sea** |||||
 |Whole region |Barbados, Bahamas, Cayman Islands, Cuba, Dominican Republic, Haiti, Jamaica, Montserrat, Puerto Rico, Saint Kitts And Nevis, Trinidad And Tobago, British Virgin Islands, Guadeloupe, Saint Barthelemy| [2001-2021](https://scholar.colorado.edu/concern/datasets/x633f230f) ||
 || Aruba||  **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/9880vs496)**|| 
 ||  Antigua and Barbuda||  **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/st74cs33x)**|| 
