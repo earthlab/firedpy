@@ -74,8 +74,8 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 || Nicaragua || **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/rb68xd57f)**||
 || Panama || **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/6q182m92n)**||
 || USA plus Canada | [2001-2021](https://scholar.colorado.edu/concern/datasets/8336h304x)| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/0g354g88p)**||
-|| USA (Coterminous) + Alaska | [2001-2021](https://scholar.colorado.edu/concern/datasets/d504rm74m) | **[November 2001- July 2024](https://scholar.colorado.edu/concern/datasets/fx719p11c)**||
-|| Hawaii | [2001-2021](https://scholar.colorado.edu/concern/datasets/7h149r06p)|**[November 2000 - December 2024](https://scholar.colorado.edu/concern/datasets/sn00b078q)**||
+|| USA: Coterminous + Alaska | [2001-2021](https://scholar.colorado.edu/concern/datasets/d504rm74m) | **[November 2001- July 2024](https://scholar.colorado.edu/concern/datasets/fx719p11c)**||
+|| USA: Hawaii | [2001-2021](https://scholar.colorado.edu/concern/datasets/7h149r06p)|**[November 2000 - December 2024](https://scholar.colorado.edu/concern/datasets/sn00b078q)**||
 |Mexico and Central America |Belize, Guatemala, Honduras, El Salvador, Nicaragua, Costa Rica, Panama| [2001-2021](https://scholar.colorado.edu/concern/datasets/vd66w1102)||
 |**Carribean Sea** |||||
 |Whole region |Barbados, Bahamas, Cayman Islands, Cuba, Dominican Republic, Haiti, Jamaica, Montserrat, Puerto Rico, Saint Kitts And Nevis, Trinidad And Tobago, British Virgin Islands, Guadeloupe, Saint Barthelemy| [2001-2021](https://scholar.colorado.edu/concern/datasets/x633f230f) ||
@@ -93,7 +93,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
  ||  Haiti||  **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/707959237)**|| 
  ||  Jamaica||  **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/xg94hr218)**|| 
  ||  Montserrat||  **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/3r074w69k)**|| 
- ||  Puerto Rico||  **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/gt54kq07d)**|| 
+ ||  USA: Puerto Rico||  **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/gt54kq07d)**|| 
  ||  Saint Barthelemy||  **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/h989r4943)**|| 
  ||  Saint Kitts and Nevis||  **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/2f75r969z)**|| 
  ||  Saint Martin||  **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/7d278v61h)**|| 
