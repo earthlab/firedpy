@@ -11,7 +11,7 @@ The algorithm outputs shapefiles of delineated fire events in either .shp or .gp
 
 <img width="1900" height="544" alt="image" src="https://github.com/user-attachments/assets/0144541b-6fc7-4718-b620-4347ae77881f" />
 
-*Illustration of the event-level and daily-level output of FIREDpy for the 2013 Rim Fire in California*
+*Illustration of the event-level and daily-level output of FIREDpy for the 2013 Rim Fire in California. Figure is from Mahood et al. 2022.*
 
 
 ## FIREDpy citation with methodological information:
