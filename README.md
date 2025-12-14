@@ -68,8 +68,8 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 || Nicaragua || **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/rb68xd57f)**||
 || Panama || **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/6q182m92n)**||
 || USA plus Canada | [2001-2021](https://scholar.colorado.edu/concern/datasets/8336h304x)| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/0g354g88p)**||
-|| USA (Coterminous) + Alaska | [2001-2021](https://scholar.colorado.edu/concern/datasets/d504rm74m) | **[2001-2024](https://scholar.colorado.edu/concern/datasets/fx719p11c)**||
-|| Hawaii | [2001-2021](https://scholar.colorado.edu/concern/datasets/7h149r06p)|||
+|| USA (Coterminous) + Alaska | [2001-2021](https://scholar.colorado.edu/concern/datasets/d504rm74m) | **[November 2001- July 2024](https://scholar.colorado.edu/concern/datasets/fx719p11c)**||
+|| Hawaii | [2001-2021](https://scholar.colorado.edu/concern/datasets/7h149r06p)|**[November 2000 - December 2024](https://scholar.colorado.edu/concern/datasets/sn00b078q)**||
 |Mexico and Central America |Belize, Guatemala, Honduras, El Salvador, Nicaragua, Costa Rica, Panama| [2001-2021](https://scholar.colorado.edu/concern/datasets/vd66w1102)||
 |**Carribean Sea** |||||
 |Whole region |Barbados, Bahamas, Cayman Islands, Cuba, Dominican Republic, Haiti, Jamaica, Montserrat, Puerto Rico, Saint Kitts And Nevis, Trinidad And Tobago, British Virgin Islands, Guadeloupe, Saint Barthelemy| [2001-2021](https://scholar.colorado.edu/concern/datasets/x633f230f) ||
@@ -125,8 +125,8 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 || Greece| [2001-2021](https://scholar.colorado.edu/concern/datasets/bc386k355)| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/z316q349s)**||
 || Greenland|| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/bv73c218z)**||
 || Guernsey|| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/bz60cx90j)**||
-|| Hungary||||
-|| Ireland||||
+|| Hungary|**[Nov 2000 - December 2024](https://scholar.colorado.edu/concern/datasets/bc386m008)**|||
+|| Ireland|**[Nov 2000 - December 2024](https://scholar.colorado.edu/concern/datasets/4m90dx459)**|||
 || Italy|[2001-2021](https://scholar.colorado.edu/concern/datasets/v979v416g)| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/tb09j7441)**||
 || Kosovo|| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/f1881n864)**||
 || Latvia||**[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/fn1070711)**||
