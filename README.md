@@ -230,9 +230,9 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 || China| [2001-2021](https://scholar.colorado.edu/concern/datasets/qz20st810) | **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/tt44pp77n)**||
 || India| [2001-2021](https://scholar.colorado.edu/concern/datasets/ht24wk47t)|**[Nov 2000 - December 2024](https://scholar.colorado.edu/concern/datasets/cv43nz55k)**||
 || Israel|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5m60qt777)**||
-|| Iraq ||||
+|| Iraq|| **[Nov 2000 - December 2024](https://scholar.colorado.edu/concern/datasets/w95052166)**||
 || Iran|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/00000172f)**||
-|| Japan|[2001-2021](https://scholar.colorado.edu/concern/datasets/dz010r34v)|||
+|| Japan|[2001-2021](https://scholar.colorado.edu/concern/datasets/dz010r34v)|**[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/zk51vj85q)**||
 || Kazakhstan|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/1r66j289k)**||
 || Kuwait|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/z316q350j)**||
 || Kyrgyzstan|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/3197xn61c)**||
@@ -281,7 +281,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
  || New Zealand| [2001-2021](https://scholar.colorado.edu/concern/datasets/9g54xj88f)| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/h989r495c)**||
  || Malaysia| [2001-2021](https://scholar.colorado.edu/concern/datasets/fq977w13f)| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/3484zj46h)**||
  || Brunei| [2001-2021](https://scholar.colorado.edu/concern/datasets/mp48sd92p)| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/0v8382100)**||
- || Indonesia| [2001-2021](https://scholar.colorado.edu/concern/datasets/p2676w918)|||
+ || Indonesia| [2001-2021](https://scholar.colorado.edu/concern/datasets/p2676w918)|**[Nov 2000 - December 2024](https://scholar.colorado.edu/concern/datasets/3b591b55c)**||
  || Samoa|| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/kw52j9917)**||
  || Singapore|| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/12579t91m)**||
  || Solomon Islands|| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/6t053h70v)**||
