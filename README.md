@@ -20,11 +20,11 @@ The algorithm outputs shapefiles of delineated fire events in either .shp or .gp
 
 Balch, J. K., St. Denis, L. A., Mahood, A. L., Mietkiewicz, N. P., Williams, T. P., McGlinchy J, and Cook, M. C. 2020. FIRED (Fire Events Delineation): An open, flexible algorithm & database of U.S. fire events derived from the MODIS burned area product (2001-19). Remote Sensing, 12(21), 3498; https://doi.org/10.3390/rs12213498
 
-### Description of the country-level data sets created in 2021: 
+### Description of the 2000 - 2021 data sets: 
 
 Mahood, A.L. Lindrooth, E.J., Cook, M.C. and Balch, J.K. Country-level fire perimeter datasets (2001-2021). 2022. Nature Scientific Data, 9(458). https://doi.org/10.1038/s41597-022-01572-3
 
-### Methodological information for FIREDpy 2.0, 2000-2024 datasets:
+### Methodological information for FIREDpy 2.0, description of 2000-2024 datasets:
 
 Coming soon...
 
