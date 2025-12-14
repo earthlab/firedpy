@@ -1,34 +1,37 @@
 import gc
 import hashlib
-
 import math
+import multiprocessing as mp
 import os
+import random
 import re
 import shutil
 import sys
+
+from argparse import Namespace
 from collections import OrderedDict, deque
 from glob import glob
 from itertools import chain
-import random
 from typing import List, Set, Dict, Tuple, Any
-from argparse import Namespace
-import multiprocessing as mp
-import matplotlib.pyplot as plt
-import time
 
+import matplotlib.pyplot as plt
 import numpy as np
 import xarray as xr
+
 from pyproj import Proj, transform
 from shapely import Point, Polygon, MultiPolygon
 from tqdm import tqdm
+
 import geopandas as gpd
+
 from datetime import datetime
 from scipy.spatial import cKDTree
+
 import pandas as pd
 import rasterio
 
-from src.enums import LandCoverType, EcoRegionType
-from src.data_classes import Base
+from firedpy.enums import LandCoverType, EcoRegionType
+from firedpy.data_classes import Base
 
 import cProfile
 import pstats

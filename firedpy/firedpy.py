@@ -1,33 +1,41 @@
 import argparse
 import os
+import resource
 import sys
 import shutil
 import time
 import warnings
-import resource
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(PROJECT_DIR)
 
 from http.cookiejar import CookieJar
+
 import urllib.request
-from src.data_classes import EcoRegion, BurnData, LandCover
-from src.model_classes import ModelBuilder
-from utilities.create_readme import make_read_me
-from src import *
-from utilities.argument_parser import FiredpyArgumentParser
-from src.spatial import shape_to_tiles
-from src.enums import EcoRegionType, TileChoice, ShapeType, LandCoverType
+
+from firedpy.cli_help import *
+from firedpy.data_classes import EcoRegion, BurnData, LandCover
+from firedpy.enums import (
+    EcoRegionType,
+    LandCoverType,
+    ShapeType,
+    TileChoice
+)
+from firedpy.model_classes import ModelBuilder
+from firedpy.utilities.create_readme import make_read_me
+from firedpy.utilities.argument_parser import FiredpyArgumentParser
+from firedpy.spatial import shape_to_tiles
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 
-def get_tile_name_from_directory(parser: FiredpyArgumentParser, directory: str, prompt_message: str):
-    """
-    Function to prompt the user for a tile name from a given directory.
-    """
-    available_files = [file.replace('.gpkg', '') for file in os.listdir(directory) if
-                       file.endswith('.gpkg')]
+def get_tile_name_from_directory(parser: FiredpyArgumentParser, directory: str,
+                                 prompt_message: str):
+    """Function to prompt the user for a tile name from a given directory."""
+    available_files = [
+        file.replace('.gpkg', '') for file in os.listdir(directory) if
+        file.endswith('.gpkg')
+    ]
     return parser.prompt_for_argument(
         arg_name='tile_name',
         prompt_override=prompt_message,
@@ -55,6 +63,7 @@ def test_earthdata_credentials(username: str, password: str) -> None:
     # should use a file based cookie jar to preserve cookies between runs. This
     # will make it much more efficient.
     cookie_jar = CookieJar()
+
     # Install all the handlers.
     opener = urllib.request.build_opener(
         urllib.request.HTTPBasicAuthHandler(password_manager),

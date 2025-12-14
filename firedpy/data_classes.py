@@ -1,14 +1,14 @@
 import datetime as dt
+import logging
 import os
 import re
 import shutil
 import sys
-import warnings
+import urllib
+
 from datetime import datetime
 from glob import glob
 from typing import List, Union, Tuple, Dict
-import logging
-import urllib
 from http.cookiejar import CookieJar
 from multiprocessing import Pool
 
@@ -17,15 +17,15 @@ import numpy as np
 import pandas as pd
 import paramiko
 import rasterio
+import requests
+
+from bs4 import BeautifulSoup
 from netCDF4 import Dataset
 from osgeo import gdal, osr, ogr
 from rasterio.merge import merge
 from tqdm import tqdm
-import requests
-from bs4 import BeautifulSoup
-
-from src.enums import LandCoverType
-from src.modis_earthaccess import MODISEarthAccess, setup_modis_earthaccess
+from firedpy.enums import LandCoverType
+from firedpy.modis_earthaccess import MODISEarthAccess, setup_modis_earthaccess
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(__file__))
 
@@ -69,6 +69,7 @@ class Base:
         self._eco_region_shape_path = os.path.join(self._eco_region_shapefile_dir, 'NA_CEC_Eco_Level3.gpkg')
 
         self._post_regex = r'\.A(?P<year>\d{4})(?P<ordinal_day>\d{3})\.h(?P<horizontal_tile>\d{2})v(?P<vertical_tile>\d{2})\.061\.(?P<prod_year>\d{4})(?P<prod_ordinal_day>\d{3})(?P<prod_hourminute>\d{4})(?P<prod_second>\d{2})\.hdf$'
+
         # Initialize output directory folders and files
         self._initialize_save_dirs()
         self._get_shape_files()
@@ -114,7 +115,8 @@ class Base:
         return date.strftime('%Y-%m-%d')
 
     @staticmethod
-    def _rasterize_vector_data(src, dst, attribute, resolution, crs, extent, all_touch=False, na=-9999):
+    def _rasterize_vector_data(src, dst, attribute, resolution, crs, extent,
+                               all_touch=False, na=-9999):
         """Rasterizes input vector data"""
         # Open shapefile, retrieve the layer
         src_data = ogr.Open(src)
@@ -150,6 +152,7 @@ class Base:
 
         # Finally rasterize
         gdal.RasterizeLayer(trgt, [1], layer, options=ops)
+
         # Close target an source rasters
         del trgt
         del src_data
@@ -158,7 +161,6 @@ class Base:
         """Convert every day in an array to days since Jan 1 1970"""
         # Loop through each position with data and convert
         ys, xs = np.where(array > 0)
-
         for y, x in zip(ys, xs):
             array[y, x] = self._convert_ordinal_to_unix_day(year, array[y, x])
 
@@ -182,49 +184,24 @@ class LPDAAC(Base):
         self._parallel_cores = None
         self._username = None
         self._password = None
-        self._file_regex = None        
+        self._file_regex = None   
+     
         # Setup EarthAccess for modern data access
         self._earthaccess = None
         if hasattr(self, '_username') and hasattr(self, '_password'):
             try:
                 self._earthaccess = setup_modis_earthaccess(self._username, self._password)
             except Exception as e:
-                print(f"EarthAccess setup failed, falling back to legacy access: {e}")        
+                print(f"EarthAccess setup failed, falling back to legacy access: {e}")    
+    
         # Setup EarthAccess for modern data access
         self._earthaccess = None
         if hasattr(self, '_username') and hasattr(self, '_password'):
             try:
                 self._earthaccess = setup_modis_earthaccess(self._username, self._password)
             except Exception as e:
-                print(f"EarthAccess setup failed, falling back to legacy access: {e}")        
-        # Setup EarthAccess for modern data access
-        self._earthaccess = None
-        if hasattr(self, '_username') and hasattr(self, '_password'):
-            try:
-                self._earthaccess = setup_modis_earthaccess(self._username, self._password)
-            except Exception as e:
-                print(f"EarthAccess setup failed, falling back to legacy access: {e}")        
-        # Setup EarthAccess for modern data access
-        self._earthaccess = None
-        if hasattr(self, '_username') and hasattr(self, '_password'):
-            try:
-                self._earthaccess = setup_modis_earthaccess(self._username, self._password)
-            except Exception as e:
-                print(f"EarthAccess setup failed, falling back to legacy access: {e}")        
-        # Setup EarthAccess for modern data access
-        self._earthaccess = None
-        if hasattr(self, '_username') and hasattr(self, '_password'):
-            try:
-                self._earthaccess = setup_modis_earthaccess(self._username, self._password)
-            except Exception as e:
-                print(f"EarthAccess setup failed, falling back to legacy access: {e}")        
-        # Setup EarthAccess for modern data access
-        self._earthaccess = None
-        if hasattr(self, '_username') and hasattr(self, '_password'):
-            try:
-                self._earthaccess = setup_modis_earthaccess(self._username, self._password)
-            except Exception as e:
-                print(f"EarthAccess setup failed, falling back to legacy access: {e}")        
+                print(f"EarthAccess setup failed, falling back to legacy access: {e}")  
+      
         # Setup EarthAccess for modern data access
         self._earthaccess = None
         if hasattr(self, '_username') and hasattr(self, '_password'):
@@ -232,6 +209,39 @@ class LPDAAC(Base):
                 self._earthaccess = setup_modis_earthaccess(self._username, self._password)
             except Exception as e:
                 print(f"EarthAccess setup failed, falling back to legacy access: {e}")
+    
+        # Setup EarthAccess for modern data access
+        self._earthaccess = None
+        if hasattr(self, '_username') and hasattr(self, '_password'):
+            try:
+                self._earthaccess = setup_modis_earthaccess(self._username, self._password)
+            except Exception as e:
+                print(f"EarthAccess setup failed, falling back to legacy access: {e}")
+    
+        # Setup EarthAccess for modern data access
+        self._earthaccess = None
+        if hasattr(self, '_username') and hasattr(self, '_password'):
+            try:
+                self._earthaccess = setup_modis_earthaccess(self._username, self._password)
+            except Exception as e:
+                print(f"EarthAccess setup failed, falling back to legacy access: {e}")
+
+        # Setup EarthAccess for modern data access
+        self._earthaccess = None
+        if hasattr(self, '_username') and hasattr(self, '_password'):
+            try:
+                self._earthaccess = setup_modis_earthaccess(self._username, self._password)
+            except Exception as e:
+                print(f"EarthAccess setup failed, falling back to legacy access: {e}")
+
+        # Setup EarthAccess for modern data access
+        self._earthaccess = None
+        if hasattr(self, '_username') and hasattr(self, '_password'):
+            try:
+                self._earthaccess = setup_modis_earthaccess(self._username, self._password)
+            except Exception as e:
+                print(f"EarthAccess setup failed, falling back to legacy access: {e}")
+
     def _generate_local_hdf_path(self, year: str, remote_name: str) -> str:
         pass
 
@@ -297,6 +307,7 @@ class LPDAAC(Base):
 
         except Exception as e:
             print(f"Download failed for {os.path.basename(dest)}: {e}")
+
     @staticmethod
     def get_all_available_tiles() -> List[str]:
         with paramiko.SSHClient() as ssh_client:
@@ -515,7 +526,7 @@ class BurnData(LPDAAC):
         Take in a time series of files for the MODIS burn detection dataset and
         create a singular netcdf file.
         """
-        # Build the net cdfs here
+        # Build the netcdfs here
         fill_value = -9999
         for tile_id in tiles:
             try:
@@ -889,6 +900,8 @@ class LandCover(Base):
         except Exception as e:
             print(f"EarthAccess land cover failed: {e}")
             print("Continuing without land cover data...")
+
+
 class EcoRegion(Base):
     def __init__(self, out_dir: str):
         super().__init__(out_dir)
