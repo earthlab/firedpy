@@ -10,6 +10,7 @@ This package uses a space-time window to classify individual burn detections fro
 The algorithm outputs shapefiles of delineated fire events in either .shp or .gpkg format. In addition to the full event polygons created by default, and the user has the option of having firedpy produce daily-level perimeters, providing a representation of both final and expanding event perimeters. 
 
 <img width="1900" height="544" alt="image" src="https://github.com/user-attachments/assets/0144541b-6fc7-4718-b620-4347ae77881f" />
+
 *Illustration of the event-level and daily-level output of FIREDpy for the 2013 Rim Fire in California*
 
 
