@@ -5,26 +5,18 @@
 
 A Python Command Line Interface for classifying fire events from the Collection 6 MODIS Burned Area Product.
 
-This package uses a space-time window to classify individual burn detections from late 2001 to near-present into discrete events and return both a data table and shapefiles of these events. The user is able to specify the spatial and temporal parameters of the window, as well as the spatial and temporal extent, using either a shapefile or a list of MODIS Sinusoidal Projection tile IDs. Shapefiles include full event polygons by default, and the user has the option of having firedpy produce daily-level perimeters, providing a representation of both final and expanding event perimeters. 
+This package uses a space-time window to classify individual burn detections from late 2001 to near-present into discrete events and return both a data table and shapefiles of these events. The user is able to specify the spatial and temporal parameters of the window, as well as the spatial and temporal extent, using either a shapefile or a list of MODIS Sinusoidal Projection tile IDs. Countries, continents and US states are included. Any area from the world may be selected. However, in the current version, memory constraints may limit the extent available for a single model run. Equatorial regions have much more fire activity, and may require much more RAM to process than a normal laptop will have.
 
-Any area from the world may be selected. However, in the current version, memory constraints may limit the extent available for a single model run. Equatorial regions have much more fire activity, and may require much more RAM to process than a normal laptop will have.
+The algorithm outputs shapefiles of delineated fire events in either .shp or .gpkg format. In addition to the full event polygons created by default, and the user has the option of having firedpy produce daily-level perimeters, providing a representation of both final and expanding event perimeters. 
 
-More methodological information is at:
 
-Balch, J. K., St. Denis, L. A., Mahood, A. L., Mietkiewicz, N. P., Williams, T. P., McGlinchy J,
-and Cook, M. C. 2020. FIRED (Fire Events Delineation): An open, flexible algorithm & database
-of U.S. fire events derived from the MODIS burned area product (2001-19). Remote
-Sensing, 12(21), 3498; https://doi.org/10.3390/rs12213498
+## FIREDpy citation with methodological information:
 
-Description of the country-level data sets is at: 
+Balch, J. K., St. Denis, L. A., Mahood, A. L., Mietkiewicz, N. P., Williams, T. P., McGlinchy J, and Cook, M. C. 2020. FIRED (Fire Events Delineation): An open, flexible algorithm & database of U.S. fire events derived from the MODIS burned area product (2001-19). Remote Sensing, 12(21), 3498; https://doi.org/10.3390/rs12213498
+
+## Description of the country-level data sets: 
 
 Mahood, A.L. Lindrooth, E.J., Cook, M.C. and Balch, J.K. Country-level fire perimeter datasets (2001-2021). 2022. Nature Scientific Data, 9(458). https://doi.org/10.1038/s41597-022-01572-3
-
-## FIREDpy Citation
-Balch, J. K., St. Denis, L. A., Mahood, A. L., Mietkiewicz, N. P., Williams, T. P., McGlinchy J,
-and Cook, M. C. 2020. FIRED (Fire Events Delineation): An open, flexible algorithm & database
-of U.S. fire events derived from the MODIS burned area product (2001-19). Remote
-Sensing, 12(21), 3498; https://doi.org/10.3390/rs12213498
 
 ## Data Sharing Agreement
 FIREDpy is currently in active development, and newer versions of the algorithm and data products are shared on an individual basis. All data products generated from unpublished versions of FIREDpy require permission from PI Jennifer K. Balch prior to use in publications, presentations, or public dissemination. These conversations ensure appropriate acknowledgment of the development team's contributions and proper context for the algorithm's current capabilities and limitations. Please use the above citation for attributing credit. For data requests or collaboration inquiries, please contact Nate Hofford (nate.hofford@colorado.edu), University of Colorado Boulder.
@@ -34,7 +26,7 @@ FIREDpy is currently in active development, and newer versions of the algorithm 
     - No longer using setup.py. See new instructions below for running it with Docker or installing it locally.
     - Improved fire grouping
     - Improved CLI
-    - Access to MODIS burn area product Version 6.1 with support up to at least 2024 
+    - Access to MODIS burn area product Version 6.1 with support up to at least December 2024 
 
 ### BUG ALERT: 
 
