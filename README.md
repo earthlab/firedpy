@@ -399,7 +399,7 @@ After creating a new fire product, it might be useful to get it out of the docke
     'python bin/firedpy.py --help'
     
     
-### Parameter table (under construction)
+### Parameter table
   
 | parameter | value(s)| example | description|
 |:--------------|:----------|:-----|:---------|
