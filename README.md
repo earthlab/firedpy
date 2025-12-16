@@ -356,6 +356,8 @@ After creating a new fire product, it might be useful to get it out of the docke
   - Create and activate a conda environment:
 
     `conda env create -f environment.yml`
+    
+  - Activate firedpy
 
     `conda activate firedpy`
 
