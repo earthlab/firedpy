@@ -175,7 +175,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 || Central African Republic: |[2001-2021](https://scholar.colorado.edu/concern/datasets/pv63g1576) |**[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/zp38wf351)**||
 || Chad| [2001-2021](https://scholar.colorado.edu/concern/datasets/707958762)| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/s4655j45w)**||
 || Comoros||**[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/s7526f22t)**||
-|| Democratic Republic of the Congo| [2001-2021](https://scholar.colorado.edu/concern/datasets/5425kb88g)||**[Nov 2000 - December 2024](https://scholar.colorado.edu/concern/datasets/4b29b780c)**|
+|| Democratic Republic of the Congo| [2001-2021](https://scholar.colorado.edu/concern/datasets/5425kb88g)||**[Nov 2000 - December 2024 (s1t1)](https://scholar.colorado.edu/concern/datasets/4b29b780c)**|
 || Djibouti| [2001-2021](https://scholar.colorado.edu/concern/datasets/1831cm01x)| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/rf55z935n)**||
 || Egypt||**[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/vm40xt27j)**||
 || Equatorial Guinea| [2001-2021](https://scholar.colorado.edu/concern/datasets/vx021g32b) | **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/j67315565)**||
