@@ -131,8 +131,8 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 || Greece| [2001-2021](https://scholar.colorado.edu/concern/datasets/bc386k355)| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/z316q349s)**||
 || Greenland|| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/bv73c218z)**||
 || Guernsey|| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/bz60cx90j)**||
-|| Hungary|**[Nov 2000 - December 2024](https://scholar.colorado.edu/concern/datasets/bc386m008)**|||
-|| Ireland|**[Nov 2000 - December 2024](https://scholar.colorado.edu/concern/datasets/4m90dx459)**|||
+|| Hungary||**[Nov 2000 - December 2024](https://scholar.colorado.edu/concern/datasets/bc386m008)**||
+|| Ireland||**[Nov 2000 - December 2024](https://scholar.colorado.edu/concern/datasets/4m90dx459)**||
 || Italy|[2001-2021](https://scholar.colorado.edu/concern/datasets/v979v416g)| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/tb09j7441)**||
 || Kosovo|| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/f1881n864)**||
 || Latvia||**[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/fn1070711)**||
