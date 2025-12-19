@@ -1,32 +1,32 @@
 import argparse
 import os
 import resource
-import sys
 import shutil
 import time
+import urllib.request
 import warnings
 
-PROJECT_DIR = os.path.dirname(os.path.dirname(__file__))
-sys.path.append(PROJECT_DIR)
-
 from http.cookiejar import CookieJar
-
-import urllib.request
-
-from firedpy.cli_help import *
-from firedpy.data_classes import EcoRegion, BurnData, LandCover
+from firedpy import PROJECT_DIR
+from firedpy.data_classes import BurnData, EcoRegion, LandCover
 from firedpy.enums import (
     EcoRegionType,
     LandCoverType,
     ShapeType,
     TileChoice
 )
+from firedpy.help import HELP_TEXT
 from firedpy.model_classes import ModelBuilder
-from firedpy.utilities.create_readme import make_read_me
 from firedpy.utilities.argument_parser import FiredpyArgumentParser
+from firedpy.utilities.create_readme import make_read_me
 from firedpy.spatial import shape_to_tiles
 
 warnings.filterwarnings("ignore", category=FutureWarning)
+
+EARTHDATA_TEST_URL = (
+    "https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.061/2019.01.01/"
+    "BROWSE.MCD12Q1.A2019001.h10v09.061.2022169160720.1.jpg"
+)
 
 
 def get_tile_name_from_directory(parser: FiredpyArgumentParser, directory: str,
@@ -52,31 +52,32 @@ def str_to_bool(s: str):
 
 def test_earthdata_credentials(username: str, password: str) -> None:
     # Earthdata Login
-    # test url for correct user/password
-    url = "https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.061/2019.01.01/BROWSE.MCD12Q1.A2019001.h10v09.061.2022169160720.1.jpg"
-
     password_manager = urllib.request.HTTPPasswordMgrWithDefaultRealm()
-    password_manager.add_password(None, "https://urs.earthdata.nasa.gov", username, password)
+    password_manager.add_password(None, "https://urs.earthdata.nasa.gov",
+                                  username, password)
+
     # Create a cookie jar for storing cookies. This is used to store and return
-    # the session cookie given to use by the data server (otherwise it will just
-    # keep sending us back to Earthdata Login to authenticate).  Ideally, we
-    # should use a file based cookie jar to preserve cookies between runs. This
-    # will make it much more efficient.
+    # the session cookie given to use by the data server (otherwise it will
+    # just keep sending us back to Earthdata Login to authenticate).  Ideally,
+    # we should use a file based cookie jar to preserve cookies between runs.
+    # This will make it much more efficient.
     cookie_jar = CookieJar()
 
-    # Install all the handlers.
+    # Install all the handlers
     opener = urllib.request.build_opener(
         urllib.request.HTTPBasicAuthHandler(password_manager),
-        # urllib.request.HTTPHandler(debuglevel=1),    # Uncomment these two lines to see
-        # urllib.request.HTTPSHandler(debuglevel=1),   # details of the requests/responses
+        # urllib.request.HTTPHandler(debuglevel=1),  # Uncomment to see details
+        # urllib.request.HTTPSHandler(debuglevel=1),  # of requests/responses
         urllib.request.HTTPCookieProcessor(cookie_jar))
     urllib.request.install_opener(opener)
 
-    request = urllib.request.Request(url)
+    # Send a test URL
+    request = urllib.request.Request(EARTHDATA_TEST_URL)
     urllib.request.urlopen(request)
 
 
 def peak_memory():
+    """Get maximum resident usage size of current process."""
     return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
 
 
@@ -86,46 +87,138 @@ def cleanup_intermediate_files(out_dir):
 
 
 def main():
-    initial_memory = peak_memory()
     # Start the timer (seconds)
     start = time.perf_counter()
 
+    # Get the maximum resource use for this process
+    initial_memory = peak_memory()
+
     # Parse arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument("-out_dir", dest="out_dir", default=os.path.join(PROJECT_DIR, 'output'),
-                        help=DATA_HELP)
-    parser.add_argument("-file_name", dest="file_name", default="fired", type=str, help=FILE_HELP)
-    parser.add_argument("-eco_region_type", type=EcoRegionType, help=ECO_HELP)
-    parser.add_argument("-eco_region_level", type=int, help=ECO_HELP)
-    parser.add_argument("-land_cover_type", help=LC_HELP, type=int)
-    parser.add_argument("-shape_type", help=SHP_HELP, type=ShapeType)
-    parser.add_argument("-spatial", dest="spatial_param", type=int, help=SP_HELP)
-    parser.add_argument("-temporal", dest="temporal_param", type=int, help=TMP_HELP)
-    parser.add_argument("--tile_choice", type=TileChoice, help='')
-    parser.add_argument('--tile_name', type=str, help='The name of the tile you would like to choose based'
-                                                      ' on your tile choice')
-    parser.add_argument("--daily", type=str, help=DAILY_HELP)
-    parser.add_argument("-start_year", type=int, help=START_YR)
-    parser.add_argument("-end_year", type=int, help=END_YR)
-    parser.add_argument("--full_csv", type=str, help=FULL_CSV)
-    parser.add_argument('--n_cores', type=int, help='Number of cores to use for parallel processing.')
-    parser.add_argument('--cleanup', type=str,
-                        help='If set then the burn area and landcover files will be removed after each run to save ' \
-                             ' disk space in between multiple runs')
+    parser.add_argument(
+        "-o",
+        "--output_directory",
+        dest="out_dir",
+        default=PROJECT_DIR.joinpath("output"),
+        help=HELP_TEXT["data"]
+    )
+    parser.add_argument(
+        "-f",
+        "--file_name",
+        dest="file_name",
+        default="fired",
+        type=str,
+        help=HELP_TEXT["file"]
+    )
+    parser.add_argument(
+        "-et",
+        "--eco_region_type",  # Distinguish this one from the eco region level
+        type=EcoRegionType,
+        help=HELP_TEXT["eco"]
+    )
+    parser.add_argument(
+        "-el",
+        "--eco_region_level",
+        type=int,
+        help=HELP_TEXT["eco"]
+    )
+    parser.add_argument(
+        "-lc",
+        "--land_cover_type",
+        help=HELP_TEXT["lc"],
+        type=int
+    )
+    parser.add_argument(
+        "-st",
+        "--shape_type",
+        help=HELP_TEXT["shp"],
+        type=ShapeType
+    )
+    parser.add_argument(
+        "-s",
+        "--spatial",
+        dest="spatial_param",
+        type=int,
+        help=HELP_TEXT["sp"]
+    )
+    parser.add_argument(
+        "-t"
+        "--temporal",
+        dest="temporal_param",
+        type=int,
+        help=HELP_TEXT["tmp"]
+    )
+    parser.add_argument(
+        "-tc",
+        "--tile_choice",
+        type=TileChoice,
+        help=''
+    )
+    parser.add_argument(
+        "-tn",
+        "--tile_name",
+        type=str,
+        help=HELP_TEXT["tile_name"]
+    )
+    parser.add_argument(
+        "-d",
+        "--daily",
+        type=str,
+        help=HELP_TEXT["daily"]
+    )
+    parser.add_argument(
+        "-ys"
+        "--year_start",
+        type=int,
+        help=HELP_TEXT["year_start"]
+    )
+    parser.add_argument(
+        "-ye",
+        "--year_end",
+        type=int,
+        help=HELP_TEXT["year_end"]
+    )
+    parser.add_argument(
+        "-fc",
+        "--full_csv",
+        type=str,
+        help=HELP_TEXT["full_csv"]
+    )
+    parser.add_argument(
+        "-nc",
+        "--n_cores",
+        type=int,
+        help=HELP_TEXT["n_cores"]
+    )
+    parser.add_argument(
+        "-cu",
+        "--cleanup",
+        type=str,
+        help=HELP_TEXT["cleanup"]
+    )
     args = parser.parse_args()
 
-    firedpy_parser = FiredpyArgumentParser(os.path.join(PROJECT_DIR, 'data', 'params.txt'))
+    param_fpath = PROJECT_DIR.joinpath("data", "params.txt")
+    firedpy_parser = FiredpyArgumentParser(param_fpath)
 
     # Resolve the output directory
-    out_dir = args.out_dir if args.out_dir is not None else firedpy_parser.prompt_for_argument('out_dir')
+    if args.out_dir:
+        out_dir = args.out_dir
+    else:
+        out_dir = firedpy_parser.prompt_for_argument("out_dir")
     os.makedirs(out_dir, exist_ok=True)
 
     # Resolve full csv
-    full_csv = str_to_bool(args.full_csv) if args.full_csv is not None else \
-        firedpy_parser.prompt_for_argument('full_csv')
+    if args.full_csv:
+        full_csv = str_to_bool(args.full_csv)
+    else:
+        firedpy_parser.prompt_for_argument("full_csv")
 
-    n_cores = firedpy_parser.prompt_for_argument('n_cores') if args.n_cores is None else args.n_cores
-    n_cores = os.cpu_count() - 1 if n_cores == 0 else n_cores
+    # Resolve n_cores
+    if args.n_cores:
+        n_cores = firedpy_parser.prompt_for_argument("n_cores")
+    else:
+        n_cores = os.cpu_count() - 1 if n_cores == 0 else n_cores
 
     # Resolve tile choice
     tile_choice = TileChoice(firedpy_parser.prompt_for_argument('tile_choice')) if args.tile_choice is None else (
@@ -180,6 +273,13 @@ def main():
         shape_file = None
     else:
         raise ValueError('Invalid tile choice')
+
+
+
+
+
+
+
 
     daily = firedpy_parser.prompt_for_argument('daily') if args.daily is None else str_to_bool(args.daily)
     spatial_param = firedpy_parser.prompt_for_argument('spatial') if args.spatial_param is None else \

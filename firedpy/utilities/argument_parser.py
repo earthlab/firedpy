@@ -37,8 +37,13 @@ class FiredpyArgumentParser:
             file.writelines(new_lines)
         self._load_params()
 
-    def prompt_for_argument(self, arg_name, prompt_override: str = None, accepted_value_override: List[Any] = None,
-                            sensitive: bool = False):
+    def prompt_for_argument(
+            self,
+            arg_name,
+            prompt_override: str = None,
+            accepted_value_override: List[Any] = None,
+            sensitive: bool = False
+        ):
         if arg_name not in self.arguments:
             raise ValueError(f"Argument {arg_name} not found in params file.")
 

@@ -24,6 +24,7 @@ from netCDF4 import Dataset
 from osgeo import gdal, osr, ogr
 from rasterio.merge import merge
 from tqdm import tqdm
+
 from firedpy.enums import LandCoverType
 from firedpy.modis_earthaccess import MODISEarthAccess, setup_modis_earthaccess
 
@@ -34,8 +35,8 @@ logging.basicConfig(filename='app.log', level=logging.ERROR,
 
 
 class Base:
-    """
-    """
+    """Base firedpy methods."""
+
     MODIS_CRS = "+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a=6371007.181 +b=6371007.181 +units=m +no_defs"
     MODIS_SINUSOIDAL_PATH = os.path.join(PROJECT_DIR, "ref", "modis_grid.gpkg")
     CONUS_SHAPEFILE_PATH = os.path.join(PROJECT_DIR, 'ref', 'boundaries', 'conus.gpkg')
