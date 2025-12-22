@@ -2,23 +2,23 @@ import enum
 
 
 class ShapeType(enum.Enum):
-    SHP = 'shp'
-    GPKG = 'gpkg'
-    BOTH = 'both'
-    NONE = 'none'
+    SHP = "shp"
+    GPKG = "gpkg"
+    BOTH = "both"
+    NONE = "none"
 
 
 class EcoRegionType(enum.Enum):
-    NA = 'na'
-    WORLD = 'world'
+    NA = "na"
+    WORLD = "world"
 
 
 class TileChoice(enum.Enum):
-    A = 'a'
-    B = 'b'
-    C = 'c'
-    D = 'd'
-    E = 'e'
+    A = "a"
+    B = "b"
+    C = "c"
+    D = "d"
+    E = "e"
 
 
 class LandCoverType(enum.IntEnum):

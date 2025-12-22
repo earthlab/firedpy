@@ -703,16 +703,24 @@ class ModelBuilder(Base):
 
         return gdf
 
-    def add_land_cover_attributes(self, gdf: gpd.GeoDataFrame, tiles: List[str],
-                                  land_cover_type: LandCoverType = LandCoverType.NONE) -> gpd.GeoDataFrame:
+    def add_land_cover_attributes(
+            self,
+            gdf: gpd.GeoDataFrame,
+            tiles: List[str],
+            land_cover_type: LandCoverType = LandCoverType.NONE
+        ) -> gpd.GeoDataFrame:
+
         print('Adding land cover attributes...')
 
         # We'll need to specify which type of land_cover
-        lc_descriptions = {LandCoverType.IGBP: "IGBP global vegetation classification scheme",
-                           LandCoverType.UMD: "University of Maryland (UMD) scheme",
-                           LandCoverType.MODIS_LAI: "MODIS-derived LAI/fPAR scheme",
-                           LandCoverType.MODIS_BGC: "MODIS-derived Net Primary Production (NPP) scheme",
-                           LandCoverType.PFT: "Plant Functional Type (PFT) scheme."}
+        lc_descriptions = {
+            LandCoverType.IGBP: "IGBP global vegetation classification scheme",
+            LandCoverType.UMD: "University of Maryland (UMD) scheme",
+            LandCoverType.MODIS_LAI: "MODIS-derived LAI/fPAR scheme",
+            LandCoverType.MODIS_BGC: ("MODIS-derived Net Primary Production "
+                                      "(NPP) scheme"),
+            LandCoverType.PFT: "Plant Functional Type (PFT) scheme."
+        }
 
         # Rasterio point querier (will only work here)
         def point_query(row):
@@ -723,6 +731,7 @@ class ModelBuilder(Base):
                 val = int([val for val in lc.sample([(x, y)])][0])
             except Exception:
                 val = np.nan
+
             return val
 
         # Get the range of burn years
@@ -737,12 +746,9 @@ class ModelBuilder(Base):
                 if not os.path.exists(mosaic_dir):
                     print(f'No land cover data for {tile} in year {year}')
                     continue
-                lc_files = sorted([os.path.join(mosaic_dir, f)
-                                   for f in os.listdir(mosaic_dir) if re.match(self._lc_mosaic_re, f)])
-                lc_years = [int(re.match(self._lc_mosaic_re, os.path.basename(f)).groupdict()['year']) for f in
-                            lc_files]
+                lc_files = sorted([os.path.join(mosaic_dir, f) for f in os.listdir(mosaic_dir) if re.match(self._lc_mosaic_re, f)])
+                lc_years = [int(re.match(self._lc_mosaic_re, os.path.basename(f)).groupdict()['year']) for f in lc_files]
                 lc_files = {lc_years[i]: lc_files[i] for i in range(len(lc_files))}
-
                 sgdf = gdf[gdf['ig_year'] == year]
 
                 # Now set year one back for land_cover
