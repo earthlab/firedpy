@@ -407,7 +407,7 @@ class BurnData(LPDAAC):
         """
 
         print(f"Getting burn data using EarthAccess for tiles: {tiles}")
-        print(f"📅 Date range: {start_year or 2000} to {end_year or 2024}")
+        print(f"📅 Date range: {start_year or 2000} to {end_year or 2025}")
 
         try:
             # Authenticate with EarthAccess
@@ -421,7 +421,7 @@ class BurnData(LPDAAC):
 
             # Search for granules
             start_date = f'{start_year or 2000}-01-01'
-            end_date = f'{end_year or 2024}-12-31'
+            end_date = f'{end_year or 2025}-12-31'
 
             print(f"Searching for MCD64A1 granules from {start_date} to {end_date}")
 
