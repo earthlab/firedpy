@@ -17,7 +17,7 @@ HELP_TEXT = {
     "data": (
         """
         The project directory you would like to use for  and output data files.
-        Defaults to a temporary directory 'src/proj'.
+        Defaults to a temporary directory 'firedpy/data/outputs'.
         """
     ),
     "file": (
@@ -25,6 +25,15 @@ HELP_TEXT = {
         The file name of the resulting dataframe. This will be saved in the
         'outputs/tables' folder of the chosen project directory. Defaults to
         'fired_events.csv' and 'fired_daily.csv' if daily data is requested.
+        """
+    ),
+    "earthdata": (
+        """
+        Please input your NASA Earthdata username and password in order to
+        download the land cover data. If you do not have an Earthdata account,
+        you can register at https://urs.earthdata.nasa.gov/. To avoid seeing
+        this prompt again, you can set the FIREDPY_ED_USER and FIREDPY_ED_PWD
+        environment variables.
         """
     ),
     "eco": (
@@ -99,7 +108,7 @@ HELP_TEXT = {
         """
     ),
     "tile_name": (
-        """"
+        """
         The name of the tile you would like to choose based on your tile
         choice.
         """
@@ -110,6 +119,6 @@ HELP_TEXT = {
         to 11 days between events.
         """
     ),
-    "year_end": "The last year of fired events.",
-    "year_start": "The first year of fired events.",
+    "end_year": "The last year of fired events.",
+    "start_year": "The first year of fired events.",
 }

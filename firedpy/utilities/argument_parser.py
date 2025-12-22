@@ -81,4 +81,3 @@ class FiredpyArgumentParser:
         self._save_params()
 
         return user_input
-

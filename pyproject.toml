@@ -29,3 +29,6 @@ version = {attr = "firedpy.__version__"}
 
 [tool.setuptools.package-data]
 firedpy = ["data/*"]
+
+[project.scripts]
+firedpy = "firedpy.main:main"

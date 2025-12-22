@@ -15,7 +15,7 @@ def get_gdal_version():
     sto, ste = process.communicate()
     if ste:
         raise OSError("GDAL is causing problems again. Make sure you can run "
-                      "'gdal-config --version' successfully in your terminal")
+                      "'gdalinfo --version' successfully in your terminal.")
     version = sto.decode().split()[1]
     return version
 
@@ -27,7 +27,6 @@ def get_requirements():
     gdal_version = get_gdal_version()
     gdal_line = f"gdal=={gdal_version}.*\n"
     reqs.append(gdal_line)
-    print(gdal_line)
     return reqs
 
 

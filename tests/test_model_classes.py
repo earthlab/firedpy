@@ -1,11 +1,13 @@
 import os
 import shutil
 
-from unittest import TestCase
-from src.model_classes import EventGrid, EventPerimeter
 from mock import patch, Mock
+from unittest import TestCase
+
 import numpy as np
 import xarray as xr
+
+from firedpy.model_classes import EventGrid, EventPerimeter
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(__file__))
 
@@ -14,7 +16,7 @@ class TestEventGridInitMethodTestCase(TestCase):
 
     def setUp(self):
         # Creating some dummy data to use in tests
-        self.out_dir = os.path.join(PROJECT_DIR, 'tests', 'test_data_dir')
+        self.out_dir = os.path.join(PROJECT_DIR, "tests", "test_data_dir")
         self.spatial_param = 5
         self.temporal_param = 11
         self.area_unit = "km^2"
@@ -38,7 +40,8 @@ class TestEventGridInitMethodTestCase(TestCase):
         mock_open.return_value = mock_array
 
         # When
-        grid = EventGrid(self.out_dir, self.spatial_param, self.temporal_param, self.area_unit, self.time_unit)
+        grid = EventGrid(self.out_dir, self.spatial_param, self.temporal_param,
+                         self.area_unit, self.time_unit)
 
         # Then
         self.assertEqual(grid._spatial_param, expected_spatial_param)
@@ -77,7 +80,7 @@ class TestEventGridInitMethodTestCase(TestCase):
         initial_coords_event1 = self.event1.get_coords().copy()
         initial_coords_event2 = self.event2.get_coords().copy()
 
-        # Suppose we have a method `merge_perimeters` that should merge event2 into event1
+        # Method `merge_perimeters`should merge event2 into event1
         merged_perimeters = grid._merge_perimeters(
             [self.event1, self.event2],
             self.event1.get_event_id(),
@@ -224,7 +227,7 @@ class TestEventGridInitMethodTestCase(TestCase):
 
 
 class TestEventGridSpatialWindow(TestCase):
-    _test_data_dir = os.path.join(PROJECT_DIR, 'tests', 'test_data_dir')
+    _test_data_dir = os.path.join(PROJECT_DIR, "tests", "test_data_dir")
 
     def tearDown(self) -> None:
         if os.path.exists(self._test_data_dir):
@@ -241,15 +244,16 @@ class TestEventGridSpatialWindow(TestCase):
 
         mock_open.return_value = mock_array
 
-        # Testing a case where the window is centered, i.e., not on the edge of the grid.
+        # Case where the window is centered (i.e., not on edge of the grid.)
         y, x = (5, 5)
-        expected_output = (3, 7, 3, 7, [2, 2], [3, 3])  # Expected output based on method logic.
+        expected_output = (3, 7, 3, 7, [2, 2], [3, 3])  # Based on event logic
 
         event_grid = EventGrid(self._test_data_dir, 2)
 
         result = event_grid._get_spatial_window(y, x, array_dims)
-        self.assertEqual(result, expected_output,
-                         f"For (y, x) = ({y}, {x}), expected {expected_output} but got {result}")
+        msg = (f"For (y, x) = ({y}, {x}), expected {expected_output} but got "
+               f"{result}")
+        self.assertEqual(result, expected_output, msg)
 
     @patch("src.model_classes.xr.open_dataset")
     def test_get_spatial_window_top_left(self, mock_open):
@@ -268,8 +272,9 @@ class TestEventGridSpatialWindow(TestCase):
         event_grid = EventGrid(self._test_data_dir, 2)
 
         result = event_grid._get_spatial_window(y, x, array_dims)
-        self.assertEqual(result, expected_output,
-                         f"For (y, x) = ({y}, {x}), expected {expected_output} but got {result}")
+        msg = (f"For (y, x) = ({y}, {x}), expected {expected_output} but got "
+               f"{result}")
+        self.assertEqual(result, expected_output, msg)
 
     @patch("src.model_classes.xr.open_dataset")
     def test_get_spatial_window_top_right(self, mock_open):
@@ -288,8 +293,9 @@ class TestEventGridSpatialWindow(TestCase):
         event_grid = EventGrid(self._test_data_dir, 2)
 
         result = event_grid._get_spatial_window(y, x, array_dims)
-        self.assertEqual(result, expected_output,
-                         f"For (y, x) = ({y}, {x}), expected {expected_output} but got {result}")
+        msg = (f"For (y, x) = ({y}, {x}), expected {expected_output} but got "
+               f"{result}")
+        self.assertEqual(result, expected_output, msg)
 
     @patch("src.model_classes.xr.open_dataset")
     def test_get_spatial_window_bottom_right(self, mock_open):
@@ -308,8 +314,9 @@ class TestEventGridSpatialWindow(TestCase):
         event_grid = EventGrid(self._test_data_dir, 2)
 
         result = event_grid._get_spatial_window(y, x, array_dims)
-        self.assertEqual(result, expected_output,
-                         f"For (y, x) = ({y}, {x}), expected {expected_output} but got {result}")
+        msg = (f"For (y, x) = ({y}, {x}), expected {expected_output} but got "
+               f"{result}")
+        self.assertEqual(result, expected_output, msg)
 
     @patch("src.model_classes.xr.open_dataset")
     def test_get_spatial_window_bottom_left(self, mock_open):
@@ -328,8 +335,9 @@ class TestEventGridSpatialWindow(TestCase):
         event_grid = EventGrid(self._test_data_dir, 2)
 
         result = event_grid._get_spatial_window(y, x, array_dims)
-        self.assertEqual(result, expected_output,
-                         f"For (y, x) = ({y}, {x}), expected {expected_output} but got {result}")
+        msg = (f"For (y, x) = ({y}, {x}), expected {expected_output} but got "
+               f"{result}")
+        self.assertEqual(result, expected_output, msg)
 
     @patch("src.model_classes.xr.open_dataset")
     def test_get_spatial_window_top_left_corner(self, mock_open):
@@ -348,8 +356,9 @@ class TestEventGridSpatialWindow(TestCase):
         event_grid = EventGrid(self._test_data_dir, 2)
 
         result = event_grid._get_spatial_window(y, x, array_dims)
-        self.assertEqual(result, expected_output,
-                         f"For (y, x) = ({y}, {x}), expected {expected_output} but got {result}")
+        msg = (f"For (y, x) = ({y}, {x}), expected {expected_output} but got "
+               f"{result}")
+        self.assertEqual(result, expected_output, msg)
 
     @patch("src.model_classes.xr.open_dataset")
     def test_get_spatial_window_top_right_corner(self, mock_open):
@@ -368,8 +377,9 @@ class TestEventGridSpatialWindow(TestCase):
         event_grid = EventGrid(self._test_data_dir, 2)
 
         result = event_grid._get_spatial_window(y, x, array_dims)
-        self.assertEqual(result, expected_output,
-                         f"For (y, x) = ({y}, {x}), expected {expected_output} but got {result}")
+        msg = (f"For (y, x) = ({y}, {x}), expected {expected_output} but got "
+               f"{result}")
+        self.assertEqual(result, expected_output, msg)
 
     @patch("src.model_classes.xr.open_dataset")
     def test_get_spatial_window_bottom_right_corner(self, mock_open):
@@ -388,8 +398,9 @@ class TestEventGridSpatialWindow(TestCase):
         event_grid = EventGrid(self._test_data_dir, 2)
 
         result = event_grid._get_spatial_window(y, x, array_dims)
-        self.assertEqual(result, expected_output,
-                         f"For (y, x) = ({y}, {x}), expected {expected_output} but got {result}")
+        msg = (f"For (y, x) = ({y}, {x}), expected {expected_output} but got "
+               f"{result}")
+        self.assertEqual(result, expected_output, msg)
 
     @patch("src.model_classes.xr.open_dataset")
     def test_get_spatial_window_bottom_left_corner(self, mock_open):
@@ -408,5 +419,6 @@ class TestEventGridSpatialWindow(TestCase):
         event_grid = EventGrid(self._test_data_dir, 2)
 
         result = event_grid._get_spatial_window(y, x, array_dims)
-        self.assertEqual(result, expected_output,
-                         f"For (y, x) = ({y}, {x}), expected {expected_output} but got {result}")
+        msg = (f"For (y, x) = ({y}, {x}), expected {expected_output} but got "
+               f"{result}")
+        self.assertEqual(result, expected_output, msg)

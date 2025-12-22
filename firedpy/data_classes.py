@@ -8,9 +8,9 @@ import urllib
 
 from datetime import datetime
 from glob import glob
-from typing import List, Union, Tuple, Dict
 from http.cookiejar import CookieJar
 from multiprocessing import Pool
+from typing import List, Union, Tuple, Dict
 
 import geopandas as gpd
 import numpy as np
@@ -25,21 +25,23 @@ from osgeo import gdal, osr, ogr
 from rasterio.merge import merge
 from tqdm import tqdm
 
+from firedpy import DATA_DIR
 from firedpy.enums import LandCoverType
 from firedpy.modis_earthaccess import MODISEarthAccess, setup_modis_earthaccess
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(__file__))
 
-logging.basicConfig(filename='app.log', level=logging.ERROR,
-                    format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(filename="app.log", level=logging.ERROR,
+                    format="%(asctime)s - %(levelname)s - %(message)s")
 
 
 class Base:
     """Base firedpy methods."""
 
-    MODIS_CRS = "+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a=6371007.181 +b=6371007.181 +units=m +no_defs"
-    MODIS_SINUSOIDAL_PATH = os.path.join(PROJECT_DIR, "ref", "modis_grid.gpkg")
-    CONUS_SHAPEFILE_PATH = os.path.join(PROJECT_DIR, 'ref', 'boundaries', 'conus.gpkg')
+    MODIS_CRS = ("+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a=6371007.181 "
+                 "+b=6371007.181 +units=m +no_defs")
+    MODIS_SINUSOIDAL_PATH = DATA_DIR.joinpath("modis_grid.gpkg")
+    CONUS_SHAPEFILE_PATH = DATA_DIR.joinpath("boundaries", "conus.gpkg")
     DEFAULT_TILES = ["h08v04", "h09v04", "h10v04", "h11v04", "h12v04",
                      "h13v04", "h08v05", "h09v05", "h10v05", "h11v05",
                      "h12v05", "h08v06", "h09v06", "h10v06", "h11v06"]
@@ -48,28 +50,28 @@ class Base:
         os.makedirs(out_dir, exist_ok=True)
 
         self._out_dir = out_dir
-        self._date = datetime.today().strftime('%m-%d-%Y')
+        self._date = datetime.today().strftime("%m-%d-%Y")
         self._cpus = os.cpu_count()
 
-        self._raster_dir = os.path.join(out_dir, 'rasters')
+        self._raster_dir = os.path.join(out_dir, "rasters")
         self._shape_file_dir = os.path.join(self._out_dir, "shape_files")
-        self._burn_area_dir = os.path.join(self._raster_dir, 'burn_area')
-        self._land_cover_dir = os.path.join(self._raster_dir, 'land_cover')
-        self._eco_region_raster_dir = os.path.join(self._raster_dir, 'eco_region')
-        self._eco_region_shapefile_dir = os.path.join(self._shape_file_dir, 'eco_region')
-        self._tables_dir = os.path.join(out_dir, 'tables')
+        self._burn_area_dir = os.path.join(self._raster_dir, "burn_area")
+        self._land_cover_dir = os.path.join(self._raster_dir, "land_cover")
+        self._eco_region_raster_dir = os.path.join(self._raster_dir, "eco_region")
+        self._eco_region_shapefile_dir = os.path.join(self._shape_file_dir, "eco_region")
+        self._tables_dir = os.path.join(out_dir, "tables")
 
-        self._nc_dir = os.path.join(self._burn_area_dir, 'netcdfs')
-        self.hdf_dir = os.path.join(self._burn_area_dir, 'hdfs')
+        self._nc_dir = os.path.join(self._burn_area_dir, "netcdfs")
+        self.hdf_dir = os.path.join(self._burn_area_dir, "hdfs")
 
-        self._modis_sinusoidal_grid_shape_path = os.path.join(self._shape_file_dir, 'modis_sinusoidal_grid_world.shp')
-        self._conus_shape_path = os.path.join(self._shape_file_dir, 'conus.shp')
+        self._modis_sinusoidal_grid_shape_path = os.path.join(self._shape_file_dir, "modis_sinusoidal_grid_world.shp")
+        self._conus_shape_path = os.path.join(self._shape_file_dir, "conus.shp")
 
-        self._eco_region_csv_path = os.path.join(self._tables_dir, 'eco_refs.csv')
-        self._project_eco_region_dir = os.path.join(PROJECT_DIR, "ref", "us_eco")
-        self._eco_region_shape_path = os.path.join(self._eco_region_shapefile_dir, 'NA_CEC_Eco_Level3.gpkg')
+        self._eco_region_csv_path = os.path.join(self._tables_dir, "eco_refs.csv")
+        self._project_eco_region_dir = DATA_DIR.joinpath("us_eco")
+        self._eco_region_shape_path = os.path.join(self._eco_region_shapefile_dir, "NA_CEC_Eco_Level3.gpkg")
 
-        self._post_regex = r'\.A(?P<year>\d{4})(?P<ordinal_day>\d{3})\.h(?P<horizontal_tile>\d{2})v(?P<vertical_tile>\d{2})\.061\.(?P<prod_year>\d{4})(?P<prod_ordinal_day>\d{3})(?P<prod_hourminute>\d{4})(?P<prod_second>\d{2})\.hdf$'
+        self._post_regex = r"\.A(?P<year>\d{4})(?P<ordinal_day>\d{3})\.h(?P<horizontal_tile>\d{2})v(?P<vertical_tile>\d{2})\.061\.(?P<prod_year>\d{4})(?P<prod_ordinal_day>\d{3})(?P<prod_hourminute>\d{4})(?P<prod_second>\d{2})\.hdf$"
 
         # Initialize output directory folders and files
         self._initialize_save_dirs()
@@ -113,7 +115,7 @@ class Base:
     def _convert_unix_day_to_calendar_date(unix_day: int) -> str:
         base = dt.datetime(1970, 1, 1)
         date = base + dt.timedelta(days=int(unix_day) - 1)
-        return date.strftime('%Y-%m-%d')
+        return date.strftime("%Y-%m-%d")
 
     @staticmethod
     def _rasterize_vector_data(src, dst, attribute, resolution, crs, extent,
@@ -174,54 +176,38 @@ class Base:
         return os.path.join(self._nc_dir, f"{tile}.nc")
 
     def _generate_land_cover_mosaic_dir(self, tile: str, year: str) -> str:
-        return os.path.join(self._land_cover_dir, tile,  str(year), 'mosaics')
+        return os.path.join(self._land_cover_dir, tile,  str(year), "mosaics")
 
 
 class LPDAAC(Base):
     def __init__(self, out_dir: str):
         super().__init__(out_dir)
         self._lp_daac_url = None
-        self._date_regex = r'(?P<year>\d{4})\.(?P<month>\d{2})\.(?P<day>\d{2})\/'
+        self._date_regex = r"(?P<year>\d{4})\.(?P<month>\d{2})\.(?P<day>\d{2})\/"
         self._parallel_cores = None
         self._username = None
         self._password = None
-        self._file_regex = None   
-     
+        self._file_regex = None
+
         # Setup EarthAccess for modern data access
         self._earthaccess = None
-        if hasattr(self, '_username') and hasattr(self, '_password'):
+        if hasattr(self, "_username") and hasattr(self, "_password"):
             try:
                 self._earthaccess = setup_modis_earthaccess(self._username, self._password)
             except Exception as e:
                 print(f"EarthAccess setup failed, falling back to legacy access: {e}")    
-    
+
         # Setup EarthAccess for modern data access
         self._earthaccess = None
-        if hasattr(self, '_username') and hasattr(self, '_password'):
+        if hasattr(self, "_username") and hasattr(self, "_password"):
             try:
                 self._earthaccess = setup_modis_earthaccess(self._username, self._password)
             except Exception as e:
                 print(f"EarthAccess setup failed, falling back to legacy access: {e}")  
-      
+
         # Setup EarthAccess for modern data access
         self._earthaccess = None
-        if hasattr(self, '_username') and hasattr(self, '_password'):
-            try:
-                self._earthaccess = setup_modis_earthaccess(self._username, self._password)
-            except Exception as e:
-                print(f"EarthAccess setup failed, falling back to legacy access: {e}")
-    
-        # Setup EarthAccess for modern data access
-        self._earthaccess = None
-        if hasattr(self, '_username') and hasattr(self, '_password'):
-            try:
-                self._earthaccess = setup_modis_earthaccess(self._username, self._password)
-            except Exception as e:
-                print(f"EarthAccess setup failed, falling back to legacy access: {e}")
-    
-        # Setup EarthAccess for modern data access
-        self._earthaccess = None
-        if hasattr(self, '_username') and hasattr(self, '_password'):
+        if hasattr(self, "_username") and hasattr(self, "_password"):
             try:
                 self._earthaccess = setup_modis_earthaccess(self._username, self._password)
             except Exception as e:
@@ -229,7 +215,7 @@ class LPDAAC(Base):
 
         # Setup EarthAccess for modern data access
         self._earthaccess = None
-        if hasattr(self, '_username') and hasattr(self, '_password'):
+        if hasattr(self, "_username") and hasattr(self, "_password"):
             try:
                 self._earthaccess = setup_modis_earthaccess(self._username, self._password)
             except Exception as e:
@@ -237,7 +223,23 @@ class LPDAAC(Base):
 
         # Setup EarthAccess for modern data access
         self._earthaccess = None
-        if hasattr(self, '_username') and hasattr(self, '_password'):
+        if hasattr(self, "_username") and hasattr(self, "_password"):
+            try:
+                self._earthaccess = setup_modis_earthaccess(self._username, self._password)
+            except Exception as e:
+                print(f"EarthAccess setup failed, falling back to legacy access: {e}")
+
+        # Setup EarthAccess for modern data access
+        self._earthaccess = None
+        if hasattr(self, "_username") and hasattr(self, "_password"):
+            try:
+                self._earthaccess = setup_modis_earthaccess(self._username, self._password)
+            except Exception as e:
+                print(f"EarthAccess setup failed, falling back to legacy access: {e}")
+
+        # Setup EarthAccess for modern data access
+        self._earthaccess = None
+        if hasattr(self, "_username") and hasattr(self, "_password"):
             try:
                 self._earthaccess = setup_modis_earthaccess(self._username, self._password)
             except Exception as e:
@@ -273,7 +275,7 @@ class LPDAAC(Base):
             return
 
         # Try EarthAccess first if available
-        if hasattr(self, '_earthaccess') and self._earthaccess is not None:
+        if hasattr(self, "_earthaccess") and self._earthaccess is not None:
             try:
                 success = self._earthaccess.download_file(link, dest)
                 if success:
@@ -298,7 +300,7 @@ class LPDAAC(Base):
             myrequest = urllib.request.Request(link)
             response = urllib.request.urlopen(myrequest)
 
-            with open(dest, 'wb') as fd:
+            with open(dest, "wb") as fd:
                 while True:
                     chunk = response.read()
                     if chunk:
@@ -318,7 +320,7 @@ class LPDAAC(Base):
             print("Connected to 'fuoco.geog.umd.edu' ...")
             # Open the connection to the SFTP
             with ssh_client.open_sftp() as sftp_client:
-                sftp_client.chdir('/data/MODIS/C61/MCD64A1/HDF')
+                sftp_client.chdir("/data/MODIS/C61/MCD64A1/HDF")
                 return sftp_client.listdir()
 
     def _download_files(self, download_requests):
@@ -339,12 +341,12 @@ class LPDAAC(Base):
     def _get_available_year_paths(self, start_year: int = None, end_year: int = None) -> List[str]:
         # Get available years
         request = requests.get(self._lp_daac_url)
-        soup = BeautifulSoup(request.text, 'html.parser')
+        soup = BeautifulSoup(request.text, "html.parser")
         year_paths = []
         for link in [link["href"] for link in soup.find_all("a", href=True)]:
             match = re.match(self._date_regex, link)
             if match is not None:
-                file_year = int(match.groupdict().get('year'))
+                file_year = int(match.groupdict().get("year"))
                 if (start_year is None or file_year >= start_year) and (
                         end_year is None or file_year <= end_year):
                     year_paths.append(link)
@@ -356,7 +358,7 @@ class LPDAAC(Base):
 
     def _get_available_files(self, year_path: str, tiles: List[str] = None):
         request = requests.get(urllib.parse.urljoin(self._lp_daac_url, year_path))
-        soup = BeautifulSoup(request.text, 'html.parser')
+        soup = BeautifulSoup(request.text, "html.parser")
         files = []
         for link in [link["href"] for link in soup.find_all("a", href=True)]:
             match = re.match(self._file_regex, link)
@@ -375,12 +377,12 @@ class LPDAAC(Base):
 class BurnData(LPDAAC):
     def __init__(self, out_dir: str, username: str, password: str, n_cores: int = None):
         super().__init__(out_dir)
-        self._lp_daac_url = 'https://e4ftl01.cr.usgs.gov/MOTA/MCD64A1.061/'
-        self._base_sftp_folder = os.path.join('data', 'MODIS', 'C61', 'MCD64A1', 'HDF')
-        self._modis_template_path = os.path.join(out_dir, 'rasters', 'mosaic_template.tif')
+        self._lp_daac_url = "https://e4ftl01.cr.usgs.gov/MOTA/MCD64A1.061/"
+        self._base_sftp_folder = os.path.join("data", "MODIS", "C61", "MCD64A1", "HDF")
+        self._modis_template_path = os.path.join(out_dir, "rasters", "mosaic_template.tif")
         self._record_start_year = 2000
         self._parallel_cores = n_cores if n_cores is not None else os.cpu_count() - 1
-        self._file_regex = r'MCD64A1' + self._post_regex
+        self._file_regex = r"MCD64A1" + self._post_regex
         self._username = username
         self._password = password
 
@@ -402,7 +404,7 @@ class BurnData(LPDAAC):
                 os.makedirs(os.path.dirname(local_file_path), exist_ok=True)
                 if os.path.exists(local_file_path):
                     if not self._verify_hdf_file(local_file_path):
-                        print('Removing', local_file_path)
+                        print("Removing", local_file_path)
                         os.remove(local_file_path)
                     else:
                         continue
@@ -419,40 +421,41 @@ class BurnData(LPDAAC):
         """
 
         print(f"Getting burn data using EarthAccess for tiles: {tiles}")
-        print(f"📅 Date range: {start_year or 2000} to {end_year or 2024}")
+        print(f"Date range: {start_year or 2000} to {end_year or 2024}")
 
         try:
             # Authenticate with EarthAccess
             import earthaccess
+
             # Set credentials as environment variables for earthaccess
-            os.environ['EARTHDATA_USERNAME'] = self._username
-            os.environ['EARTHDATA_PASSWORD'] = self._password
+            os.environ["EARTHDATA_USERNAME"] = self._username
+            os.environ["EARTHDATA_PASSWORD"] = self._password
             auth = earthaccess.login()
             if not auth:
                 raise RuntimeError("EarthAccess authentication failed")
 
             # Search for granules
-            start_date = f'{start_year or 2000}-01-01'
-            end_date = f'{end_year or 2024}-12-31'
+            start_date = f"{start_year or 2000}-01-01"
+            end_date = f"{end_year or 2024}-12-31"
 
             print(f"Searching for MCD64A1 granules from {start_date} to {end_date}")
 
             granules = earthaccess.search_data(
-                short_name='MCD64A1',
-                version='061',
+                short_name="MCD64A1",
+                version="061",
                 temporal=(start_date, end_date)
             )
 
-            print(f"✅ Found {len(granules)} total granules")
+            print(f"Found {len(granules)} total granules")
 
             # Filter for our specific tiles and download by tile
             for tile in tiles:
-                print(f"\n📍 Processing tile: {tile}")
+                print(f"\nProcessing tile: {tile}")
 
                 # Filter granules for this tile
                 tile_granules = []
                 for granule in granules:
-                    granule_name = granule.get('meta', {}).get('native-id', '')
+                    granule_name = granule.get("meta", {}).get("native-id", "")
                     if tile in granule_name:
                         tile_granules.append(granule)
 
@@ -466,15 +469,15 @@ class BurnData(LPDAAC):
                 tile_download_dir = self._generate_local_burn_hdf_dir(tile)
                 os.makedirs(tile_download_dir, exist_ok=True)
 
-                print(f"   📥 Downloading to: {tile_download_dir}")
+                print(f"   Downloading to: {tile_download_dir}")
 
                 try:
                     downloaded_files = earthaccess.download(tile_granules, tile_download_dir)
-                    print(f"   ✅ Downloaded {len(downloaded_files)} files")
+                    print(f"   Downloaded {len(downloaded_files)} files")
 
                     # Convert to NetCDF
                     self._write_ncs([tile])
-                    print(f"   ✅ Created NetCDF for tile {tile}")
+                    print(f"   Created NetCDF for tile {tile}")
 
                 except Exception as e:
                     print(f"   Download failed for tile {tile}: {e}")
@@ -487,6 +490,7 @@ class BurnData(LPDAAC):
             import traceback
             traceback.print_exc()
             raise RuntimeError(f"Failed to get burn data with EarthAccess: {e}")
+
     def _write_modis_template_file(self):
         # Merge one year into a reference mosaic
         print("Creating reference mosaic ...")
@@ -511,12 +515,12 @@ class BurnData(LPDAAC):
         filename = os.path.basename(filename)
         match = re.match(self._file_regex, filename)
         if match:
-            return int(match.groupdict()['year']), int(match.groupdict()['ordinal_day'])
+            return int(match.groupdict()["year"]), int(match.groupdict()["ordinal_day"])
         return None
 
     def get_date_range(self, start_year: int = None, end_year: int = None) -> List[Tuple[int, int]]:
         dates = [
-            self._extract_date_parts(f) for f in glob(os.path.join(self.hdf_dir, '**', '*'), recursive=True)
+            self._extract_date_parts(f) for f in glob(os.path.join(self.hdf_dir, "**", "*"), recursive=True)
         ]
 
         return sorted([d for d in dates if d is not None and (start_year is None or d[0] >= start_year) and (
@@ -541,7 +545,7 @@ class BurnData(LPDAAC):
                                 is not None], key=self._extract_date_parts)
 
                 if not files:
-                    print(f'No hdf files for tile {tile_id} in {hdf_dir}')
+                    print(f"No hdf files for tile {tile_id} in {hdf_dir}")
 
                 # Skip if it exists already
                 if os.path.exists(nc_file_name):
@@ -568,13 +572,13 @@ class BurnData(LPDAAC):
                     xs = np.arange(nx) * geom[1] + geom[0]
                     ys = np.arange(ny) * geom[5] + geom[3]
                     lats = np.linspace(
-                        float(metadata['SOUTHBOUNDINGCOORDINATE']),
-                        float(metadata['NORTHBOUNDINGCOORDINATE']),
+                        float(metadata["SOUTHBOUNDINGCOORDINATE"]),
+                        float(metadata["NORTHBOUNDINGCOORDINATE"]),
                         ny
                     )
                     lons = np.linspace(
-                        float(metadata['WESTBOUNDINGCOORDINATE']),
-                        float(metadata['EASTBOUNDINGCOORDINATE']),
+                        float(metadata["WESTBOUNDINGCOORDINATE"]),
+                        float(metadata["EASTBOUNDINGCOORDINATE"]),
                         nx
                     )
 
@@ -589,14 +593,14 @@ class BurnData(LPDAAC):
                     nco.createDimension("y", ny)
                     nco.createDimension("x", nx)
                     nco.createDimension("time", None)
-                    nco.createDimension('lat', nx)
-                    nco.createDimension('lon', ny)
+                    nco.createDimension("lat", nx)
+                    nco.createDimension("lon", ny)
 
                     # Variables
                     y = nco.createVariable("y", np.float64, ("y",))
                     x = nco.createVariable("x", np.float64, ("x",))
-                    lat = nco.createVariable('lat', np.float64, dimensions=('lat',))
-                    lon = nco.createVariable('lon', np.float64, dimensions=('lon',))
+                    lat = nco.createVariable("lat", np.float64, dimensions=("lat",))
+                    lon = nco.createVariable("lon", np.float64, dimensions=("lon",))
                     times = nco.createVariable("time", np.int16, ("time",))
                     variable = nco.createVariable("value", np.int16,
                                                   ("time", "y", "x"),
@@ -627,12 +631,12 @@ class BurnData(LPDAAC):
                     y.long_name = "y coordinate of projection"
                     y.units = "m"
 
-                    lat.standard_name = 'latitude_coordinate'
-                    lat.long_name = 'latitude coordinate'
-                    lat.units = 'deg'
-                    lon.standard_name = 'longitude_coordinate'
-                    lon.long_name = 'longitude coordinate'
-                    lon.units = 'deg'
+                    lat.standard_name = "latitude_coordinate"
+                    lat.long_name = "latitude coordinate"
+                    lat.units = "deg"
+                    lon.standard_name = "longitude_coordinate"
+                    lon.long_name = "longitude coordinate"
+                    lon.units = "deg"
 
                     # Other attributes
                     nco.title = "Burn Days"
@@ -670,7 +674,7 @@ class BurnData(LPDAAC):
                             ds = gdal.Open(f).GetSubDatasets()[0][0]
                             hdf = gdal.Open(ds)
                         except Exception as e:
-                            print(f'Could not open {f} for building ncdf: {str(e)}')
+                            print(f"Could not open {f} for building ncdf: {str(e)}")
                             variable[tile_index, :, :] = np.full((ny, nx), fill_value)
                             continue
 
@@ -678,7 +682,7 @@ class BurnData(LPDAAC):
                         array = data.ReadAsArray()
                         nulls = np.where(array < 0)
 
-                        year = int(regex_group_dict['year'])
+                        year = int(regex_group_dict["year"])
                         array = self._convert_dates(array, year)
 
                         array[nulls] = fill_value
@@ -733,10 +737,10 @@ class LandCover(Base):
 
         # Smart tile mapping for cases where land cover tiles differ from burn tiles
         self._tile_mapping = {
-            'h09v04': ['h09v03', 'h08v04'],  # Try nearby tiles
-            'h09v05': ['h09v06', 'h08v04'],
-            'h10v04': ['h10v02', 'h09v03'],
-            'h10v05': ['h10v06', 'h09v06']
+            "h09v04": ["h09v03", "h08v04"],  # Try nearby tiles
+            "h09v05": ["h09v06", "h08v04"],
+            "h10v04": ["h10v02", "h09v03"],
+            "h10v05": ["h10v06", "h09v06"]
         }
 
     def _setup_earthaccess(self):
@@ -745,13 +749,13 @@ class LandCover(Base):
             import earthaccess
 
             if self._username and self._password:
-                os.environ['EARTHDATA_USERNAME'] = self._username
-                os.environ['EARTHDATA_PASSWORD'] = self._password
+                os.environ["EARTHDATA_USERNAME"] = self._username
+                os.environ["EARTHDATA_PASSWORD"] = self._password
 
             auth = earthaccess.login()
             if auth:
                 self._earthaccess_authenticated = True
-                print("✅ EarthAccess authenticated for land cover")
+                print("EarthAccess authenticated for land cover")
             else:
                 print("EarthAccess authentication failed for land cover")
         except Exception as e:
@@ -764,7 +768,7 @@ class LandCover(Base):
         return os.path.join(self._land_cover_dir, tile, year)
 
     def _generate_land_cover_mosaic_dir(self, tile: str, year: str) -> str:
-        return os.path.join(self._land_cover_dir, tile, str(year), 'mosaics')
+        return os.path.join(self._land_cover_dir, tile, str(year), "mosaics")
 
     def _find_available_tiles_for_region(self, requested_tiles: List[str]) -> List[str]:
         """Find available land cover tiles that can cover the requested region."""
@@ -774,16 +778,16 @@ class LandCover(Base):
 
             # Get all available tiles for a sample year
             granules = earthaccess.search_data(
-                short_name='MCD12Q1',
-                version='061',
-                temporal=('2020-01-01', '2020-12-31'),
+                short_name="MCD12Q1",
+                version="061",
+                temporal=("2020-01-01", "2020-12-31"),
                 count=500
             )
 
             available_tiles = set()
             for granule in granules:
-                name = granule.get('meta', {}).get('native-id', '')
-                tile_match = re.search(r'\.h(\d{2})v(\d{2})\.', name)
+                name = granule.get("meta", {}).get("native-id", "")
+                tile_match = re.search(r"\.h(\d{2})v(\d{2})\.", name)
                 if tile_match:
                     h, v = tile_match.groups()
                     tile = f"h{h}v{v}"
@@ -794,12 +798,12 @@ class LandCover(Base):
             for tile in requested_tiles:
                 if tile in available_tiles:
                     tiles_to_use.add(tile)
-                    print(f"   ✅ {tile} - Available directly")
+                    print(f"   {tile} - Available directly")
                 elif tile in self._tile_mapping:
                     for alt_tile in self._tile_mapping[tile]:
                         if alt_tile in available_tiles:
                             tiles_to_use.add(alt_tile)
-                            print(f"   📍 {tile} -> using {alt_tile} (nearby coverage)")
+                            print(f"   {tile} -> using {alt_tile} (nearby coverage)")
                             break
                     else:
                         print(f"   {tile} - No suitable alternative found")
@@ -825,7 +829,7 @@ class LandCover(Base):
             print("No tiles specified for land cover")
             return
 
-        print(f"🌱 Getting land cover data using EarthAccess for region: {tiles}")
+        print(f"Getting land cover data using EarthAccess for region: {tiles}")
 
         # Find available tiles that can cover our region
         print("Finding available land cover tiles for region...")
@@ -839,13 +843,13 @@ class LandCover(Base):
             import earthaccess
 
             # Get available years
-            available_years = ['2018', '2019', '2020', '2021', '2022']
+            available_years = ["2018", "2019", "2020", "2021", "2022"]
 
             for tile in available_tiles:
-                print(f"\n📍 Processing land cover for tile: {tile}")
+                print(f"\n Processing land cover for tile: {tile}")
 
                 for year in available_years:
-                    print(f"   📅 Processing year: {year}")
+                    print(f"   Processing year: {year}")
 
                     # Check if mosaic already exists
                     mosaic_dir = self._generate_land_cover_mosaic_dir(tile, year)
@@ -855,22 +859,22 @@ class LandCover(Base):
                     mosaic_path = os.path.join(mosaic_dir, output_file)
 
                     if os.path.exists(mosaic_path):
-                        print(f"   ✅ Mosaic already exists: {output_file}")
+                        print(f"   Mosaic already exists: {output_file}")
                         continue
 
                     # Search for granules for this year and tile
                     print(f"   Searching for {tile} data in {year}...")
 
                     granules = earthaccess.search_data(
-                        short_name='MCD12Q1',
-                        version='061',
-                        temporal=(f'{year}-01-01', f'{year}-12-31')
+                        short_name="MCD12Q1",
+                        version="061",
+                        temporal=(f"{year}-01-01", f"{year}-12-31")
                     )
 
                     # Filter for this specific tile
                     tile_granules = []
                     for granule in granules:
-                        granule_name = granule.get('meta', {}).get('native-id', '')
+                        granule_name = granule.get("meta", {}).get("native-id", "")
                         if tile in granule_name:
                             tile_granules.append(granule)
 
@@ -878,7 +882,7 @@ class LandCover(Base):
                         print(f"   No land cover data for {tile} in year {year}")
                         continue
 
-                    print(f"   📥 Found {len(tile_granules)} granules, downloading...")
+                    print(f"   Found {len(tile_granules)} granules, downloading...")
 
                     # Download granules
                     download_dir = self._generate_local_hdf_dir(tile, year)
@@ -886,11 +890,11 @@ class LandCover(Base):
 
                     try:
                         downloaded_files = earthaccess.download(tile_granules, download_dir)
-                        print(f"   ✅ Downloaded {len(downloaded_files)} files")
+                        print(f"   Downloaded {len(downloaded_files)} files")
 
                         # Create mosaic (simplified version)
                         if downloaded_files:
-                            print(f"   ✅ Land cover data ready for {tile} {year}")
+                            print(f"   Land cover data ready for {tile} {year}")
 
                     except Exception as e:
                         print(f"   Processing failed for {tile} {year}: {e}")
@@ -907,13 +911,13 @@ class EcoRegion(Base):
     def __init__(self, out_dir: str):
         super().__init__(out_dir)
 
-        self._eco_region_ftp_url = 'ftp://newftp.epa.gov/EPADataCommons/ORD/Ecoregions/cec_na/NA_CEC_Eco_Level3.zip'
-        self._eco_region_raster_path = os.path.join(self._eco_region_raster_dir, 'NA_CEC_Eco_Level3_modis.tif')
+        self._eco_region_ftp_url = "ftp://newftp.epa.gov/EPADataCommons/ORD/Ecoregions/cec_na/NA_CEC_Eco_Level3.zip"
+        self._eco_region_raster_path = os.path.join(self._eco_region_raster_dir, "NA_CEC_Eco_Level3_modis.tif")
 
-        self._ref_cols = ['NA_L3CODE', 'NA_L3NAME', 'NA_L2CODE', 'NA_L2NAME', 'NA_L1CODE', 'NA_L1NAME', 'NA_L3KEY',
-                          'NA_L2KEY', 'NA_L1KEY']
+        self._ref_cols = ["NA_L3CODE", "NA_L3NAME", "NA_L2CODE", "NA_L2NAME", "NA_L1CODE", "NA_L1NAME", "NA_L3KEY",
+                          "NA_L2KEY", "NA_L1KEY"]
         self.eco_region_data_frame: Union[None, gpd.GeoDataFrame] = None
-        self._file_regex = r'MCD64A1' + self._post_regex
+        self._file_regex = r"MCD64A1" + self._post_regex
 
     @staticmethod
     def _normalize_string(string) -> str:
@@ -924,10 +928,10 @@ class EcoRegion(Base):
         def capitalize_special(s):
             """Handles capitalization for special characters within a string."""
             if "/" in s:
-                s = "/".join([segment.capitalize() if segment.upper() != 'USA' else segment.upper() for segment in
+                s = "/".join([segment.capitalize() if segment.upper() != "USA" else segment.upper() for segment in
                               s.split("/")])
             if "-" in s:
-                s = "-".join([segment.title() if segment.upper() != 'USA' else segment.upper() for segment in
+                s = "-".join([segment.title() if segment.upper() != "USA" else segment.upper() for segment in
                               s.split("-")])
             return s
 
@@ -993,15 +997,15 @@ class EcoRegion(Base):
         maxy_tile = template1["tile"][bounds["maxy"] == maxy].iloc[0]
         extent_tiles = [minx_tile, miny_tile, maxx_tile, maxy_tile]
 
-        # If these aren't present, I say just go ahead and download
+        # If these aren"t present, I say just go ahead and download
         exts = []
         projection = None
         xres = None
         for tile in extent_tiles:
             burn_dir = self._generate_local_burn_hdf_dir(tile)
             if not os.path.exists(burn_dir):
-                raise FileNotFoundError(f'Burn HDFs do not exist for tile {tile} at {burn_dir}. Use the BurnData class '
-                                        f'to download this data before rasterizing the eco region file')
+                raise FileNotFoundError(f"Burn HDFs do not exist for tile {tile} at {burn_dir}. Use the BurnData class "
+                                        f"to download this data before rasterizing the eco region file")
 
             file = [os.path.join(burn_dir, f) for f in glob(os.path.join(burn_dir, "*")) if
                     re.match(self._file_regex, os.path.basename(f)) is not None][0]

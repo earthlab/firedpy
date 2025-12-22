@@ -6,6 +6,7 @@ from pathlib import Path
 
 
 PROJECT_DIR = Path(__file__).parent
+DATA_DIR = PROJECT_DIR.joinpath("data")
 
 __version__ = "2.0.0"
 

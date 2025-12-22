@@ -1,10 +1,11 @@
-from typing import List
 import os
+
+from typing import List
+
 import geopandas as gpd
 import pandas as pd
 
-
-PROJECT_DIR = os.path.dirname(os.path.dirname(__file__))
+from firedpy import DATA_DIR
 
 
 def shape_to_tiles(shape_path: str) -> List[str]:
@@ -27,7 +28,7 @@ def shape_to_tiles(shape_path: str) -> List[str]:
     UNIT["Meter",1],
     AXIS["Easting",EAST],AXIS["Northing",NORTH]]'''
 
-    grid_path = os.path.join(PROJECT_DIR, "ref", "modis_grid.gpkg")
+    grid_path = DATA_DIR.joinpath("modis_grid.gpkg")
     modis_grid = gpd.read_file(grid_path)
     modis_grid.set_crs(out_crs, inplace=True, allow_override=True)
 
@@ -41,4 +42,5 @@ def shape_to_tiles(shape_path: str) -> List[str]:
     shared["v"] = shared["v"].apply(lambda x: "v{:02d}".format(int(x)))
     shared["tile"] = shared["h"] + shared["v"]
     tiles = pd.unique(shared["tile"].values)
+
     return tiles
