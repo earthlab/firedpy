@@ -434,7 +434,7 @@ def main():
     # Get the maximum resource use for this process
     initial_memory = peak_memory()
 
-    # Parse arguments
+    # Parse arguments  (All of this could be wrapped into one function)
     parser = build_parser()
     args = parser.parse_args()
     param_fpath = DATA_DIR.joinpath("params.txt")

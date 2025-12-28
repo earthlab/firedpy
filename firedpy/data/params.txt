@@ -7,7 +7,7 @@ daily,Enter (true y yes) if you want to create the daily polygons or (false n no
 spatial,fPlease enter the number of cells (~463 m resolution) to search for neighboring burn detections in all directions,int,8,none
 temporal,The number of days between events to search for neighboring burn detections,int,11,none
 shape_type,Specify the format of the shapefile you want. Can be 'shp' 'gpkg' or 'both'.,str,gpkg,gpkg|shp|both|none
-land_cover_type,If you would like to include land cover as an attribute enter the land cover type number you would like to use.\nAvailable land cover categories: \n 0: None \n 1: IGBP global vegetation classification scheme \n 2: University of Maryland (UMD) scheme \n 3: MODIS-derived LAI/fPAR scheme \n 4: MODIS-derived Net Primary Production (NPP) scheme \n 5: Plant Functional Types (PFT) scheme \n,int,1,0|1|2|3|4|5
+land_cover_type,If you would like to include land cover as an attribute enter the land cover type number you would like to use.\nAvailable land cover categories: \n 0: None \n 1: IGBP global vegetation classification scheme \n 2: University of Maryland (UMD) scheme \n 3: MODIS-derived LAI/fPAR scheme \n 4: MODIS-derived Net Primary Production (NPP) scheme \n 5: Plant Functional Types (PFT) scheme \n,int,0,0|1|2|3|4|5
 username,Enter your NASA Earthdata username,str,twillico,none
 password,Enter your NASA Earthdata password,str,,none
 start_year,Enter the year you want to start or 0 for all dates,int,2020,none
