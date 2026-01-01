@@ -9,7 +9,17 @@ name = "firedpy"
 dynamic = ["version", "dependencies"]
 description = "The Fire Event Delineation Model Python Package"
 readme = "README.md"
-authors = [{name="Adam Mahood"}]
+authors = [
+    {name="Adam Mahood", email="admahood@duck.com"},
+    {name="Travis Williams"},
+    {name="Lise St. Denis"},
+    {name="Maxwell Cook"},
+    {name="Ellie Lindrooth"},
+    {name="Nate Hofford"},
+    {name="Kyle Manley"},
+    {name="Maxwell Joseph"},
+    {name="Erick Verleye"}
+]
 license = "MIT"
 keywords = ["FIRED", "firedpy", "fire", "wildfire"]
 requires-python = ">=3.12"

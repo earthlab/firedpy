@@ -1,20 +1,28 @@
-"""
-Simplified EarthAccess MODIS Data Wrapper for FireDPy
-====================================================
-"""
-
+"""Simplified EarthAccess MODIS Data Wrapper for Firedpy."""
 import earthaccess
 import os
 import requests
-from typing import List, Optional, Tuple, Union
+
 import logging
 
 logger = logging.getLogger(__name__)
 
-class MODISEarthAccess:
-    """Simplified EarthAccess-based MODIS data access for FireDPy."""
 
-    def __init__(self, username: Optional[str] = None, password: Optional[str] = None):
+# Global instance for backward compatibility
+MODIS_ACCESS = None
+
+
+class MODISEarthAccess:
+    """Simplified EarthAccess-based MODIS data access for Firedpy."""
+
+    def __init__(self, username=None, password=None):
+        """Initialize MODISEarthAccess object.
+
+        Paramters
+        ---------
+        username : str
+            Earth Access Username. Defaults to user prompt, Optional.
+        """
         self.username = username
         self.password = password
         self._authenticated = False
@@ -24,7 +32,7 @@ class MODISEarthAccess:
         """Setup earthaccess authentication."""
         try:
             if self.username and self.password:
-                self.auth = earthaccess.login(username=self.username, password=self.password)
+                self.auth = earthaccess.login(self.username, self.password)
             else:
                 self.auth = earthaccess.login()
 
@@ -38,9 +46,21 @@ class MODISEarthAccess:
             logger.error(f"EarthAccess authentication failed: {e}")
             raise
 
-    def download_file(self, url: str, dest_path: str) -> bool:
-        """Download a file using standard requests with earthaccess authentication."""
+    def download_file(self, url, dest_path):
+        """Download file with earthaccess authentication.
 
+        Parameters
+        ----------
+        url : str
+            Target Earthaccess file URL.
+        dest_path : str
+            Target local file path.
+
+        Returns
+        -------
+        bool : True if download successful, False if request not authenticated
+               or if down load fails.
+        """
         if not self._authenticated:
             return False
 
@@ -48,7 +68,11 @@ class MODISEarthAccess:
             os.makedirs(os.path.dirname(dest_path), exist_ok=True)
 
             # Use requests with earthaccess authentication
-            response = requests.get(url, auth=(self.username, self.password), stream=True)
+            response = requests.get(
+                url,
+                auth=(self.username, self.password),
+                stream=True
+            )
             response.raise_for_status()
 
             with open(dest_path, 'wb') as f:
@@ -63,21 +87,41 @@ class MODISEarthAccess:
             logger.error(f"Download failed for {url}: {e}")
             return False
 
-# Global instance for backward compatibility
-_modis_access = None
 
-def setup_modis_earthaccess(username: str, password: str) -> MODISEarthAccess:
-    """Setup global MODIS earthaccess instance."""
-    global _modis_access
+def setup_modis_earthaccess(username, password):
+    """Setup global MODIS earthaccess instance.
+
+    Parameters
+    ----------
+    username : str
+        Earthaccess account username.
+    password : str
+        Earthaccess account password.
+
+    Returns
+    -------
+    firedpy.modis_earthaccess.MODISEarthAccess : A Firedpy MODIS Earth Access
+        object.
+    """
+
+    global MODIS_ACCESS
+
     try:
-        _modis_access = MODISEarthAccess(username, password)
-        return _modis_access
+        MODIS_ACCESS = MODISEarthAccess(username, password)
+        return MODIS_ACCESS
     except Exception as e:
         print(f"EarthAccess setup failed: {e}")
         return None
 
-def get_modis_earthaccess() -> MODISEarthAccess:
-    """Get the global MODIS earthaccess instance."""
-    if _modis_access is None:
+
+def get_modis_earthaccess():
+    """Get the global MODIS earthaccess instance.
+
+    Returns
+    -------
+    firedpy.modis_earthaccess.MODISEarthAccess : A Firedpy MODIS Earth Access
+        object.
+    """
+    if MODIS_ACCESS is None:
         raise RuntimeError("Call setup_modis_earthaccess() first")
-    return _modis_access
+    return MODIS_ACCESS

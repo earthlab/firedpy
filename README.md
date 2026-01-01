@@ -131,8 +131,8 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 || Greece| [2001-2021](https://scholar.colorado.edu/concern/datasets/bc386k355)| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/z316q349s)**||
 || Greenland|| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/bv73c218z)**||
 || Guernsey|| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/bz60cx90j)**||
-|| Hungary|**[Nov 2000 - December 2024](https://scholar.colorado.edu/concern/datasets/bc386m008)**|||
-|| Ireland|**[Nov 2000 - December 2024](https://scholar.colorado.edu/concern/datasets/4m90dx459)**|||
+|| Hungary||**[Nov 2000 - December 2024](https://scholar.colorado.edu/concern/datasets/bc386m008)**||
+|| Ireland||**[Nov 2000 - December 2024](https://scholar.colorado.edu/concern/datasets/4m90dx459)**||
 || Italy|[2001-2021](https://scholar.colorado.edu/concern/datasets/v979v416g)| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/tb09j7441)**||
 || Kosovo|| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/f1881n864)**||
 || Latvia||**[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/fn1070711)**||
@@ -175,7 +175,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 || Central African Republic: |[2001-2021](https://scholar.colorado.edu/concern/datasets/pv63g1576) |**[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/zp38wf351)**||
 || Chad| [2001-2021](https://scholar.colorado.edu/concern/datasets/707958762)| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/s4655j45w)**||
 || Comoros||**[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/s7526f22t)**||
-|| Democratic Republic of the Congo| [2001-2021](https://scholar.colorado.edu/concern/datasets/5425kb88g)|||
+|| Democratic Republic of the Congo| [2001-2021](https://scholar.colorado.edu/concern/datasets/5425kb88g)||**[Nov 2000 - December 2024 (s1t1)](https://scholar.colorado.edu/concern/datasets/4b29b780c)**|
 || Djibouti| [2001-2021](https://scholar.colorado.edu/concern/datasets/1831cm01x)| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/rf55z935n)**||
 || Egypt||**[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/vm40xt27j)**||
 || Equatorial Guinea| [2001-2021](https://scholar.colorado.edu/concern/datasets/vx021g32b) | **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/j67315565)**||
@@ -356,6 +356,8 @@ After creating a new fire product, it might be useful to get it out of the docke
   - Create and activate a conda environment:
 
     `conda env create -f environment.yml`
+    
+  - Activate firedpy
 
     `conda activate firedpy`
 
@@ -399,7 +401,7 @@ After creating a new fire product, it might be useful to get it out of the docke
     'python bin/firedpy.py --help'
     
     
-### Parameter table (under construction)
+### Parameter table
   
 | parameter | value(s)| example | description|
 |:--------------|:----------|:-----|:---------|
