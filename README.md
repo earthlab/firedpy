@@ -351,7 +351,7 @@ After creating a new fire product, it might be useful to get it out of the docke
 
   - You must have all packages listed in the environment.yaml installed using
   
-    'conda install -c conda-forge <package_name>'
+    `conda install -c conda-forge <package_name>`
 
   - Create and activate a conda environment:
 
