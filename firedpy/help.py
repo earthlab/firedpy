@@ -61,6 +61,12 @@ HELP_TEXT = {
         csv.
         """
     ),
+    "interactive": (
+        """
+        Run the CLI in interactive mode. Any required argument that is not
+        supplied will prompt the user for a value. Defaults to False.
+        """
+    ),
     "lc": (
         """
         To include land cover as an attribute, provide a number corresponding
@@ -92,7 +98,7 @@ HELP_TEXT = {
     "tile": (
         """
         You may specify the tiles as a list of characters (no quotes no
-        spaces) (e.g., 'h08v04', 'h09v04', etc.). Alternatively, provide a path
+        spaces) (e.g., ['h08v04', 'h09v04']). Alternatively, provide a path
         to a shapefile with either a '.shp' or '.gpkg' extension to use its
         intersecting MODIS tiles. In the `src` directory, you can access any of
         the 50 states by specifying 'ref/us_states/state_name.gpkg', all 7

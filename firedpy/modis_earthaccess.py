@@ -21,7 +21,9 @@ class MODISEarthAccess:
         Paramters
         ---------
         username : str
-            Earth Access Username. Defaults to user prompt, Optional.
+            Earth Access username. Defaults to user prompt, Optional.
+        password : str
+            Earth Access password. Defaults to user prompt, Optional.
         """
         self.username = username
         self.password = password

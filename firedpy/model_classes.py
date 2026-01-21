@@ -1,7 +1,6 @@
 import gc
 import hashlib
 import math
-import multiprocessing as mp
 import os
 import random
 import re
@@ -9,43 +8,54 @@ import shutil
 import sys
 
 from argparse import Namespace
-from collections import OrderedDict, deque
-from glob import glob
-from itertools import chain
-from typing import List, Set, Dict, Tuple, Any
+from concurrent.futures import as_completed, ProcessPoolExecutor
+from datetime import datetime
+from typing import List, Set, Dict, Tuple
 
-import matplotlib.pyplot as plt
+import geopandas as gpd
+import pandas as pd
+import rasterio
 import numpy as np
 import xarray as xr
 
 from pyproj import Proj, transform
+from scipy.spatial import cKDTree
 from shapely import Point, Polygon, MultiPolygon
 from tqdm import tqdm
 
-import geopandas as gpd
-
-from datetime import datetime
-from scipy.spatial import cKDTree
-
-import pandas as pd
-import rasterio
-
+from firedpy import DATA_DIR
 from firedpy.enums import LandCoverType, EcoRegionType
 from firedpy.data_classes import Base
 
-import cProfile
-import pstats
 
-from concurrent.futures import as_completed, ProcessPoolExecutor
+def process_file_perimeter(nc_file_path, out_dir, spatial_param,
+                           temporal_param, i):
+    """Process a perimeter for a given burn data file.
 
-PROJECT_DIR = os.path.dirname(os.path.dirname(__file__))
-
-
-def _process_file_perimeter(args):
-    event_grid = EventGrid(nc_file_path=args[1], out_dir=args[2],
-                           spatial_param=args[4],
-                           temporal_param=args[3])
-    fire_events = event_grid.get_event_perimeters(args[0], progress_description=os.path.basename(args[1]))
+    Parameters
+    ----------
+    nc_file_path : str
+        Path to NetCDF file containing burn data for a MODIS tile.
+    out_dir : str
+        Project output directory path. Required.
+    spatial_param : int
+        The number of cells (~463 m resolution) to search for neighboring burn
+        detections. Defaults to 5 cells in all directions.
+    temporal_param : int
+        The number of days to search for neighboring burn detections.
+    i : int
+        Progress position.
+    """
+    event_grid = EventGrid(
+        nc_file_path=nc_file_path,
+        out_dir=out_dir,
+        spatial_param=spatial_param,
+        temporal_param=temporal_param
+    )
+    fire_events = event_grid.get_event_perimeters(
+        i,
+        progress_description=os.path.basename(nc_file_path)
+    )
     return fire_events
 
 
@@ -279,7 +289,12 @@ class EventGrid(Base):
 
         return list(zip(locs[0], locs[1]))
 
-    def get_event_perimeters(self, progress_position: int = 0, progress_description: str = '', all_t: bool = False):
+    def get_event_perimeters(
+            self,
+            progress_position: int = 0,
+            progress_description: str = '',
+            all_t: bool = False
+    ):
         """
         Iterate through each cell in the 3D MODIS Burn Date tile and group it
         into fire events using the space-time window.
@@ -292,9 +307,11 @@ class EventGrid(Base):
 
         time_index_buffer = max(1, self.temporal_param // 30)
 
-        for pair in tqdm(available_pairs, position=progress_position, file=sys.stdout, desc=progress_description):
+        for pair in tqdm(available_pairs, position=progress_position,
+                         file=sys.stdout, desc=progress_description):
             y, x = pair
-            top, bottom, left, right, center, origin, is_edge = self._get_spatial_window(y, x, dims)
+            top, bottom, left, right, center, origin, is_edge = \
+                self._get_spatial_window(y, x, dims)
             center_y, center_x = center
 
             window = self._input_array[:, top:bottom + 1, left:right + 1]
@@ -374,17 +391,29 @@ class EventGrid(Base):
 
 
 class ModelBuilder(Base):
-    def __init__(self, out_dir: str, tiles: List[str], spatial_param: int = 5, temporal_param: int = 11,
-                 n_cores: int = os.cpu_count() - 1):
+    def __init__(
+            self,
+            out_dir: str,
+            tiles: List[str],
+            spatial_param: int = 5,
+            temporal_param: int = 11,
+            n_cores: int = os.cpu_count() - 1
+    ):
         super().__init__(out_dir)
         self.tiles = tiles
         self.spatial_param = spatial_param
         self.temporal_param = temporal_param
-        self.files = sorted([self._generate_local_nc_path(t) for t in self.tiles])
-        self._lc_mosaic_re = r'lc_mosaic_(?P<land_cover_type>\d{1})_(?P<year>\d{4})\.tif$'
+        self.files = sorted(
+            [self._generate_local_nc_path(t) for t in self.tiles]
+        )
+        self._lc_mosaic_re = r'lc_mosaic_(?P<land_cover_type>\d{1})_\
+            (?P<year>\d{4})\.tif$'
 
         if not self.files:
-            raise FileNotFoundError(f'Could not find any netcdf files in {self._nc_dir} for tiles: {self.tiles}')
+            raise FileNotFoundError(
+                f"Could not find any netcdf files in {self._nc_dir} for "
+                f"tiles: {self.tiles}"
+            )
 
         # Use the first file to get some geometry data for later
         with xr.open_dataset(self.files[0]) as data_set:
@@ -392,8 +421,13 @@ class ModelBuilder(Base):
             self.geom = self.crs.geo_transform
             self._res = self.geom[1]
             self.sp_buf = spatial_param * self._res
-            self._coordinates = {dim: np.array(data_set.coords[dim].values) for dim in ['y', 'x', 'time']}
+            dims = ["y", "x", "time"]
+            self._coordinates = {
+                dim: np.array(data_set.coords[dim].values) for dim in dims
+            }
 
+        if n_cores == 0:
+            n_cores = os.cpu_count() - 1
         self._n_cores = n_cores
 
     @staticmethod
@@ -410,7 +444,7 @@ class ModelBuilder(Base):
 
     @staticmethod
     def _as_multi_polygon(polygon):
-        if type(polygon) == Polygon:
+        if isinstance(polygon, Polygon):
             polygon = MultiPolygon([polygon])
         return polygon
 
@@ -423,19 +457,26 @@ class ModelBuilder(Base):
         return dest_path
 
     def _copy_land_cover_ref(self, land_cover_type: LandCoverType) -> str:
-        lookup = os.path.join(PROJECT_DIR, 'ref', 'land_cover', f'MCD12Q1_LegendDesc_Type{land_cover_type.value}.csv')
-        land_cover_out_dir_path = os.path.join(self._out_dir, 'tables', 'land_cover',
-                                               f"MCD12Q1_LegendDesc_Type{land_cover_type.value}.csv")
+        lookup = DATA_DIR.joinpath(
+            'land_cover',
+            f'MCD12Q1_LegendDesc_Type{land_cover_type.value}.csv'
+        )
+        land_cover_out_dir_path = os.path.join(
+            self.out_dir, 'tables', 'land_cover',
+            f"MCD12Q1_LegendDesc_Type{land_cover_type.value}.csv"
+        )
         return self._copy_file(lookup, land_cover_out_dir_path)
 
     def _copy_wwf_file(self) -> str:
-        lookup = os.path.join(PROJECT_DIR, 'ref', 'world_eco_regions', 'wwf_terr_ecos.gpkg')
-        wwf_out_dir_path = os.path.join(self._out_dir, 'shapefiles', 'eco_region', 'wwf_terr_ecos.gpkg')
+        lookup = DATA_DIR.joinpath('world_eco_regions', 'wwf_terr_ecos.gpkg')
+        wwf_out_dir_path = os.path.join(
+            self.out_dir, 'shapefiles', 'eco_region', 'wwf_terr_ecos.gpkg'
+        )
         return self._copy_file(lookup, wwf_out_dir_path)
 
     def _copy_cec_file(self) -> str:
-        return self._copy_file(os.path.join(PROJECT_DIR, 'ref', 'ec_eco', 'NA_CEC_Eco_Level3.gpkg'),
-                               self._eco_region_shape_path)
+        src = DATA_DIR.joinpath('ec_eco', 'NA_CEC_Eco_Level3.gpkg')
+        return self._copy_file(src, self._eco_region_shape_path)
 
     def _to_kms(self, p: float):
         return (p * self._res ** 2) / 1000000
@@ -551,55 +592,80 @@ class ModelBuilder(Base):
         merged_events = []
         for i, group in enumerate(groups):
             group_array, coordinates = self._create_event_grid_array(group)
-            event_grid = EventGrid(out_dir=self._out_dir, input_array=group_array, coordinates=coordinates)
-            perimeters = event_grid.get_event_perimeters(progress_position=i,
-                                                         progress_description=f'Merging edge tiles for group {i} of'
-                                                                              f' {len(groups)}', all_t=True)
+            event_grid = EventGrid(
+                out_dir=self.out_dir,
+                input_array=group_array,
+                coordinates=coordinates
+            )
+            desc = f'Merging edge tiles for group {i} of {len(groups)}'
+            perimeters = event_grid.get_event_perimeters(
+                progress_position=i,
+                progress_description=desc,
+                all_t=True
+            )
             del event_grid, group_array, coordinates, group
             merged_events.extend(perimeters)
 
         return merged_events
 
     def build_events(self):
-        """
-        Use the EventGrid class to classify events tile by tile and then merge
-        them all together for a seamless set of wildfire events.
-
-        """
+        """Build wildfire events tile by tile and merge together."""
         print('Building fire event perimeters')
 
+        # Initialize the event container
         fire_events = []
-
-        # Create a pool of workers with the number of cores specified
-        with mp.Pool(self._n_cores) as pool:
-            # Map the files to the processing function and collect the results
-            # Use starmap to pass the arguments unpacked
-            args = []
+        if self._n_cores == 1:
+            # Run serially
             for i, file in enumerate(self.files):
-                args.append((i, file, self._out_dir, self.temporal_param, self.spatial_param))
-            results = pool.imap_unordered(_process_file_perimeter, args)
+                out_dir = self.out_dir
+                temp_param = self.temporal_param
+                space_param = self.spatial_param
+                out = process_file_perimeter(
+                    file,
+                    out_dir,
+                    temp_param,
+                    space_param,
+                    i
+                )
+                fire_events.extend(out)
+        else:
+            # Run in parallel
+            with ProcessPoolExecutor(self._n_cores) as pool:
+                jobs = []
+                for i, file in enumerate(self.files):
+                    out_dir = self.out_dir
+                    temp_param = self.temporal_param
+                    space_param = self.spatial_param
+                    job = pool.submit(
+                        process_file_perimeter,
+                        file,
+                        out_dir,
+                        temp_param,
+                        space_param,
+                        i
+                    )
+                    jobs.append(job)
 
-            # As each file is processed, results will be appended to the fire_events list
-            for result in results:
-                fire_events.extend(result)
+                for job in tqdm(as_completed(jobs), total=len(jobs)):
+                    fire_events.extend(job.result())
 
+        # Assign event IDs
         for i in range(len(fire_events)):
             fire_events[i].event_id = i
 
+        # Find and merge the edge cases
         non_edge = [e for e in fire_events if not e.is_edge]
         edge_events = [e for e in fire_events if e.is_edge]
         for edge_event in edge_events:
             edge_event.compute_min_max()
-
         merged_edges = self.merge_fire_edge_events(edge_events)
-
         del edge_events
-
         last_non_edge_id = non_edge[-1].event_id + 1
         for edge in merged_edges:
             edge.event_id = last_non_edge_id
             last_non_edge_id += 1
 
+        # Combine edge and non edge cases
         fire_events = non_edge + merged_edges
         gc.collect()
 
@@ -703,58 +769,95 @@ class ModelBuilder(Base):
 
         return gdf
 
-    def add_land_cover_attributes(
-            self,
-            gdf: gpd.GeoDataFrame,
-            tiles: List[str],
-            land_cover_type: LandCoverType = LandCoverType.NONE
-        ) -> gpd.GeoDataFrame:
+    def add_land_cover_attributes(self, gdf, tiles, land_cover_type=0):
+        """Add landcover attributes to a FiredPy GeoDataFrame.
 
-        print('Adding land cover attributes...')
+        Parameters
+        ----------
+        gdf : geopandas.geodataframe.GeoDataFrame
+            A geodata frame of fire events.
+        tiles : list[str]
+            A list of MODIS of grid tile IDs.
+        land_cover_type : int | LandCoverType
+            Include land cover as an attribute, provide a number corresponding
+            with a MODIS/Terra+Aqua Land Cover (MCD12Q1) category followed with
+            username:password of your NASA's Earthdata service account.
+            Available land cover categories:
+
+                1: IGBP global vegetation classification scheme
+                2: University of Maryland (UMD) scheme
+                3: MODIS-derived LAI/fPAR scheme
+
+            If you do not have an account register at
+            https://urs.earthdata.nasa.gov/home. Defaults to 0 or
+            LandCoverType.NONE.
+
+        Returns
+        -------
+        geopandas.geodataframe.GeoDataFrame : The geodataframe with landcover
+            attributes added.
+        """
+        # Match possible land cover type argument types
+        print("Adding land cover attributes...")
+        is_int = isinstance(land_cover_type, int)
+        is_lctype = isinstance(land_cover_type, LandCoverType)
+        if is_int and not is_lctype:
+            land_cover_type = LandCoverType(land_cover_type)
 
         # We'll need to specify which type of land_cover
         lc_descriptions = {
             LandCoverType.IGBP: "IGBP global vegetation classification scheme",
             LandCoverType.UMD: "University of Maryland (UMD) scheme",
             LandCoverType.MODIS_LAI: "MODIS-derived LAI/fPAR scheme",
-            LandCoverType.MODIS_BGC: ("MODIS-derived Net Primary Production "
-                                      "(NPP) scheme"),
+            LandCoverType.MODIS_BGC: (
+                "MODIS-derived Net Primary Production (NPP) scheme"
+            ),
             LandCoverType.PFT: "Plant Functional Type (PFT) scheme."
         }
 
         # Rasterio point querier (will only work here)
         def point_query(row):
-            x = row['x']
-            y = row['y']
-
+            x = row["x"]
+            y = row["y"]
             try:
                 val = int([val for val in lc.sample([(x, y)])][0])
             except Exception:
                 val = np.nan
-
             return val
 
         # Get the range of burn years
-        burn_years = list(gdf['ig_year'].unique())
+        burn_years = list(gdf["ig_year"].unique())
 
         # This works faster when split by year and the pointer is outside
         # This is also not the best way
         sgdfs = []
         for tile in tiles:
             for year in tqdm(burn_years, position=0, file=sys.stdout):
-                mosaic_dir = self._generate_land_cover_mosaic_dir(tile, year)
-                if not os.path.exists(mosaic_dir):
-                    print(f'No land cover data for {tile} in year {year}')
+                mosaic_dir = self.land_cover_dir.joinpath(
+                    tile, str(year), "mosaics"
+                )
+                if not mosaic_dir.exists():
+                    print(f"No land cover data for {tile} in year {year}")
                     continue
-                lc_files = sorted([os.path.join(mosaic_dir, f) for f in os.listdir(mosaic_dir) if re.match(self._lc_mosaic_re, f)])
-                lc_years = [int(re.match(self._lc_mosaic_re, os.path.basename(f)).groupdict()['year']) for f in lc_files]
-                lc_files = {lc_years[i]: lc_files[i] for i in range(len(lc_files))}
-                sgdf = gdf[gdf['ig_year'] == year]
+                lc_files = []
+                lc_years = []
+                for fname in os.listdir(mosaic_dir):
+                    if re.match(self._lc_mosaic_re, fname):
+                        fpath = os.path.join(mosaic_dir, fname)
+                        lc_files.append(fpath)
+                lc_files = sorted(lc_files)
+                for fpath in lc_files:
+                    fname = os.path.basename(fpath)
+                    year_dict = re.match(self._lc_mosaic_re, fname).groupdict()
+                    year = int(year_dict["year"])
+                    lc_years.append(year)
+                lc_files = {lc_years[i]: f for i, f in enumerate(lc_files)}
+                sgdf = gdf[gdf["ig_year"] == year]
 
                 # Now set year one back for land_cover
                 year = year - 1
 
-                # Use previous year's lc
+                # Use previous year's land cover
                 if year < min(lc_years):
                     year = min(lc_years)
                 elif year > max(lc_years):
@@ -762,16 +865,25 @@ class ModelBuilder(Base):
 
                 lc_file = lc_files[year]
                 lc = rasterio.open(lc_file)
-                sgdf['lc_code'] = sgdf.apply(point_query, axis=1)
-                sgdf['lc_mode'] = sgdf.groupby('id')['lc_code'].transform(self._mode)
+                sgdf["lc_code"] = sgdf.apply(point_query, axis=1)
+                sgdf["lc_mode"] = sgdf.groupby("id")["lc_code"].transform(
+                    self._mode
+                )
                 sgdfs.append(sgdf)
 
         gdf = pd.concat(sgdfs)
         gdf = gdf.reset_index(drop=True)
+
         # Add in the class description from land_cover tables
         land_cover_path = self._copy_land_cover_ref(land_cover_type)
         lc_table = pd.read_csv(land_cover_path)
-        gdf = pd.merge(left=gdf, right=lc_table, how='left', left_on='lc_mode', right_on='Value')
+        gdf = pd.merge(
+            left=gdf,
+            right=lc_table,
+            how='left',
+            left_on='lc_mode',
+            right_on='Value'
+        )
         gdf = gdf.drop('Value', axis=1)
         gdf['lc_type'] = lc_descriptions[land_cover_type]
 
@@ -780,10 +892,12 @@ class ModelBuilder(Base):
 
     def _add_attributes_from_na_cec(self, gdf, eco_region_level):
         # Different levels have different sources
+        institution = "(NA-Commission for Environmental Cooperation)"
         eco_types = {
-            'NA_L3CODE': ('Level III Ecoregions ' + '(NA-Commission for Environmental Cooperation)'),
-            'NA_L2CODE': ('Level II Ecoregions ' + '(NA-Commission for Environmental Cooperation)'),
-            'NA_L1CODE': ('Level I Ecoregions ' + '(NA-Commission for Environmental Cooperation)')}
+            "NA_L3CODE": f"Level III Ecoregions {institution}",
+            "NA_L2CODE": f"Level II Ecoregions {institution}",
+            "NA_L1CODE": f"Level I Ecoregions {institution}"
+        }
 
         # Read in the Level File (contains every level) and reference table
         shp_path = self._copy_cec_file()
@@ -793,35 +907,34 @@ class ModelBuilder(Base):
         # Filter for selected level (level III defaults to US-EPA version)
         if not eco_region_level:
             eco_region_level = 3
-
-        eco_code = [c for c in eco.columns if str(eco_region_level) in
-                    c and 'CODE' in c]
+        eco_code = [c for c in eco if str(eco_region_level) in
+                    c and "CODE" in c]
 
         if len(eco_code) > 1:
-            eco_code = [c for c in eco_code if 'NA' in c][0]
+            eco_code = [c for c in eco_code if "NA" in c][0]
         else:
             eco_code = eco_code[0]
 
         print("Selected ecoregion code: " + str(eco_code))
 
         # Find modal eco-region for each event id
-        eco = eco[[eco_code, 'geometry']]
+        eco = eco[[eco_code, "geometry"]]
         gdf = gpd.sjoin(gdf, eco, how="left", predicate="within")
         gdf = gdf.reset_index(drop=True)
-        gdf['eco_mode'] = gdf.groupby('id')[eco_code].transform(self._mode)
+        gdf["eco_mode"] = gdf.groupby("id")[eco_code].transform(self._mode)
 
         # Add in the type of eco-region
-        gdf['eco_type'] = eco_types[eco_code]
+        gdf["eco_type"] = eco_types[eco_code]
 
         # Add in the name of the modal ecoregion
         eco_ref = pd.read_csv(self._eco_region_csv_path)
-        eco_name = eco_code.replace('CODE', 'NAME')
+        eco_name = eco_code.replace("CODE", "NAME")
         eco_df = eco_ref[[eco_code, eco_name]].drop_duplicates()
         eco_map = dict(zip(eco_df[eco_code], eco_df[eco_name]))
-        gdf['eco_name'] = gdf[eco_code].map(eco_map)
+        gdf["eco_name"] = gdf[eco_code].map(eco_map)
 
         # Clean up column names
-        gdf = gdf.drop('index_right', axis=1)
+        gdf = gdf.drop("index_right", axis=1)
         gdf = gdf.drop(eco_code, axis=1)
 
         return gdf
@@ -847,8 +960,12 @@ class ModelBuilder(Base):
 
         return gdf
 
-    def add_eco_region_attributes(self, gdf: gpd.GeoDataFrame, eco_region_type: EcoRegionType = EcoRegionType.NA,
-                                  eco_region_level: int = None) -> gpd.GeoDataFrame:
+    def add_eco_region_attributes(
+            self,
+            gdf: gpd.GeoDataFrame,
+            eco_region_type: EcoRegionType = EcoRegionType.NA,
+            eco_region_level: int = None
+    ) -> gpd.GeoDataFrame:
 
         print("Adding eco-region attributes ...")
         if eco_region_level or (eco_region_type == EcoRegionType.NA):
@@ -868,13 +985,23 @@ class ModelBuilder(Base):
     @staticmethod
     def _create_did_column(df, columns):
         """Hashes multiple columns in a DataFrame"""
-        df['temp'] = df[columns].apply(lambda row: '_'.join(row.values.astype(str)), axis=1)
-        df['did'] = df['temp'].apply(lambda x: hashlib.md5(x.encode()).hexdigest())
+        df['temp'] = df[columns].apply(
+            lambda row: '_'.join(row.values.astype(str)),
+            axis=1
+        )
+        df['did'] = df['temp'].apply(
+            lambda x: hashlib.md5(x.encode()).hexdigest()
+        )
         df.drop('temp', axis=1, inplace=True)  # Remove temporary column
         return df
 
-    def process_daily_data(self, gdf: gpd.GeoDataFrame, output_csv_path: str, daily_shp_path: str,
-                           daily_gpkg_path: str) -> gpd.GeoDataFrame:
+    def process_daily_data(
+            self,
+            gdf: gpd.GeoDataFrame,
+            output_csv_path: str,
+            daily_shp_path: str,
+            daily_gpkg_path: str
+    ) -> gpd.GeoDataFrame:
         print("Dissolving polygons...")
 
         gdf = self._create_did_column(gdf, ['date', 'id'])
@@ -885,7 +1012,8 @@ class ModelBuilder(Base):
 
         self.save_data(gdfd, daily_shp_path, daily_gpkg_path, output_csv_path)
 
-        gdf = gdfd.drop(['did', 'pixels', 'date', 'event_day', 'dy_ar_km2'], axis=1)
+        dropcols = ['did', 'pixels', 'date', 'event_day', 'dy_ar_km2']
+        gdf = gdfd.drop(dropcols, axis=1)
         gdf = gdf.dissolve(by="id", as_index=False)
         print("Calculating perimeter lengths...")
         gdf["tot_perim"] = gdf["geometry"].length
@@ -941,8 +1069,7 @@ class ModelBuilder(Base):
             print("Saving file to " + shape_path)
 
     def add_kg_attributes(self, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-        """
-        Assign Köppen-Geiger climate zones to fire events using a single raster file.
+        """Assign Köppen-Geiger climate zones to events with a raster file.
 
         Args:
             gdf: GeoDataFrame containing 'x', 'y', and 'id'.
@@ -951,12 +1078,16 @@ class ModelBuilder(Base):
         Returns:
             GeoDataFrame with kg_zone, kg_mode, and kg_desc columns added.
         """
-        tif_path = os.path.join(PROJECT_DIR, 'data', 'koppen_geiger_tif', '1991_2020', 'koppen_geiger_0p00833333.tif')
+        tif_path = DATA_DIR.joinpath(
+            'koppen_geiger_tif', '1991_2020', 'koppen_geiger_0p00833333.tif'
+        )
 
-        KG_LEGEND = {1: "Af", 2: "Am", 3: "Aw", 4: "BWh", 5: "BWk", 6: "BSh", 7: "BSk", 8: "Csa", 9: "Csb", 10: "Csc",
-            11: "Cwa", 12: "Cwb", 13: "Cwc", 14: "Cfa", 15: "Cfb", 16: "Cfc", 17: "Dsa", 18: "Dsb", 19: "Dsc",
-            20: "Dsd", 21: "Dwa", 22: "Dwb", 23: "Dwc", 24: "Dwd", 25: "Dfa", 26: "Dfb", 27: "Dfc", 28: "Dfd", 29: "ET",
-            30: "EF",
+        KG_LEGEND = {
+            1: "Af", 2: "Am", 3: "Aw", 4: "BWh", 5: "BWk", 6: "BSh", 7: "BSk",
+            8: "Csa", 9: "Csb", 10: "Csc", 11: "Cwa", 12: "Cwb", 13: "Cwc",
+            14: "Cfa", 15: "Cfb", 16: "Cfc", 17: "Dsa", 18: "Dsb", 19: "Dsc",
+            20: "Dsd", 21: "Dwa", 22: "Dwb", 23: "Dwc", 24: "Dwd", 25: "Dfa",
+            26: "Dfb", 27: "Dfc", 28: "Dfd", 29: "ET", 30: "EF",
         }
 
         sgdf = gdf.copy()
@@ -977,4 +1108,3 @@ class ModelBuilder(Base):
         sgdf['kg_desc'] = sgdf['kg_mode'].map(KG_LEGEND)
 
         return sgdf
-    

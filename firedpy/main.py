@@ -1,4 +1,3 @@
-import argparse
 import os
 import resource
 import shutil
@@ -7,23 +6,15 @@ import urllib.request
 import warnings
 
 from http.cookiejar import CookieJar
-from pathlib import Path
 
-from firedpy import DATA_DIR
 from firedpy.data_classes import BurnData, EcoRegion, LandCover
-from firedpy.enums import (
-    EcoRegionType,
-    LandCoverType,
-    ShapeType,
-    TileChoice
-)
-from firedpy.help import HELP_TEXT
+from firedpy.enums import LandCoverType, ShapeType
 from firedpy.model_classes import ModelBuilder
-from firedpy.utilities.argument_parser import FiredpyArgumentParser
+from firedpy.utilities.argument_parsing import FiredpyArgumentParser
 from firedpy.utilities.create_readme import make_read_me
-from firedpy.spatial import shape_to_tiles
 
 warnings.filterwarnings("ignore", category=FutureWarning)
+
 
 EARTHDATA_TEST_URL = (
     "https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.061/2019.01.01/"
@@ -31,129 +22,50 @@ EARTHDATA_TEST_URL = (
 )
 
 
-def build_parser():
-    """Build the CLI argument parser."""
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-o",
-        "--output_directory",
-        dest="out_dir",
-        default=DATA_DIR.joinpath("output"),
-        help=HELP_TEXT["data"]
-    )
-    parser.add_argument(
-        "-f",
-        "--file_name",
-        dest="file_name",
-        default="fired",
-        type=str,
-        help=HELP_TEXT["file"]
-    )
-    parser.add_argument(
-        "-et",
-        "--eco_region_type",  # Distinguish this one from the eco region level
-        type=EcoRegionType,
-        help=HELP_TEXT["eco"]
-    )
-    parser.add_argument(
-        "-el",
-        "--eco_region_level",
-        type=int,
-        help=HELP_TEXT["eco"]
-    )
-    parser.add_argument(
-        "-lc",
-        "--land_cover_type",
-        help=HELP_TEXT["lc"],
-        type=int
-    )
-    parser.add_argument(
-        "-st",
-        "--shape_type",
-        help=HELP_TEXT["shp"],
-        type=ShapeType
-    )
-    parser.add_argument(
-        "-s",
-        "--spatial",
-        dest="spatial_param",
-        type=int,
-        help=HELP_TEXT["sp"]
-    )
-    parser.add_argument(
-        "-t",
-        "--temporal",
-        dest="temporal_param",
-        type=int,
-        help=HELP_TEXT["tmp"]
-    )
-    parser.add_argument(
-        "-tc",
-        "--tile_choice",
-        type=TileChoice,
-        help=""
-    )
-    parser.add_argument(
-        "-tn",
-        "--tile_name",
-        type=str,
-        help=HELP_TEXT["tile_name"]
-    )
-    parser.add_argument(
-        "-d",
-        "--daily",
-        type=str,
-        help=HELP_TEXT["daily"]
-    )
-    parser.add_argument(
-        "-sy",
-        "--start_year",
-        type=int,
-        help=HELP_TEXT["start_year"]
-    )
-    parser.add_argument(
-        "-ey",
-        "--end_year",
-        type=int,
-        help=HELP_TEXT["end_year"]
-    )
-    parser.add_argument(
-        "-fc",
-        "--full_csv",
-        type=str,
-        help=HELP_TEXT["full_csv"]
-    )
-    parser.add_argument(
-        "-nc",
-        "--n_cores",
-        type=int,
-        help=HELP_TEXT["n_cores"]
-    )
-    parser.add_argument(
-        "-cu",
-        "--cleanup",
-        type=str,
-        help=HELP_TEXT["cleanup"]
-    )
+def cleanup_intermediate_files(out_dir):
+    """Remove temporary `burn_area` and `land_cover` raster files.
 
-    return parser
+    Parameters
+    ----------
+    out_dir : str | pathlib.PosixPath
+        The output directory containing 'rasters/burn_area' and
+        'rasters/land_cover'.
+    """
+    shutil.rmtree(os.path.join(out_dir, "rasters", "burn_area"))
+    shutil.rmtree(os.path.join(out_dir, "rasters", "land_cover"))
 
 
-def generate_path(proj_dir, base_filename, shape_type: ShapeType):
-    """Generate the appropriate file path."""
-    proj_dir = Path(proj_dir)
-    file_exts = {
+def generate_path(proj_dir, base_filename, shape_type):
+    """Return the full path to a target file
+
+    Parameters
+    ----------
+    proj_dir : str
+        A project directory selected containing target shapefiles. This
+        corresponds with the '-o' or '--output_directory` option in the
+        firedpy CLI.
+    base_filename : str
+        The file name of the target file.
+    shape_type : firedpy.enums.ShapeType
+        One of ShapeType.SHP, ShapeType.GPKG, or ShapeType.BOTH.
+
+    Returns
+    -------
+    list[str] : A list of full filepaths corresponding with the target file
+        and file formats.
+    """
+    file_extensions = {
         ShapeType.SHP: [".shp", None],
         ShapeType.GPKG: [".gpkg", None],
         ShapeType.BOTH: [".shp", ".gpkg"]
     }
-    file_ext = file_exts.get(shape_type, [".gpkg"])
+    file_ext = file_extensions.get(shape_type, [".gpkg"])
 
     paths = []
     for ext in file_ext:
         if ext:
             fname = f"{base_filename}{ext}"
-            path = proj_dir.joinpath("outputs", "shapefiles", fname)
+            path = os.path.join(proj_dir, "outputs", "shapefiles", fname)
         else:
             path = None
         paths.append(path)
@@ -161,28 +73,24 @@ def generate_path(proj_dir, base_filename, shape_type: ShapeType):
     return paths
 
 
-def get_tile_name_from_directory(parser: FiredpyArgumentParser, directory: str,
-                                 prompt_message: str):
-    """Function to prompt the user for a tile name from a given directory."""
-    available_files = [
-        file.replace(".gpkg", "") for file in os.listdir(directory) if
-        file.endswith(".gpkg")
-    ]
-    return parser.prompt_for_argument(
-        arg_name="tile_name",
-        prompt_override=prompt_message,
-        accepted_value_override=available_files
-    )
+def peak_memory():
+    """Get maximum resident usage size of current process.
+
+    NOTE: This probably isn't doing what we want.
+    """
+    return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
 
 
-def str_to_bool(s: str):
-    accepted_values = ["true", "y", "yes", "false", "n", "no"]
-    if s.lower() not in accepted_values:
-        raise ValueError(f"{s} must be in {accepted_values}")
-    return s.lower() in ["true", "y", "yes"]
+def test_earthdata_credentials(username, password):
+    """Test access to `ers.earthdata.nasa.gov`
 
-
-def test_earthdata_credentials(username: str, password: str) -> None:
+    Parameters
+    ----------
+    username : str
+        Username for Earthdata account.
+    password : str
+        Password for Earthdata account.
+    """
     # Earthdata Login
     password_manager = urllib.request.HTTPPasswordMgrWithDefaultRealm()
     password_manager.add_password(None, "https://urs.earthdata.nasa.gov",
@@ -208,328 +116,340 @@ def test_earthdata_credentials(username: str, password: str) -> None:
     urllib.request.urlopen(request)
 
 
-def peak_memory():
-    """Get maximum resident usage size of current process."""
-    return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-
-
-def cleanup_intermediate_files(out_dir):
-    shutil.rmtree(os.path.join(out_dir, "rasters", "burn_area"))
-    shutil.rmtree(os.path.join(out_dir, "rasters", "land_cover"))
-
-
-def resolve_arguments(args, firedpy_parser):
-    """Resolve given user arguments and/or prompt for missing arguments.
+def run_all(
+    out_dir,
+    tiles,
+    tile_name=None,
+    start_year=2000,
+    end_year=2025,
+    daily=True,
+    spatial_param=8,
+    temporal_param=3,
+    shape_file=None,
+    shape_type="gpkg",
+    eco_region_level=None,
+    eco_region_type=1,
+    land_cover_type=1,
+    n_cores=0,
+    full_csv=True,
+    username=None,
+    password=None
+):
+    """Run all steps of the FiredPy modeling pipeline.
 
     Parameters
     ----------
-    args : argparse.Namespace
-        A collection of argument default value pairs from argparse.
-    firedpy_parser : firedpy.utilities.argument_parser.FiredpyArgumentParser
-        An initialized firedpy argument parser object.
+    out_dir : str
+        Project output directory path. Required.
+    tiles : list
+        List of MODIS tiles (e.g., ['h08v04', 'h09v04']). Required.
+    tile_name : str | NoneType
+        The name of the MODIS tile being run? Shouldn't there be multiple?
+        How is this different from above, defaulting to None for now.
+    start_year : int
+        The first year of fire events. Defaults to 2000.
+    end_year : int
+        The last year of fire events. Defaults to 2025.
+    daily : boolean
+        Create the daily polygons or just the event-level perimeter for your
+        analysis area. If this flag is set, the daily and event polygons will
+        be created, otherwise only the event level.
+    spatial_param : int
+        The number of cells (~463 m resolution) to search for neighboring burn
+        detections. Defaults to 5 cells in all directions.
+    temporal_param : int
+        The number of days to search for neighboring burn detections.
+    shape_file : str
+        Path to a shapefile to use for the fire study area.
+    shape_type : str
+        Build shapefiles from the event data frame. Specify either "shp",
+        "gpkg", or both. Shapefiles of both daily progression and overall
+        event perimeters will be written to the 'outputs/shapefiles' folder of 
+        the chosen project directory. These will be saved in the specified
+        geopackage format (.gpkg), ERSI Shapefile format (.shp), or save them
+        in both formats using the file basename of the fire event data frame
+        (e.g. 'modis_events_daily.gpkg' and 'modis_events.gpkg').
+    eco_region_level : int
+        The desired Ecoregions level from the North American Commission for
+        Environmental Cooperation (CEC). Levels 1 to 3 are available, with
+        level 1 representing the broadest scale and level III representing the
+        most detailed. Defaults to 1.
+    eco_region_type : str
+        Specify the ecoregion type as either 'world' or 'na':
 
-    Returns
-    -------
-    argparse.Namespace : Updated argparse object with refined or user supplied
-        values.
+            'world' = World Terrestrial Ecoregions (World Wildlife Fund)
+            'na' = North American ecoregions (Omernick, 1987)
+
+        The most common (modal) ecoregion across the event is used.
+
+        Further, to associate each event with North American ecoregions
+        (Omernick, 1987) you may provide a number corresponding to an
+        ecoregion level. Ecoregions are retrieved from www.epa.gov and
+        levels I through IV are available. Levels I and II were developed
+        by the North American Commission for Environmental Cooperation.
+        Levels III and IV were developed by the United States Environmental
+        Protection Agency. For events with more than one ecoregion, the
+        most common value will be used. Defaults to None.
+    land_cover_type : int
+        Include land cover as an attribute, provide a number corresponding
+        with a MODIS/Terra+Aqua Land Cover (MCD12Q1) category followed with
+        username:password of your NASA's Earthdata service account.
+        Available land cover categories:
+
+            1: IGBP global vegetation classification scheme
+            2: University of Maryland (UMD) scheme
+            3: MODIS-derived LAI/fPAR scheme
+
+        If you do not have an account register at
+        https://urs.earthdata.nasa.gov/home. Defaults to 1.
+    n_cores : int
+        Number of cores to use for parallel processing. Defaults to 0
+        or all available cores.
+    full_csv : bool
+        Export all attributes to CSV. Defaults to only x and y coordinates,
+        event date, and event id will be exported to a CSV. Defaults to
+        True.
+    username : str
+        Username for a NASA Earthdata Account. Defaults to None, will
+        prompt user.
+    password : str
+        Password for a NASA Earthdata Account. Defaults to None, will
+        prompt user.
     """
-    # Resolve the output directory
-    if args.out_dir:
-        args.out_dir = args.out_dir
-    else:
-        args.out_dir = firedpy_parser.prompt_for_argument("out_dir")
-    os.makedirs(args.out_dir, exist_ok=True)
-
-    # Resolve full csv
-    if args.full_csv:
-        args.full_csv = str_to_bool(args.full_csv)
-    else:
-        args.full_csv = firedpy_parser.prompt_for_argument("full_csv")
-
-    # Resolve n_cores
-    if not args.n_cores:
-        args.n_cores = firedpy_parser.prompt_for_argument("n_cores")
-    if args.n_cores == 0:
-        args.n_cores = os.cpu_count() - 1
-
-    # Resolve tile choice
-    if not args.tile_choice:
-        user_input = firedpy_parser.prompt_for_argument("tile_choice")
-        args.tile_choice = TileChoice(user_input)
-
-    if args.tile_choice == TileChoice.A:
-        if not args.tile_name:
-            args.tile_name = get_tile_name_from_directory(
-                parser=firedpy_parser,
-                directory=DATA_DIR.joinpath("continents"),
-                prompt_message="Please enter the continent name: "
-            )
-
-        args.shape_file = DATA_DIR.joinpath(
-            "continents", f"{args.tile_name}.gpkg"
-        )
-        print(f"Filtering for MODIS tiles that intersect \n {args.shape_file}")
-        args.tiles = shape_to_tiles(args.shape_file)
-
-        if args.tile_name == "north_america":
-            args.eco_region_type = EcoRegionType.NA
-            args.eco_region_level = 3
-        else:
-            args.eco_region_type = EcoRegionType.WORLD
-            args.eco_region_level = None
-
-    elif args.tile_choice == TileChoice.B:
-        if not args.tile_name:
-            args.tile_name = get_tile_name_from_directory(
-                parser=firedpy_parser,
-                directory=DATA_DIR.joinpath("individual_countries"),
-                prompt_message="Please enter the country name:"
-            )
-
-        args.shape_file = DATA_DIR.joinpath("individual_countries",
-                                            f"{args.tile_name}.gpkg")
-        print(f"Filtering for MODIS tiles that intersect \n {args.shape_file}")
-        args.tiles = shape_to_tiles(args.shape_file)
-
-        na_tiles = ["united_states_of_america", "canada",
-                    "united_states_virgin_islands"]
-        if args.tile_name in na_tiles:
-            args.eco_region_type = EcoRegionType.NA
-            args.eco_region_level = 3
-        else:
-            args.eco_region_type = EcoRegionType.WORLD
-            args.eco_region_level = None
-
-    elif args.tile_choice == TileChoice.C:
-        if not args.tile_name:
-            args.tile_name = get_tile_name_from_directory(
-                parser=firedpy_parser,
-                directory=DATA_DIR.joinpath("us_states"),
-                prompt_message="Please enter the state name:"
-            )
-
-        args.shape_file = DATA_DIR.joinpath("us_states",
-                                            f"{args.tile_name}.gpkg")
-        print(f"Filtering for MODIS tiles that intersect \n {args.shape_file}")
-        args.tiles = shape_to_tiles(args.shape_file)
-        args.eco_region_type = EcoRegionType.NA
-        args.eco_region_level = 3
-
-    elif args.tile_choice == TileChoice.D:
-        args.shape_file = input("Please enter the GPKG or shapefile path:")
-        print(f"Filtering for MODIS tiles that intersect \n {args.shape_file}")
-        args.tiles = shape_to_tiles(args.shape_file)
-        args.tile_name = os.path.basename(args.shape_file).rstrip(".gpkg")
-        args.tile_name = args.tile_name.rstrip(".shp")
-        args.eco_region_type = firedpy_parser.prompt_for_argument(
-            "eco_region_type"
-        )
-        if args.eco_region_type == EcoRegionType.NA:
-            args.eco_region_level = 3
-        else:
-            args.eco_region_level = None
-
-    elif args.tile_choice == TileChoice.E:
-        args.tiles = firedpy_parser.prompt_for_argument(
-            arg_name="tile_name",
-            prompt_override=(
-                "Please enter tiles as a list of characters "
-                "(no quotes no spaces)(e.g., h08v04 h09v04 ...):"
-            )
-        )
-        if args.tile_name:
-            args.tiles = args.tile_name
-        else:
-            args.tiles = args.tiles.split(" ")
-        args.tile_name = args.tiles[0]
-        args.eco_region_type = firedpy_parser.prompt_for_argument(
-            "eco_region_type"
-        )
-        if args.eco_region_type == EcoRegionType.NA:
-            args.eco_region_level = 3
-        else:
-            args.eco_region_level = None
-        args.shape_file = None
-    else:
-        raise ValueError("Invalid tile choice.")
-
-    # Resolve daily option
-    if args.daily:
-        args.daily = str_to_bool(args.daily)
-    else:
-        args.daily = firedpy_parser.prompt_for_argument("daily")
-
-    # Resolve spatial parameter
-    if not args.spatial_param:
-        args.spatial_param = firedpy_parser.prompt_for_argument("spatial")
-
-    # Resolve temporal parameter
-    if not args.temporal_param:
-        args.temporal_param = firedpy_parser.prompt_for_argument("temporal")
-
-    # Resolve shapefile format option
-    if not args.shape_type:
-        user_input = firedpy_parser.prompt_for_argument("shape_type")
-        args.shape_type = ShapeType(user_input)
-    args.shapefile = args.shape_type != ShapeType.NONE
-
-    # Resolve land cover type
-    if args.land_cover_type:
-        args.land_cover_type = LandCoverType(args.land_cover_type)
-    else:
-        user_input = firedpy_parser.prompt_for_argument("land_cover_type")
-        args.land_cover_type = LandCoverType(user_input)
-
-    # Resolve clean up option
-    if args.cleanup:
-        args.cleanup = str_to_bool(args.cleanup)
-    else:
-        args.cleanup = firedpy_parser.prompt_for_argument("cleanup")
-
-    # Resolve username and password
-    args.username = os.environ.get("FIREDPY_ED_USER", None)
-    args.password = os.environ.get("FIREDPY_ED_PWD", None)
-    if args.username is None or args.password is None:
-        print(HELP_TEXT["earthdata"])
-        args.username = firedpy_parser.prompt_for_argument("username")
-        args.password = firedpy_parser.prompt_for_argument(
-            "password",
-            sensitive=True
-        )
-        print("EarthAccess will handle authentication automatically.")
-
-    # Resolve start and end years
-    if args.start_year and args.start_year > 0:
-        args.start_year = args.start_year
-    elif args.start_year == 0:
-        args.start_year = None
-    else:
-        args.start_year = firedpy_parser.prompt_for_argument("start_year")
-
-    if args.end_year and args.end_year > 0:
-        args.end_year = args.end_year
-    elif args.end_year == 0:
-        args.end_year = None
-    else:
-        args.end_year = firedpy_parser.prompt_for_argument("end_year")
-
-    # Resolve land cover
-    if args.land_cover_type != LandCoverType.NONE:
-        print("Retrieving landcover...")
-        args.land_cover = LandCover(
-            out_dir=args.out_dir,
-            n_cores=args.n_cores,
-            username=args.username,
-            password=args.password
-        )
-        args.land_cover.get_land_cover(args.tiles, args.land_cover_type)
-
-    return args
-
-
-def main():
-    # Start the timer (seconds)
-    start = time.perf_counter()
-
-    # Get the maximum resource use for this process
-    initial_memory = peak_memory()
-
-    # Parse arguments  (All of this could be wrapped into one function)
-    parser = build_parser()
-    args = parser.parse_args()
-    param_fpath = DATA_DIR.joinpath("params.txt")
-    firedpy_parser = FiredpyArgumentParser(param_fpath)
-    args = resolve_arguments(args, firedpy_parser)
-
     # Get the ecoregion data
-    eco_region_data = EcoRegion(args.out_dir)
+    # This also initiates the project directory and it's subfolders and
+    # downloads the MODIS world grid, let's adjust here for clarity
+    eco_region_data = EcoRegion(out_dir=out_dir)
     eco_region_data.get_eco_region()
 
     # Get the burn data
-    burn_data = BurnData(args.out_dir, args.username, args.password,
-                         args.n_cores)
-    burn_data.get_burns(args.tiles, args.start_year, args.end_year)
+    burn_data = BurnData(
+        out_dir=out_dir,
+        username=username,
+        password=password,
+        n_cores=n_cores
+    )
+    burn_data.get_burns(
+        tiles=tiles,
+        start_year=start_year,
+        end_year=end_year
+    )
 
     # Create Model Builder object
     models = ModelBuilder(
-        out_dir=args.out_dir,
-        tiles=args.tiles,
-        spatial_param=args.spatial_param,
-        temporal_param=args.temporal_param,
-        n_cores=args.n_cores
+        out_dir=out_dir,
+        tiles=tiles,
+        spatial_param=spatial_param,
+        temporal_param=temporal_param,
+        n_cores=n_cores
     )
 
     # Build event perimeters
     event_perimeters = models.build_events()
 
+    # Build the event geodataframe
     # TODO: This can be parallelized
-    gdf = models.build_points(event_perimeters,
-                              shape_file_path=args.shape_file)
-    gdf = models.add_fire_attributes(gdf)
-    if args.land_cover_type != LandCoverType.NONE:
-        gdf = models.add_land_cover_attributes(gdf, args.tiles,
-                                               args.land_cover_type)
+    gdf = models.build_points(
+        event_perimeter_list=event_perimeters,
+        shape_file_path=shape_file
+    )
+
+    # Add secondary attributes
+    gdf = models.add_fire_attributes(gdf=gdf)
+    if land_cover_type != LandCoverType.NONE:
+        land_cover = LandCover(
+            out_dir=out_dir,
+            n_cores=n_cores,
+            username=username,
+            password=password
+        )
+        land_cover.get_land_cover(  #-----------------------------------------> This doesn't create the geotiffs the next methods look for
+            tiles=tiles,
+            land_cover_type=land_cover_type
+        )
+        gdf = models.add_land_cover_attributes(
+            gdf=gdf,
+            tiles=tiles,
+            land_cover_type=land_cover_type
+        )
     gdf = models.process_geometry(gdf)
-    gdf = models.add_eco_region_attributes(gdf, args.eco_region_type,
-                                           args.eco_region_level)
+    gdf = models.add_eco_region_attributes(
+        gdf=gdf,
+        eco_region_type=eco_region_type,
+        eco_region_level=eco_region_level
+    )
 
     # Calculate fire spread speed and maximum travel vectors
     gdf = models.add_kg_attributes(gdf)
 
-    # Build the polygons
+    # Build the burn polygons
     date_range = burn_data.get_date_range(
-        start_year=args.start_year,
-        end_year=args.end_year
+        start_year=start_year,
+        end_year=end_year
     )
     date1 = date_range[0][0]
     date2 = date_range[-1][0]
-    base_file_name = f"fired_{args.tile_name}_{date1}_to_{date2}"
+    base_file_name = f"fired_{tile_name}_{date1}_to_{date2}"
     daily_base = f"{base_file_name}_daily"
     event_base = f"{base_file_name}_events"
     daily_shape_path, daily_gpkg_path = generate_path(
-        proj_dir=args.out_dir,
+        proj_dir=out_dir,
         base_filename=daily_base,
-        shape_type=args.shape_type
+        shape_type=shape_type
     )
     event_shape_path, event_gpkg_path = generate_path(
-        proj_dir=args.out_dir,
+        proj_dir=out_dir,
         base_filename=event_base,
-        shape_type=args.shape_type
+        shape_type=shape_type
     )
-    csv_path = os.path.join(args.out_dir, base_file_name + ".csv")
+    csv_path = os.path.join(out_dir, base_file_name + ".csv")
 
-    if args.daily:
+    # Process event data
+    if daily:
         os.makedirs(os.path.dirname(daily_shape_path), exist_ok=True)
         csv_path = str(csv_path).replace(".csv", "_daily.csv")
         if daily_gpkg_path:
             os.makedirs(os.path.dirname(daily_gpkg_path), exist_ok=True)
-        gdf = models.process_daily_data(gdf, csv_path, daily_shape_path,
-                                        daily_gpkg_path)
+        gdf = models.process_daily_data(
+            gdf=gdf,
+            output_csv_path=csv_path,
+            daily_shp_path=daily_shape_path,
+            daily_gpkg_path=daily_gpkg_path
+        )
     else:
         gdf = models.process_event_data(gdf)
 
+    # Save the events
     os.makedirs(os.path.dirname(event_shape_path), exist_ok=True)
     if event_gpkg_path is not None:
         os.makedirs(os.path.dirname(event_gpkg_path), exist_ok=True)
-    models.save_event_data(gdf, csv_path, event_shape_path, event_gpkg_path,
-                           full_csv=args.full_csv)
+    models.save_event_data(
+        gdf=gdf,
+        outptu_csv_path=csv_path,
+        event_shape_path=event_shape_path,
+        event_gpkg_path=event_gpkg_path,
+        full_csv=full_csv
+    )
 
+    return base_file_name
+
+
+def main():
+    # Start the timer (seconds, not as helpful for prompted inputs)
+    start = time.perf_counter()
+
+    # Get the maximum resource use for this process (fix this, it's broken)
+    initial_memory = peak_memory()
+
+    # Parse user arguments
+    resolver = FiredpyArgumentParser()
+    args = resolver.resolve()
+
+    # Break out arguments for easier editing/readability
+    out_dir = args.out_dir
+    tile_name = args.tile_name
+    tiles = args.tiles
+    daily = args.daily
+    start_year = args.date_range[0]
+    end_year = args.date_range[1]
+    spatial_param = args.spatial_param
+    temporal_param = args.temporal_param
+    shapefile = args.shapefile
+    shape_type = args.shape_typem
+    n_cores = args.n_cores
+    full_csv = args.full_csv
+    username = args.username
+    password = args.password
+
+    # Run the model
+    file_base = run_all(
+        out_dir=out_dir,
+        tiles=tiles,
+        tile_name=tile_name,
+        start_year=start_year,
+        end__year=end_year,
+        daily=daily,
+        spatial_param=spatial_param,
+        temporal_param=temporal_param,
+        shapefile=shapefile,
+        shape_type=shape_type,
+        n_cores=n_cores,
+        full_csv=full_csv,
+        username=username,
+        password=password
+    )
+
+    # Done.
     end = time.perf_counter()
     seconds = end - start
     minutes = seconds / 60
-    print("Job completed in {} minutes".format(round(minutes, 2)))
+    print(f"Job completed in {minutes:.2f} minutes")
+    peak_mem = (peak_memory() - initial_memory) / 1_024 ** 3
+    print(f"Peak memory usage: {peak_mem:.2f} GB")
+    make_read_me(
+        out_dir=out_dir,
+        tile_name=tile_name,
+        file_base=file_base,
+        input=1,
+        first_date=start_year,
+        last_date=end_year,
+        daily=daily,
+        spatial_param=spatial_param,
+        temporal=temporal_param,
+        shapefile=shapefile,
+        shape_type=shape_type,
+        job_time=seconds,
+        job_memory=peak_mem,
+        n_cores=n_cores
+    )
 
-    peak_mem = (peak_memory() - initial_memory) / (1024 * 1024 * 1024)
-    print("Peak memory usage:", peak_mem, "GB")
-
-    make_read_me(args.out_dir, args.tile_name, base_file_name, 1,
-                 date_range[0], date_range[-1], args.daily, args.spatial_param,
-                 args.temporal_param, args.shapefile, args.shape_type,
-                 seconds, peak_mem, args.n_cores)
-
+    # Remove intermediate files if requested
     if args.cleanup:
-        cleanup_intermediate_files(args.out_dir)
+        cleanup_intermediate_files(out_dir)
 
 
 if __name__ == "__main__":
-    main()
+    out_dir = "~/scratch/firedpy"
+    tiles = ["h08v04", "h09v04"]
+    tile_name = None
+    start_year = 2020
+    end_year = 2021
+    daily = True
+    spatial_param = 8
+    temporal_param = 3
+    shape_file = None
+    shape_type = "gpkg"
+    eco_region_level = 1
+    eco_region_type = 1
+    land_cover_type = 1
+    n_cores = 1
+    full_csv = True
+    username = None
+    password = None
+
+    key_fpath = os.path.expanduser("~/.keys/earthdata")
+    if os.path.exists(key_fpath):
+        with open(key_fpath) as file:
+            lines = file.readlines()
+        username = lines[0].strip()
+        password = lines[1].strip()
+
+    # run_all(
+    #     out_dir=out_dir,
+    #     tiles=tiles,
+    #     tile_name=tile_name,
+    #     start_year=start_year,
+    #     end_year=end_year,
+    #     daily=daily,
+    #     spatial_param=spatial_param,
+    #     temporal_param=temporal_param,
+    #     shape_file=shape_file,
+    #     shape_type=shape_type,
+    #     eco_region_level=eco_region_level,
+    #     eco_region_type=eco_region_type,
+    #     land_cover_type=land_cover_type,
+    #     n_cores=n_cores,
+    #     full_csv=full_csv,
+    #     username=username,
+    #     password=password
+    # )
