@@ -17,6 +17,7 @@ from shapely.geometry import Point
 
 from firedpy.data_classes import Base, BurnData, EcoRegion
 
+
 PROJECT_DIR = os.path.dirname(os.path.dirname(__file__))
 
 

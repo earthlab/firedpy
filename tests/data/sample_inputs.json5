@@ -1,0 +1,10 @@
+{
+    "out_dir": "./test_run",  # Replace with variable from tests
+    "tile_name": "tile_test",
+    "daily": true,
+    "spatial_param": 8,
+    "temporal_param": 3,
+    "shapefile": true,
+    "shape_type": "gpkg",
+    "n_cores": 0
+}

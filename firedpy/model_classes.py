@@ -3,7 +3,6 @@ import hashlib
 import math
 import os
 import random
-import re
 import shutil
 import sys
 
@@ -26,6 +25,7 @@ from tqdm import tqdm
 from firedpy import DATA_DIR
 from firedpy.enums import LandCoverType, EcoRegionType
 from firedpy.data_classes import Base
+from firedpy.spatial import MODIS_CRS
 
 
 def process_file_perimeter(nc_file_path, out_dir, spatial_param,
@@ -476,7 +476,7 @@ class ModelBuilder(Base):
 
     def _copy_cec_file(self) -> str:
         src = DATA_DIR.joinpath('ec_eco', 'NA_CEC_Eco_Level3.gpkg')
-        return self._copy_file(src, self._eco_region_shape_path)
+        return self._copy_file(src, self.eco_region_shape_path)
 
     def _to_kms(self, p: float):
         return (p * self._res ** 2) / 1000000
@@ -815,60 +815,75 @@ class ModelBuilder(Base):
             LandCoverType.PFT: "Plant Functional Type (PFT) scheme."
         }
 
-        # Rasterio point querier (will only work here)
+        # Rasterio point querier (why define here?)
         def point_query(row):
             x = row["x"]
             y = row["y"]
             try:
-                val = int([val for val in lc.sample([(x, y)])][0])
+                val = [val for val in lc.sample([(x, y)])][0][0]
             except Exception:
                 val = np.nan
             return val
 
         # Get the range of burn years
         burn_years = list(gdf["ig_year"].unique())
+        burn_years.sort()
 
         # This works faster when split by year and the pointer is outside
         # This is also not the best way
         sgdfs = []
         for tile in tiles:
             for year in tqdm(burn_years, position=0, file=sys.stdout):
+                # Get the land cover geotiff directory for this tile
                 mosaic_dir = self.land_cover_dir.joinpath(
                     tile, str(year), "mosaics"
                 )
                 if not mosaic_dir.exists():
                     print(f"No land cover data for {tile} in year {year}")
                     continue
-                lc_files = []
-                lc_years = []
-                for fname in os.listdir(mosaic_dir):
-                    if re.match(self._lc_mosaic_re, fname):
-                        fpath = os.path.join(mosaic_dir, fname)
-                        lc_files.append(fpath)
-                lc_files = sorted(lc_files)
-                for fpath in lc_files:
-                    fname = os.path.basename(fpath)
-                    year_dict = re.match(self._lc_mosaic_re, fname).groupdict()
-                    year = int(year_dict["year"])
-                    lc_years.append(year)
-                lc_files = {lc_years[i]: f for i, f in enumerate(lc_files)}
-                sgdf = gdf[gdf["ig_year"] == year]
+
+                # I don't understand what's happening below
+                # lc_files = []
+                # lc_years = []
+                # for fname in os.listdir(mosaic_dir):
+                #     # How necessary is the re match?
+                #     # if re.match(self._lc_mosaic_re, fname):
+                #     fpath = os.path.join(mosaic_dir, fname)
+                #     lc_files.append(fpath)
+                # lc_files = sorted(lc_files)
+
+                # # Group by year?
+                # for fpath in lc_files:
+                #     fname = os.path.basename(fpath)
+                #     # Don't we know what year it is?
+                #     # year_match = re.match(self._lc_mosaic_re, fname)
+                #     # year_dict = year_match.groupdict()
+                #     year = int(year_dict["year"])
+                #     lc_years.append(year)
+                # lc_files = {lc_years[i]: f for i, f in enumerate(lc_files)}
 
                 # Now set year one back for land_cover
-                year = year - 1
+                # year = year - 1
 
                 # Use previous year's land cover
-                if year < min(lc_years):
-                    year = min(lc_years)
-                elif year > max(lc_years):
-                    year = max(lc_years)
+                # if year < min(lc_years):
+                #     year = min(lc_years)
+                # elif year > max(lc_years):
+                #     year = max(lc_years)
 
-                lc_file = lc_files[year]
+                # lc_file = lc_files[year]
+
+                # Collect all files in the mosaic directory (only one ever?)
+                lc_file = list(mosaic_dir.glob("*tif"))[0]
+
+                # Create a sub data frame for this year
+                sgdf = gdf[gdf["ig_year"] == year].copy()
+
+                # Open the land cover raster and add attributes to sub df
                 lc = rasterio.open(lc_file)
-                sgdf["lc_code"] = sgdf.apply(point_query, axis=1)
-                sgdf["lc_mode"] = sgdf.groupby("id")["lc_code"].transform(
-                    self._mode
-                )
+                sgdf.loc[:, "lc_code"] = sgdf.apply(point_query, axis=1)
+                idgrp = sgdf.groupby("id")
+                sgdf.loc[:, "lc_mode"] = idgrp["lc_code"].transform(self._mode)
                 sgdfs.append(sgdf)
 
         gdf = pd.concat(sgdfs)
@@ -880,14 +895,14 @@ class ModelBuilder(Base):
         gdf = pd.merge(
             left=gdf,
             right=lc_table,
-            how='left',
-            left_on='lc_mode',
-            right_on='Value'
+            how="left",
+            left_on="lc_mode",
+            right_on="Value"
         )
-        gdf = gdf.drop('Value', axis=1)
-        gdf['lc_type'] = lc_descriptions[land_cover_type]
+        gdf = gdf.drop("Value", axis=1)
+        gdf.loc[:, "lc_type"] = lc_descriptions[land_cover_type]
+        gdf.rename({"lc_description": "lc_desc"}, inplace=True, axis="columns")
 
-        gdf.rename({'lc_description': 'lc_desc'}, inplace=True, axis='columns')
         return gdf
 
     def _add_attributes_from_na_cec(self, gdf, eco_region_level):
@@ -927,7 +942,7 @@ class ModelBuilder(Base):
         gdf["eco_type"] = eco_types[eco_code]
 
         # Add in the name of the modal ecoregion
-        eco_ref = pd.read_csv(self._eco_region_csv_path)
+        eco_ref = pd.read_csv(self.eco_region_csv_path)
         eco_name = eco_code.replace("CODE", "NAME")
         eco_df = eco_ref[[eco_code, eco_name]].drop_duplicates()
         eco_map = dict(zip(eco_df[eco_code], eco_df[eco_name]))
@@ -962,12 +977,44 @@ class ModelBuilder(Base):
 
     def add_eco_region_attributes(
             self,
-            gdf: gpd.GeoDataFrame,
-            eco_region_type: EcoRegionType = EcoRegionType.NA,
-            eco_region_level: int = None
-    ) -> gpd.GeoDataFrame:
+            gdf,
+            eco_region_type="na",
+            eco_region_level=None
+    ):
+        """Add eco region attributes to a fire event geodataframe.
 
+        Parameters
+        ----------
+        gdf : geopandas.geodataframe.GeoDataFrame
+        eco_region_type : str
+            Specify the ecoregion type as either 'world' or 'na':
+
+                'world' = World Terrestrial Ecoregions (World Wildlife Fund)
+                'na' = North American ecoregions (Omernick, 1987)
+
+            The most common (modal) ecoregion across the event is used.
+
+            Further, to associate each event with North American ecoregions
+            (Omernick, 1987) you may provide a number corresponding to an
+            ecoregion level. Ecoregions are retrieved from www.epa.gov and
+            levels I through IV are available. Levels I and II were developed
+            by the North American Commission for Environmental Cooperation.
+            Levels III and IV were developed by the United States Environmental
+            Protection Agency. For events with more than one ecoregion, the
+            most common value will be used. Defaults to None.
+        eco_region_level : int
+            The desired Ecoregions level from the North American Commission for
+            Environmental Cooperation (CEC). Levels 1 to 3 are available, with
+            level 1 representing the broadest scale and level III representing the
+            most detailed. Defaults to 1.
+
+        Returns
+        -------
+        geopandas.geodataframe.GeoDataFrame: A copy of the geodataframe with
+            eco region attributes added.
+        """
         print("Adding eco-region attributes ...")
+        eco_region_type = EcoRegionType(eco_region_type)
         if eco_region_level or (eco_region_type == EcoRegionType.NA):
             gdf = self._add_attributes_from_na_cec(gdf, eco_region_level)
         else:
@@ -997,26 +1044,49 @@ class ModelBuilder(Base):
 
     def process_daily_data(
             self,
-            gdf: gpd.GeoDataFrame,
-            output_csv_path: str,
-            daily_shp_path: str,
-            daily_gpkg_path: str
-    ) -> gpd.GeoDataFrame:
+            gdf,
+            output_csv_path,
+            daily_shape_path,
+            daily_gpkg_path
+    ):
+        """Process daily data geometries.
+
+        Parameters
+        ----------
+        gdf : geopandas.geodataframe.GeoDataFrame
+            A firedpy geodataframe of burn events.
+        output_csv_path : str
+            The output CSV path.
+        daily_shape_path : str
+            The output Shapefile path.
+        daily_gpkg_path : str
+            The output GeoPackage path.
+
+        Returns
+        -------
+        geopandas.geodataframe.GeoDataFrame : The processed geodataframe.
+        """
         print("Dissolving polygons...")
+        gdfc = gdf.copy()
+        gdfc = self._create_did_column(gdfc, ["date", "id"])
+        gdfd = gdfc.dissolve(by="did", as_index=False)
 
-        gdf = self._create_did_column(gdf, ['date', 'id'])
-
-        gdfd = gdf.dissolve(by="did", as_index=False)
         print("Converting polygons to multipolygons...")
         gdfd["geometry"] = gdfd["geometry"].apply(self._as_multi_polygon)
 
-        self.save_data(gdfd, daily_shp_path, daily_gpkg_path, output_csv_path)
+        # make sure the output directory exists
+        self.save_data(
+            gdfd,
+            daily_shape_path,
+            daily_gpkg_path,
+            output_csv_path
+        )
 
-        dropcols = ['did', 'pixels', 'date', 'event_day', 'dy_ar_km2']
+        dropcols = ["did", "pixels", "event_day", "dy_ar_km2"]
         gdf = gdfd.drop(dropcols, axis=1)
         gdf = gdf.dissolve(by="id", as_index=False)
         print("Calculating perimeter lengths...")
-        gdf["tot_perim"] = gdf["geometry"].length
+        gdf["tot_perim"] = gdf["geometry"].to_crs(MODIS_CRS).length
         gdf["geometry"] = gdf["geometry"].apply(self._as_multi_polygon)
 
         return gdf
@@ -1066,7 +1136,7 @@ class ModelBuilder(Base):
             gdf['mx_grw_dte'] = [str(d) for d in gdf['mx_grw_dte']]
 
             gdf.to_file(shape_path)
-            print("Saving file to " + shape_path)
+            print(f"Saving file to {shape_path}")
 
     def add_kg_attributes(self, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         """Assign Köppen-Geiger climate zones to events with a raster file.

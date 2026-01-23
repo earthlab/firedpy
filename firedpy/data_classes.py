@@ -13,6 +13,7 @@ from multiprocessing import Pool
 from pathlib import Path
 from typing import List, Union, Tuple, Dict
 
+import earthaccess
 import geopandas as gpd
 import numpy as np
 import pandas as pd
@@ -66,8 +67,8 @@ class Base:
         self.shape_dir = out_dir.joinpath("shape_files")
         self.burn_area_dir = self.raster_dir.joinpath("burn_area")
         self.land_cover_dir = self.raster_dir.joinpath("land_cover")
-        self.ecoregion_raster_dir = self.raster_dir.joinpath("eco_region")
-        self.ecoregion_shape_dir = self.shape_dir.joinpath("eco_region")
+        self.eco_region_raster_dir = self.raster_dir.joinpath("eco_region")
+        self.eco_region_shape_dir = self.shape_dir.joinpath("eco_region")
         self.tables_dir = out_dir.joinpath("tables")
         self.nc_dir = self.burn_area_dir.joinpath("netcdfs")
         self.hdf_dir = self.burn_area_dir.joinpath("hdfs")
@@ -75,9 +76,9 @@ class Base:
             "modis_sinusoidal_grid_world.shp"
         )
         self.conus_shape_path = self.shape_dir.joinpath("conus.shp")
-        self.ecoregion_csv_path = self.tables_dir.joinpath("eco_refs.csv")
-        self.project_ecoregion_dir = DATA_DIR.joinpath("us_eco")
-        self.ecoregion_shape_path = self.ecoregion_shape_dir.joinpath(
+        self.eco_region_csv_path = self.tables_dir.joinpath("eco_refs.csv")
+        self.project_eco_region_dir = DATA_DIR.joinpath("us_eco")
+        self.eco_region_shape_path = self.eco_region_shape_dir.joinpath(
             "NA_CEC_Eco_Level3.gpkg"
         )
 
@@ -477,9 +478,6 @@ class BurnData(LPDAAC):
         print(f"📅 Date range: {start_date} to {end_date}")
 
         try:
-            # Authenticate with EarthAccess
-            import earthaccess
-
             # Set credentials as environment variables for earthaccess
             os.environ["EARTHDATA_USERNAME"] = self._username
             os.environ["EARTHDATA_PASSWORD"] = self._password
@@ -803,8 +801,6 @@ class LandCover(Base):
     def _setup_earthaccess(self):
         """Setup EarthAccess authentication for land cover data."""
         try:
-            import earthaccess
-
             if self._username and self._password:
                 os.environ["EARTHDATA_USERNAME"] = self._username
                 os.environ["EARTHDATA_PASSWORD"] = self._password
@@ -831,8 +827,6 @@ class LandCover(Base):
         """Find available land cover tiles that can cover the requested region."""
 
         try:
-            import earthaccess
-
             # Get all available tiles for a sample year
             granules = earthaccess.search_data(
                 short_name="MCD12Q1",
@@ -873,6 +867,62 @@ class LandCover(Base):
             print(f"Error finding available tiles: {e}")
             return []
 
+    def mosaic_landuse(self, downloaded_files, mosaic_path, land_cover_type):
+        """Merge a list of MODIS HDF files into one GeoTiff.
+
+        TODO: Will there ever be multiple downloaded files 
+            from LandCover.get_land_cover? I was assuming there would be since
+            we are labeling the final output tiff "mosaic" but it looks like
+            the earthaccess method that downloads the originals takes in
+            one tile at a time.
+
+        Parameters
+        ----------
+        downloaded_files : list[str]
+            A list of paths to MODIS Land Cover HDF4 files.
+        mosaic_path : str | pathlib.PosixPath
+            Target file path for the GeoTiff.
+        land_cover_type : int | firedpy.enums.LandCoverType
+            Include land cover as an attribute, provide a number corresponding
+            with a MODIS/Terra+Aqua Land Cover (MCD12Q1) category followed with
+            username:password of your NASA's Earthdata service account.
+            Available land cover categories:
+
+                1: IGBP global vegetation classification scheme
+                2: University of Maryland (UMD) scheme
+                3: MODIS-derived LAI/fPAR scheme
+
+            If you do not have an account register at
+            https://urs.earthdata.nasa.gov/home. Defaults to 1.
+        """
+        # Match possible land cover type arguments
+        # is_int = isinstance(land_cover_type, int)
+        # is_lctype = isinstance(land_cover_type, LandCoverType)
+        # if is_int and is_lctype:
+        #     land_cover_type = LandCoverType.value
+
+        # Use the target file's parent directory for the temporary files
+        mosaic_dir = Path(os.path.dirname(mosaic_path))
+        tmp_files = []
+        for i, file in enumerate(downloaded_files):
+            # Get a variable name pattern
+            pattern = f"LC_Type{land_cover_type}"
+
+            # Create temporary file
+            dst = mosaic_dir.joinpath(f"tile_{i}.tif")
+            hdf4_to_geotiff(file, dst, pattern=pattern)
+            tmp_files.append(dst)
+
+        # Mosaic these together and save to file
+        if len(tmp_files) > 1:
+            shutil.rmtree(tmp_files)
+            raise NotImplementedError(
+                "Merging multiple land use layers not implemented yet: "
+                f"{downloaded_files}")
+
+        else:
+            shutil.move(tmp_files[0], mosaic_path)
+
     def get_land_cover(self, tiles=None, land_cover_type=LandCoverType.IGBP):
         """Download and process land cover data with EarthAccess.
 
@@ -902,14 +952,14 @@ class LandCover(Base):
             return
 
         # Match possible land cover type arguments
-        is_int = isinstance(land_cover_type, int)
-        is_lctype = isinstance(land_cover_type, LandCoverType)
-        if is_int and is_lctype:
-            land_cover_type = LandCoverType.value
-
-        print(f"Getting land cover data using EarthAccess for region: {tiles}")
+        # if isinstance(land_cover_type, int):
+        #     land_cover_int = land_cover_type
+        #     land_cover_type = LandCoverType(land_cover_int)
+        # if isinstance(land_cover_type, LandCoverType):
+        #     land_cover_int = land_cover_type.value
 
         # Find available tiles that can cover our region
+        print(f"Getting land cover data using EarthAccess for region: {tiles}")
         print("Finding available land cover tiles for region...")
         available_tiles = self._find_available_tiles_for_region(tiles)
 
@@ -918,9 +968,7 @@ class LandCover(Base):
             return
 
         try:
-            import earthaccess
-
-            # Get available years
+            # Get available years (this is fixed?)
             available_years = ["2018", "2019", "2020", "2021", "2022"]
             for tile in available_tiles:
                 print(f"\n Processing land cover for tile: {tile}")
@@ -949,16 +997,14 @@ class LandCover(Base):
                     # Filter for this specific tile
                     tile_granules = []
                     for granule in granules:
-                        granule_name = granule.get("meta", {}).get(
-                            "native-id", ""
-                        )
+                        id = "native-id"
+                        granule_name = granule.get("meta", {}).get(id, "")
                         if tile in granule_name:
                             tile_granules.append(granule)
 
                     if not tile_granules:
-                        print(
-                            f"   No land cover data for {tile} in year {year}"
-                        )
+                        print(f"   No land cover data for {tile} in year "
+                              f"{year}")
                         continue
 
                     print(f"   Found {len(tile_granules)} granules, "
@@ -976,20 +1022,13 @@ class LandCover(Base):
 
                         # Create mosaic (simplified version)
                         if downloaded_files:
-                            print(
-                                f"   Land cover data ready for {tile} {year}"
+                            msg = f"   Land cover data ready for {tile} {year}"
+                            print(msg)
+                            self.mosaic_landuse(
+                                downloaded_files,
+                                mosaic_path,
+                                land_cover_type
                             )
-                            for i, file in enumerate(downloaded_files):
-                                # Get the variable name
-                                pattern = f"LC_Type{land_cover_type}"
-
-                                # Create temporary file
-                                dst = mosaic_dir.joinpath(f"tile_{i:03d}.tif")
-                                hdf4_to_geotiff(file, dst, pattern=pattern)
-
-                            # Mosaic these together and save to file
-
-                            # remove temporary files
 
                     except Exception as e:
                         print(f"   Processing failed for {tile} {year}: {e}")
@@ -1012,7 +1051,7 @@ class EcoRegion(Base):
             "Ecoregions/cec_na/NA_CEC_Eco_Level3.zip"
         )
         self._eco_region_raster_path = os.path.join(
-            self.ecoregion_raster_dir,
+            self.eco_region_raster_dir,
             "NA_CEC_Eco_Level3_modis.tif"
         )
 
@@ -1068,20 +1107,20 @@ class EcoRegion(Base):
         gpd.
         """
         # Check if the file exists, try to use a new EPA file
-        if not os.path.exists(self.ecoregion_shape_path):
+        if not os.path.exists(self.eco_region_shape_path):
             try:
                 eco = gpd.read_file(self._eco_region_ftp_url)
                 eco.crs = {"init": "epsg:5070"}
-                eco.to_file(self.ecoregion_shape_path)
+                eco.to_file(self.eco_region_shape_path)
             except Exception as e:
                 print(f"Download from EPA FTP site, using local file {e}")
                 shutil.copytree(
-                    self.project_ecoregion_dir,
-                    self.ecoregion_shape_dir
+                    self.project_eco_region_dir,
+                    self.eco_region_shape_dir
                 )
 
         # Read in the file downloaded or copied to the output directory
-        df = gpd.read_file(self.ecoregion_shape_path)
+        df = gpd.read_file(self.eco_region_shape_path)
 
         return df
 
@@ -1165,7 +1204,5 @@ class EcoRegion(Base):
         # Create a reference table for ecoregions
         eco_ref = eco[self._ref_cols].drop_duplicates()
         eco_ref = eco_ref.applymap(self._normalize_string)
-
-        eco_ref.to_csv(self.ecoregion_csv_path, index=False)
-
+        eco_ref.to_csv(self.eco_region_csv_path, index=False)
         self.eco_region_data_frame = eco_ref

@@ -10,7 +10,7 @@ from http.cookiejar import CookieJar
 from firedpy.data_classes import BurnData, EcoRegion, LandCover
 from firedpy.enums import LandCoverType, ShapeType
 from firedpy.model_classes import ModelBuilder
-from firedpy.utilities.argument_parsing import FiredpyArgumentParser
+# from firedpy.utilities.argument_parsing import FiredpyArgumentParser
 from firedpy.utilities.create_readme import make_read_me
 
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -36,7 +36,7 @@ def cleanup_intermediate_files(out_dir):
 
 
 def generate_path(proj_dir, base_filename, shape_type):
-    """Return the full path to a target file
+    """Return the full paths to a target files.
 
     Parameters
     ----------
@@ -54,14 +54,21 @@ def generate_path(proj_dir, base_filename, shape_type):
     list[str] : A list of full filepaths corresponding with the target file
         and file formats.
     """
+    # What's the benefit of enums here?
+    if not isinstance(shape_type, ShapeType):
+        shape_type = ShapeType(shape_type)
+
+    # Get the requested combination of shapefile types
     file_extensions = {
         ShapeType.SHP: [".shp", None],
-        ShapeType.GPKG: [".gpkg", None],
+        ShapeType.GPKG: [None, ".gpkg"],
         ShapeType.BOTH: [".shp", ".gpkg"]
     }
     file_ext = file_extensions.get(shape_type, [".gpkg"])
 
+    # Create the paths
     paths = []
+    proj_dir = os.path.expanduser(proj_dir)
     for ext in file_ext:
         if ext:
             fname = f"{base_filename}{ext}"
@@ -248,7 +255,6 @@ def run_all(
     event_perimeters = models.build_events()
 
     # Build the event geodataframe
-    # TODO: This can be parallelized
     gdf = models.build_points(
         event_perimeter_list=event_perimeters,
         shape_file_path=shape_file
@@ -263,7 +269,7 @@ def run_all(
             username=username,
             password=password
         )
-        land_cover.get_land_cover(  #-----------------------------------------> This doesn't create the geotiffs the next methods look for
+        land_cover.get_land_cover(
             tiles=tiles,
             land_cover_type=land_cover_type
         )
@@ -282,14 +288,18 @@ def run_all(
     # Calculate fire spread speed and maximum travel vectors
     gdf = models.add_kg_attributes(gdf)
 
-    # Build the burn polygons
+    # Set paths
+    out_dir = os.path.expanduser(out_dir)
     date_range = burn_data.get_date_range(
         start_year=start_year,
         end_year=end_year
     )
     date1 = date_range[0][0]
     date2 = date_range[-1][0]
-    base_file_name = f"fired_{tile_name}_{date1}_to_{date2}"
+    if tile_name:
+        base_file_name = f"fired_{tile_name}_{date1}_to_{date2}"
+    else:
+        base_file_name = f"fired_{date1}_to_{date2}"
     daily_base = f"{base_file_name}_daily"
     event_base = f"{base_file_name}_events"
     daily_shape_path, daily_gpkg_path = generate_path(
@@ -302,30 +312,28 @@ def run_all(
         base_filename=event_base,
         shape_type=shape_type
     )
-    csv_path = os.path.join(out_dir, base_file_name + ".csv")
+    shape_dir = os.path.join(out_dir, "outputs", "shapefiles")
+    table_dir = os.path.join(out_dir, "tables")
+    csv_path = os.path.join(table_dir, base_file_name + ".csv")
 
     # Process event data
     if daily:
-        os.makedirs(os.path.dirname(daily_shape_path), exist_ok=True)
-        csv_path = str(csv_path).replace(".csv", "_daily.csv")
-        if daily_gpkg_path:
-            os.makedirs(os.path.dirname(daily_gpkg_path), exist_ok=True)
+        os.makedirs(shape_dir, exist_ok=True)
+        os.makedirs(table_dir, exist_ok=True)
+        output_csv_path = str(csv_path).replace(".csv", "_daily.csv")
         gdf = models.process_daily_data(
             gdf=gdf,
-            output_csv_path=csv_path,
-            daily_shp_path=daily_shape_path,
+            output_csv_path=output_csv_path,
+            daily_shape_path=daily_shape_path,
             daily_gpkg_path=daily_gpkg_path
         )
     else:
         gdf = models.process_event_data(gdf)
 
     # Save the events
-    os.makedirs(os.path.dirname(event_shape_path), exist_ok=True)
-    if event_gpkg_path is not None:
-        os.makedirs(os.path.dirname(event_gpkg_path), exist_ok=True)
     models.save_event_data(
         gdf=gdf,
-        outptu_csv_path=csv_path,
+        output_csv_path=csv_path,
         event_shape_path=event_shape_path,
         event_gpkg_path=event_gpkg_path,
         full_csv=full_csv
@@ -410,7 +418,7 @@ def main():
 
 if __name__ == "__main__":
     out_dir = "~/scratch/firedpy"
-    tiles = ["h08v04", "h09v04"]
+    tiles = ["h08v04", "h09v04", "h08v05", "h09v05"]
     tile_name = None
     start_year = 2020
     end_year = 2021
@@ -420,7 +428,7 @@ if __name__ == "__main__":
     shape_file = None
     shape_type = "gpkg"
     eco_region_level = 1
-    eco_region_type = 1
+    eco_region_type = "na"
     land_cover_type = 1
     n_cores = 1
     full_csv = True
@@ -434,22 +442,22 @@ if __name__ == "__main__":
         username = lines[0].strip()
         password = lines[1].strip()
 
-    # run_all(
-    #     out_dir=out_dir,
-    #     tiles=tiles,
-    #     tile_name=tile_name,
-    #     start_year=start_year,
-    #     end_year=end_year,
-    #     daily=daily,
-    #     spatial_param=spatial_param,
-    #     temporal_param=temporal_param,
-    #     shape_file=shape_file,
-    #     shape_type=shape_type,
-    #     eco_region_level=eco_region_level,
-    #     eco_region_type=eco_region_type,
-    #     land_cover_type=land_cover_type,
-    #     n_cores=n_cores,
-    #     full_csv=full_csv,
-    #     username=username,
-    #     password=password
-    # )
+    run_all(
+        out_dir=out_dir,
+        tiles=tiles,
+        tile_name=tile_name,
+        start_year=start_year,
+        end_year=end_year,
+        daily=daily,
+        spatial_param=spatial_param,
+        temporal_param=temporal_param,
+        shape_file=shape_file,
+        shape_type=shape_type,
+        eco_region_level=eco_region_level,
+        eco_region_type=eco_region_type,
+        land_cover_type=land_cover_type,
+        n_cores=n_cores,
+        full_csv=full_csv,
+        username=username,
+        password=password
+    )

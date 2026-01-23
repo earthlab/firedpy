@@ -1,0 +1,1 @@
+"""FiredPy Command Line Interface."""
