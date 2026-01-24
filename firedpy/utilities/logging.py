@@ -1,7 +1,7 @@
 """FiredPy Logging Utilities.
 
-We need to run init_logger here after creating a logger with Create a logger
-with `logging.getLogger(__name__)` somehow.
+Run init_logger here with a target directory after creating a logging object
+(`logger = logging.getLogger(__name__)`).
 """
 import logging
 

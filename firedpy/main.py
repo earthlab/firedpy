@@ -228,7 +228,6 @@ def run_all(
     """
     # Setup logging for this output directory
     out_dir = Path(out_dir).expanduser()
-    print(out_dir)
     init_logger(out_dir=out_dir)
     logger.info(
         f"Running FiredPy for years {start_year} to {end_year} for MODIS "
@@ -237,7 +236,8 @@ def run_all(
 
     # Get the ecoregion data
     # This also initiates the project directory and it's subfolders and
-    # downloads the MODIS world grid, let's adjust here for clarity
+    # downloads the MODIS world grid (Base method init), let's adjust here for
+    # clarity
     eco_region_data = EcoRegion(out_dir=out_dir)
     eco_region_data.get_eco_region()
 

@@ -1039,7 +1039,16 @@ class LandCover(Base):
 
 
 class EcoRegion(Base):
-    def __init__(self, out_dir: str):
+    """Methods for managing Ecoregion data."""
+
+    def __init__(self, out_dir):
+        """Iniitialize an EcoRegion object.
+
+        Parameters
+        ----------
+        out_dir : str | pathlib.PosixPath
+            Path to FiredPy output directory.
+        """
         super().__init__(out_dir)
         self._eco_region_ftp_url = (
             "https://dmap-prod-oms-edc.s3.us-east-1.amazonaws.com/ORD/"
@@ -1052,13 +1061,33 @@ class EcoRegion(Base):
         self._ref_cols = ["NA_L3CODE", "NA_L3NAME", "NA_L2CODE", "NA_L2NAME",
                           "NA_L1CODE", "NA_L1NAME", "NA_L3KEY", "NA_L2KEY",
                           "NA_L1KEY"]
-        self.eco_region_data_frame: Union[None, gpd.GeoDataFrame] = None
+        self.eco_region_data_frame = None
         self._file_regex = r"MCD64A1" + self._post_regex
 
+    def __repr__(self):
+        """Return representation string for an EcoRegion object."""
+        name = self.__class__.__name__
+        attrs = {}
+        for key, attr in self.__dict__.items():
+            # Avoid secrets/private attributes
+            if not key.startswith("_"):
+                attrs[key] = attr
+        address = hex(id(self))
+        msgs = [f"\n   {k}='{v}'" for k, v in attrs.items()]
+        msg = " ".join(msgs)
+        return f"<{name} object at {address}> {msg}"
+
     @staticmethod
-    def _normalize_string(string) -> str:
-        """
-        # Character cases are inconsistent between I,II and III,IV levels
+    def _normalize_string(string):
+        """Fix character inconsistencies between ecoregion level strings.
+
+        Parameters
+        ----------
+        string : str
+
+        Returns
+        -------
+        str : 
         """
 
         def capitalize_special(s):
@@ -1104,7 +1133,7 @@ class EcoRegion(Base):
         if not os.path.exists(self.eco_region_shape_path):
             try:
                 eco = gpd.read_file(self._eco_region_ftp_url)
-                eco.crs = {"init": "epsg:5070"}
+                eco = eco.to_crs("epsg:5070")
                 eco.to_file(self.eco_region_shape_path)
             except Exception as e:
                 print(f"Download from EPA FTP site, using local file {e}")
@@ -1192,7 +1221,13 @@ class EcoRegion(Base):
         )
 
     def get_eco_region(self):
-        # Omernick's Ecoregions - EPA North American Albers
+        """Download Ecoregion shapefile to the project directory.
+
+        NOTE: This currently only downloads the EPA Omernick Ecoregions North
+            for North American, though we tell the user they could have this
+            or the World Terrestrial Ecoregions (World Wildlife Fund).
+        """
+        # Download the file from source
         eco = self._read_eco_region_file()
 
         # Create a reference table for ecoregions
