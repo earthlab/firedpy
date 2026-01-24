@@ -3,17 +3,19 @@ import resource
 import shutil
 import time
 import urllib.request
-import warnings
 
 from http.cookiejar import CookieJar
+from logging import getLogger
+from pathlib import Path
 
 from firedpy.data_classes import BurnData, EcoRegion, LandCover
 from firedpy.enums import LandCoverType, ShapeType
 from firedpy.model_classes import ModelBuilder
 # from firedpy.utilities.argument_parsing import FiredpyArgumentParser
 from firedpy.utilities.create_readme import make_read_me
+from firedpy.utilities.logging import init_logger
 
-warnings.filterwarnings("ignore", category=FutureWarning)
+logger = getLogger(__name__)
 
 
 EARTHDATA_TEST_URL = (
@@ -135,12 +137,13 @@ def run_all(
     shape_file=None,
     shape_type="gpkg",
     eco_region_level=None,
-    eco_region_type=1,
+    eco_region_type="na",
     land_cover_type=1,
     n_cores=0,
     full_csv=True,
     username=None,
-    password=None
+    password=None,
+    test=False
 ):
     """Run all steps of the FiredPy modeling pipeline.
 
@@ -223,6 +226,15 @@ def run_all(
         Password for a NASA Earthdata Account. Defaults to None, will
         prompt user.
     """
+    # Setup logging for this output directory
+    out_dir = Path(out_dir).expanduser()
+    print(out_dir)
+    init_logger(out_dir=out_dir)
+    logger.info(
+        f"Running FiredPy for years {start_year} to {end_year} for MODIS "
+        f"tiles: {tiles}."
+    )
+
     # Get the ecoregion data
     # This also initiates the project directory and it's subfolders and
     # downloads the MODIS world grid, let's adjust here for clarity
@@ -417,7 +429,7 @@ def main():
 
 
 if __name__ == "__main__":
-    out_dir = "~/scratch/firedpy"
+    out_dir = "~/scratch/firedpy/test"
     tiles = ["h08v04", "h09v04", "h08v05", "h09v05"]
     tile_name = None
     start_year = 2020
@@ -442,22 +454,22 @@ if __name__ == "__main__":
         username = lines[0].strip()
         password = lines[1].strip()
 
-    run_all(
-        out_dir=out_dir,
-        tiles=tiles,
-        tile_name=tile_name,
-        start_year=start_year,
-        end_year=end_year,
-        daily=daily,
-        spatial_param=spatial_param,
-        temporal_param=temporal_param,
-        shape_file=shape_file,
-        shape_type=shape_type,
-        eco_region_level=eco_region_level,
-        eco_region_type=eco_region_type,
-        land_cover_type=land_cover_type,
-        n_cores=n_cores,
-        full_csv=full_csv,
-        username=username,
-        password=password
-    )
+    # run_all(
+    #     out_dir=out_dir,
+    #     tiles=tiles,
+    #     tile_name=tile_name,
+    #     start_year=start_year,
+    #     end_year=end_year,
+    #     daily=daily,
+    #     spatial_param=spatial_param,
+    #     temporal_param=temporal_param,
+    #     shape_file=shape_file,
+    #     shape_type=shape_type,
+    #     eco_region_level=eco_region_level,
+    #     eco_region_type=eco_region_type,
+    #     land_cover_type=land_cover_type,
+    #     n_cores=n_cores,
+    #     full_csv=full_csv,
+    #     username=username,
+    #     password=password
+    # )

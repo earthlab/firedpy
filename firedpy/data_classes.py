@@ -32,10 +32,7 @@ from firedpy.enums import LandCoverType
 from firedpy.modis_earthaccess import setup_modis_earthaccess
 from firedpy.spatial import hdf4_to_geotiff
 
-PROJECT_DIR = os.path.dirname(os.path.dirname(__file__))
-
-logging.basicConfig(filename="app.log", level=logging.ERROR,
-                    format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
 
 
 class Base:
@@ -64,7 +61,7 @@ class Base:
         self.out_dir = out_dir
         self.date = datetime.today().strftime("%m-%d-%Y")
         self.raster_dir = out_dir.joinpath("rasters")
-        self.shape_dir = out_dir.joinpath("shape_files")
+        self.shape_dir = out_dir.joinpath("shapefiles")
         self.burn_area_dir = self.raster_dir.joinpath("burn_area")
         self.land_cover_dir = self.raster_dir.joinpath("land_cover")
         self.eco_region_raster_dir = self.raster_dir.joinpath("eco_region")
@@ -754,7 +751,7 @@ class BurnData(LPDAAC):
 
             except Exception as e:
                 # Log the error and move on to the next tile
-                logging.error(f"Error processing tile {tile_id}: {str(e)}")
+                logger.error(f"Error processing tile {tile_id}: {str(e)}")
 
     @staticmethod
     def _verify_hdf_file(file_path) -> bool:
@@ -1044,8 +1041,6 @@ class LandCover(Base):
 class EcoRegion(Base):
     def __init__(self, out_dir: str):
         super().__init__(out_dir)
-
-        # self._eco_region_ftp_url = "ftp://newftp.epa.gov/EPADataCommons/ORD/Ecoregions/cec_na/NA_CEC_Eco_Level3.zip"
         self._eco_region_ftp_url = (
             "https://dmap-prod-oms-edc.s3.us-east-1.amazonaws.com/ORD/"
             "Ecoregions/cec_na/NA_CEC_Eco_Level3.zip"
@@ -1054,7 +1049,6 @@ class EcoRegion(Base):
             self.eco_region_raster_dir,
             "NA_CEC_Eco_Level3_modis.tif"
         )
-
         self._ref_cols = ["NA_L3CODE", "NA_L3NAME", "NA_L2CODE", "NA_L2NAME",
                           "NA_L1CODE", "NA_L1NAME", "NA_L3KEY", "NA_L2KEY",
                           "NA_L1KEY"]

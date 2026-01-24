@@ -57,7 +57,7 @@ class TestBase(unittest.TestCase):
         self.assertFalse(any([
             os.path.exists(save_dir) for save_dir in [
                 os.path.join(self._test_data_dir, "raster"),
-                os.path.join(self._test_data_dir, "shape_files"),
+                os.path.join(self._test_data_dir, "shapefiles"),
                 os.path.join(self._test_data_dir, "rasters", "burn_area"),
                 os.path.join(self._test_data_dir, "rasters", "land_cover"),
                 os.path.join(self._test_data_dir, "rasters", "eco_region"),
@@ -74,7 +74,7 @@ class TestBase(unittest.TestCase):
         self.assertTrue(all([
             os.path.exists(save_dir) for save_dir in [
                 os.path.join(self._test_data_dir, "rasters"),
-                os.path.join(self._test_data_dir, "shape_files"),
+                os.path.join(self._test_data_dir, "shapefiles"),
                 os.path.join(self._test_data_dir, "rasters", "burn_area"),
                 os.path.join(self._test_data_dir, "rasters", "land_cover"),
                 os.path.join(self._test_data_dir, "rasters", "eco_region"),
@@ -87,16 +87,16 @@ class TestBase(unittest.TestCase):
         ]))
 
     def test_get_shape_files(self):
-        self.assertFalse(os.path.exists(os.path.join(self._test_data_dir, "shape_files",
+        self.assertFalse(os.path.exists(os.path.join(self._test_data_dir, "shapefiles",
                                                      "modis_sinusoidal_grid_world.shp")))
-        self.assertFalse(os.path.exists(os.path.join(self._test_data_dir, "shape_files",
+        self.assertFalse(os.path.exists(os.path.join(self._test_data_dir, "shapefiles",
                                                      "conus.shp")))
 
         _ = Base(out_dir=self._test_data_dir)
 
-        self.assertTrue(os.path.exists(os.path.join(self._test_data_dir, "shape_files",
+        self.assertTrue(os.path.exists(os.path.join(self._test_data_dir, "shapefiles",
                                                     "modis_sinusoidal_grid_world.shp")))
-        self.assertTrue(os.path.exists(os.path.join(self._test_data_dir, "shape_files",
+        self.assertTrue(os.path.exists(os.path.join(self._test_data_dir, "shapefiles",
                                                     "conus.shp")))
 
     def test_convert_ordinal_date(self):
