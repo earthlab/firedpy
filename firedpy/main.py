@@ -452,13 +452,6 @@ if __name__ == "__main__":
     username = None
     password = None
 
-    key_fpath = os.path.expanduser("~/.keys/earthdata")
-    if os.path.exists(key_fpath):
-        with open(key_fpath) as file:
-            lines = file.readlines()
-        username = lines[0].strip()
-        password = lines[1].strip()
-
     run_all(
         out_dir=out_dir,
         tiles=tiles,

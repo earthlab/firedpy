@@ -517,9 +517,10 @@ class BurnData(LPDAAC):
 
         try:
             # Set credentials as environment variables for earthaccess
-            os.environ["EARTHDATA_USERNAME"] = self._username
-            os.environ["EARTHDATA_PASSWORD"] = self._password
-            auth = earthaccess.login()
+            # os.environ["EARTHDATA_USERNAME"] = self._username
+            # os.environ["EARTHDATA_PASSWORD"] = self._password
+
+            auth = earthaccess.login(strategy="all")
             if not auth:
                 raise RuntimeError("EarthAccess authentication failed")
 
@@ -844,10 +845,17 @@ class BurnData(LPDAAC):
 class LandCover(Base):
     """EarthAccess-based Land Cover data access for firedpy.
 
-    Handles cases where burn area tiles don't match land cover tiles.
+    TODO: Double check that the land cover and fired datasets line up
+        correctly. There may be discrepancies in the years.
     """
 
-    def __init__(self, out_dir: str, n_cores: int = None, username: str = None, password: str = None):
+    def __init__(
+            self,
+            out_dir,
+            n_cores=None,
+            username=None,
+            password=None
+    ):
         super().__init__(out_dir)
         self._parallel_cores = n_cores if n_cores else os.cpu_count() - 1
         self._username = username
@@ -935,7 +943,10 @@ class LandCover(Base):
                     for alt_tile in self._tile_mapping[tile]:
                         if alt_tile in available_tiles:
                             tiles_to_use.add(alt_tile)
-                            print(f"   {tile} -> using {alt_tile} (nearby coverage)")
+                            print(
+                                f"   {tile} -> using {alt_tile} (nearby "
+                                "coverage)"
+                            )
                             break
                     else:
                         print(f"   {tile} - No suitable alternative found")
@@ -1172,7 +1183,7 @@ class EcoRegion(Base):
         return f"<{name} object at {address}> {msg}"
 
     @staticmethod
-    def _normalize_string(string):
+    def _normalize_string(string):  # ----------------------------------------> Finish docstring
         """Fix character inconsistencies between ecoregion level strings.
 
         Parameters
@@ -1181,7 +1192,7 @@ class EcoRegion(Base):
 
         Returns
         -------
-        str : 
+        str
         """
 
         def capitalize_special(s):
