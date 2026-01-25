@@ -11,7 +11,7 @@ from glob import glob
 from http.cookiejar import CookieJar
 from multiprocessing import Pool
 from pathlib import Path
-from typing import List, Union, Tuple, Dict
+from typing import List, Tuple, Dict
 
 import earthaccess
 import geopandas as gpd
@@ -32,11 +32,27 @@ from firedpy.enums import LandCoverType
 from firedpy.modis_earthaccess import setup_modis_earthaccess
 from firedpy.spatial import hdf4_to_geotiff
 
+gdal.UseExceptions()
 logger = logging.getLogger(__name__)
 
 
+ATTR_DESCS = {
+    "ecoregions": {
+        "na": "North American ecoregions (Omernick, 1987)",
+        "world": "World Terrestrial Ecoregions (World Wildlife Fund)"
+    },
+    "landcover": {
+        1: "Annual International Geosphere-Biosphere Programme (IGBP)",
+        2: "Annual University of Maryland (UMD)",
+        3: "Annual Leaf Area Index (LAI)",
+        4: "Annual BIOME-Biogeochemical Cycles (BGC)",
+        5: "Annual Plant Functional Types (PFT)"
+    }
+}
+
+
 class Base:
-    """Base FiredPy methods."""
+    """Base firedpy methods."""
 
     MODIS_CRS = ("+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a=6371007.181 "
                  "+b=6371007.181 +units=m +no_defs")
@@ -185,7 +201,7 @@ class LPDAAC(Base):
         Parameters
         ----------
         out_dir : str
-            Path to FiredPy project directory.
+            Path to firedpy project directory.
         username : str
             Earth Access username. Defaults to user prompt, Optional.
         password : str
@@ -213,6 +229,20 @@ class LPDAAC(Base):
                     f"access: {e}"
                 )
 
+    def __repr__(self):
+        """Return representation string for LPDAAC object."""
+        name = self.__class__.__name__
+        attrs = {}
+        for key, attr in self.__dict__.items():
+            if "data_frame" in key:
+                attr = f"{type(attr)} {attr.shape}"  # Too big for preview
+            if not key.startswith("_"):  # Avoid secrets/private attributes
+                attrs[key] = attr
+        address = hex(id(self))
+        msgs = [f"\n   {k}='{v}'" for k, v in attrs.items()]
+        msg = " ".join(msgs)
+        return f"<{name} object at {address}> {msg}"
+
     def _generate_local_hdf_path(self, year: str, remote_name: str) -> str:
         pass
 
@@ -235,7 +265,7 @@ class LPDAAC(Base):
         return True
 
     def _download_task(self, request: Tuple[str, str]):
-        """Download file using EarthAccess if available, fallback to original method."""
+        """Try request with EarthAccess, fallback to original method."""
         link = request[0]
         dest = request[1]
         if os.path.exists(dest):
@@ -248,14 +278,18 @@ class LPDAAC(Base):
                 if success:
                     return
                 else:
-                    print(f"EarthAccess download failed for {os.path.basename(dest)}, trying legacy method")
+                    print(
+                        "EarthAccess download failed for "
+                        f"{os.path.basename(dest)}, trying legacy method"
+                    )
             except Exception as e:
                 print(f"EarthAccess error: {e}, falling back to legacy method")
 
         # Fallback to original urllib method
         try:
             pm = urllib.request.HTTPPasswordMgrWithDefaultRealm()
-            pm.add_password(None, "https://urs.earthdata.nasa.gov", self._username, self._password)
+            pm.add_password(None, "https://urs.earthdata.nasa.gov",
+                            self._username, self._password)
 
             cookie_jar = CookieJar()
             opener = urllib.request.build_opener(
@@ -293,18 +327,25 @@ class LPDAAC(Base):
     def _download_files(self, download_requests):
         try:
             with Pool(self._parallel_cores - 1) as pool:
-                for _ in tqdm(pool.imap_unordered(self._download_task, download_requests),
-                              total=len(download_requests)):
+                mapper = pool.imap_unordered(
+                    self._download_task,
+                    download_requests
+                )
+                for _ in tqdm(mapper, total=len(download_requests)):
                     pass
         except Exception as pe:
+            # logger.error(f"Download failed: {pe}")
+            print(f"Download failed: {pe}")
             try:
-                _ = [self._download_task(q) for q in tqdm(download_requests, position=0, file=sys.stdout)]
+                for q in tqdm(download_requests, position=0, file=sys.stdout):
+                    self._download_task(q)
             except Exception as e:
                 template = "Download failed: error type {0}:\n{1!r}"
                 message = template.format(type(e).__name__, e.args)
+                # logger.error(message)
                 print(message)
 
-    def _get_available_year_paths(self, start_year: int = None, end_year: int = None) -> List[str]:
+    def _get_available_year_paths(self, start_year=None, end_year=None):
         # Get available years
         request = requests.get(self._lp_daac_url)
         soup = BeautifulSoup(request.text, "html.parser")
@@ -316,7 +357,6 @@ class LPDAAC(Base):
                 if (start_year is None or file_year >= start_year) and (
                         end_year is None or file_year <= end_year):
                     year_paths.append(link)
-
         return year_paths
 
     def _generate_tile(self, regex_group_dict: Dict[str, str]):
@@ -334,9 +374,7 @@ class LPDAAC(Base):
                     tile = self._generate_tile(group_dict)
                     if tile not in tiles:
                         continue
-
                 files.append(link)
-
         return files
 
 
@@ -378,8 +416,9 @@ class BurnData(LPDAAC):
         name = self.__class__.__name__
         attrs = {}
         for key, attr in self.__dict__.items():
-            # Avoid secrets/private attributes
-            if not key.startswith("_"):
+            if "data_frame" in key:
+                attr = f"{type(attr)} {attr.shape}"  # Too big for preview
+            if not key.startswith("_"):  # Avoid secrets/private attributes
                 attrs[key] = attr
         address = hex(id(self))
         msgs = [f"\n   {k}='{v}'" for k, v in attrs.items()]
@@ -462,6 +501,8 @@ class BurnData(LPDAAC):
 
         NOTE: This completely replaces the legacy FTP/HTTP approach.
 
+        Parameters
+        ----------
         tiles : list
             List of MODIS tiles (e.g., ['h08v04', 'h09v04']). Required.
         start_year : int
@@ -591,167 +632,195 @@ class BurnData(LPDAAC):
             try:
                 nc_file_name = self._generate_local_nc_path(tile_id)
                 if os.path.exists(nc_file_name):
+                    print(f"{tile_id} netCDF file exists, skipping...")
                     continue
 
-                hdf_dir = os.path.join(self.hdf_dir, tile_id)
-                files = sorted([os.path.join(hdf_dir, f) for f in os.listdir(hdf_dir) if self._extract_date_parts(f)
-                                is not None], key=self._extract_date_parts)
-
+                hdf_dir = self.hdf_dir.joinpath(tile_id)
+                paths = []
+                for path in hdf_dir.glob("*.hdf"):
+                    if self._extract_date_parts(path):
+                        paths.append(path)
+                files = sorted(paths, key=self._extract_date_parts)
                 if not files:
                     print(f"No hdf files for tile {tile_id} in {hdf_dir}")
 
-                # Skip if it exists already
-                if os.path.exists(nc_file_name):
-                    print(tile_id + " netCDF file exists, skipping...")
-                else:
-                    # Use a sample to get geography information and geometries
-                    print("Building netcdf for tile " + tile_id)
-                    sample = files[0]
-                    ds = gdal.Open(sample).GetSubDatasets()[0][0]
-                    hdf = gdal.Open(ds)
-                    geom = hdf.GetGeoTransform()
-                    proj = hdf.GetProjection()
+                # Use a sample to get geography information and geometries
+                print(f"Building netcdf for tile {tile_id}")
+                sample = files[0]
+                ds = gdal.Open(sample).GetSubDatasets()[0][0]
+                hdf = gdal.Open(ds)
+                geom = hdf.GetGeoTransform()
+                proj = hdf.GetProjection()
+                data = hdf.GetRasterBand(1)
+                crs = osr.SpatialReference()
+
+                # Get the proj4 string using the WKT
+                crs.ImportFromWkt(proj)
+                proj4 = crs.ExportToProj4()
+
+                # Use one tif (one array) for spatial attributes
+                metadata = hdf.GetMetadata()
+                array = data.ReadAsArray()
+                ny, nx = array.shape
+                xs = np.arange(nx) * geom[1] + geom[0]
+                ys = np.arange(ny) * geom[5] + geom[3]
+                lats = np.linspace(
+                    float(metadata["SOUTHBOUNDINGCOORDINATE"]),
+                    float(metadata["NORTHBOUNDINGCOORDINATE"]),
+                    ny
+                )
+                lons = np.linspace(
+                    float(metadata["WESTBOUNDINGCOORDINATE"]),
+                    float(metadata["EASTBOUNDINGCOORDINATE"]),
+                    nx
+                )
+
+                # Today's date for attributes
+                todays_date = dt.datetime.today()
+                today = np.datetime64(todays_date)
+
+                # Create Dataset
+                nco = Dataset(
+                    nc_file_name,
+                    mode="w",
+                    format="NETCDF4",
+                    clobber=True
+                )
+
+                # Dimensions
+                nco.createDimension("y", ny)
+                nco.createDimension("x", nx)
+                nco.createDimension("time", None)
+                nco.createDimension("lat", nx)
+                nco.createDimension("lon", ny)
+
+                # Variables
+                y = nco.createVariable("y", np.float64, ("y",))
+                x = nco.createVariable("x", np.float64, ("x",))
+                lat = nco.createVariable(
+                    "lat",
+                    np.float64,
+                    dimensions=("lat",)
+                )
+                lon = nco.createVariable(
+                    "lon",
+                    np.float64,
+                    dimensions=("lon",)
+                )
+                times = nco.createVariable("time", np.int16, ("time",))
+                variable = nco.createVariable(
+                    "value",
+                    np.int16,
+                    ("time", "y", "x"),
+                    fill_value=fill_value,
+                    zlib=True
+                )
+                variable.standard_name = "day"
+                variable.long_name = "Burn Days"
+
+                # Appending the CRS information
+                # Check "https://cf-trac.llnl.gov/trac/ticket/77"
+                crs = nco.createVariable("crs", "c")
+                variable.setncattr("grid_mapping", "crs")
+                crs.spatial_ref = proj4
+                crs.proj4 = proj4
+                crs.geo_transform = geom
+                crs.grid_mapping_name = "sinusoidal"
+                crs.false_easting = 0.0
+                crs.false_northing = 0.0
+                crs.longitude_of_central_meridian = 0.0
+                crs.longitude_of_prime_meridian = 0.0
+                crs.semi_major_axis = 6371007.181
+                crs.inverse_flattening = 0.0
+
+                # Coordinate attributes
+                x.standard_name = "projection_x_coordinate"
+                x.long_name = "x coordinate of projection"
+                x.units = "m"
+                y.standard_name = "projection_y_coordinate"
+                y.long_name = "y coordinate of projection"
+                y.units = "m"
+
+                lat.standard_name = "latitude_coordinate"
+                lat.long_name = "latitude coordinate"
+                lat.units = "deg"
+                lon.standard_name = "longitude_coordinate"
+                lon.long_name = "longitude coordinate"
+                lon.units = "deg"
+
+                # Other attributes
+                nco.title = "Burn Days"
+                nco.subtitle = "Burn Days Detection by MODIS since 1970."
+                nco.description = "The day that a fire is detected."
+                nco.date = pd.to_datetime(str(today)).strftime("%Y-%m-%d")
+                nco.projection = "MODIS Sinusoidal"
+                nco.Conventions = "CF-1.6"
+
+                # Variable Attrs
+                times.units = "days since 1970-01-01"
+                times.standard_name = "time"
+                times.calendar = "gregorian"
+                days = []
+                for file in files:
+                    p = self._extract_date_parts(file)
+                    day = self._convert_ordinal_to_unix_day(p[0], p[1])
+                    days.append(day)
+                days = np.array(days)
+
+                # Write dimension data
+                x[:] = xs
+                y[:] = ys
+                lon[:] = lons
+                lat[:] = lats
+                times[:] = days
+
+                # One file a time, write the arrays
+                for tile_index, f in tqdm(enumerate(files), position=0):
+                    match = re.match(self._file_regex, os.path.basename(f))
+                    if match is None:
+                        continue
+
+                    regex_group_dict = match.groupdict()
+
+                    try:
+                        ds = gdal.Open(f).GetSubDatasets()[0][0]
+                        hdf = gdal.Open(ds)
+                    except Exception as e:
+                        print(f"Could not open {f} for building ncdf: {e}")
+                        variable[tile_index, :, :] = np.full(
+                            (ny, nx),
+                            fill_value
+                        )
+                        continue
+
                     data = hdf.GetRasterBand(1)
-                    crs = osr.SpatialReference()
-
-                    # Get the proj4 string using the WKT
-                    crs.ImportFromWkt(proj)
-                    proj4 = crs.ExportToProj4()
-
-                    # Use one tif (one array) for spatial attributes
-                    metadata = hdf.GetMetadata()
                     array = data.ReadAsArray()
-                    ny, nx = array.shape
-                    xs = np.arange(nx) * geom[1] + geom[0]
-                    ys = np.arange(ny) * geom[5] + geom[3]
-                    lats = np.linspace(
-                        float(metadata["SOUTHBOUNDINGCOORDINATE"]),
-                        float(metadata["NORTHBOUNDINGCOORDINATE"]),
-                        ny
-                    )
-                    lons = np.linspace(
-                        float(metadata["WESTBOUNDINGCOORDINATE"]),
-                        float(metadata["EASTBOUNDINGCOORDINATE"]),
-                        nx
-                    )
+                    nulls = np.where(array < 0)
 
-                    # Today's date for attributes
-                    todays_date = dt.datetime.today()
-                    today = np.datetime64(todays_date)
+                    year = int(regex_group_dict["year"])
+                    array = self._convert_dates(array, year)
 
-                    # Create Dataset
-                    nco = Dataset(nc_file_name, mode="w", format="NETCDF4", clobber=True)
+                    array[nulls] = fill_value
 
-                    # Dimensions
-                    nco.createDimension("y", ny)
-                    nco.createDimension("x", nx)
-                    nco.createDimension("time", None)
-                    nco.createDimension("lat", nx)
-                    nco.createDimension("lon", ny)
+                    if array.shape == (ny, nx):
+                        variable[tile_index, :, :] = array
+                    else:
+                        print(
+                            f"{f}: failed, had wrong dimensions, "
+                            "inserting a blank array in its place."
+                        )
+                        variable[tile_index, :, :] = np.full(
+                            (ny, nx),
+                            fill_value
+                        )
 
-                    # Variables
-                    y = nco.createVariable("y", np.float64, ("y",))
-                    x = nco.createVariable("x", np.float64, ("x",))
-                    lat = nco.createVariable("lat", np.float64, dimensions=("lat",))
-                    lon = nco.createVariable("lon", np.float64, dimensions=("lon",))
-                    times = nco.createVariable("time", np.int16, ("time",))
-                    variable = nco.createVariable("value", np.int16,
-                                                  ("time", "y", "x"),
-                                                  fill_value=fill_value, zlib=True)
-                    variable.standard_name = "day"
-                    variable.long_name = "Burn Days"
-
-                    # Appending the CRS information
-                    # Check "https://cf-trac.llnl.gov/trac/ticket/77"
-                    crs = nco.createVariable("crs", "c")
-                    variable.setncattr("grid_mapping", "crs")
-                    crs.spatial_ref = proj4
-                    crs.proj4 = proj4
-                    crs.geo_transform = geom
-                    crs.grid_mapping_name = "sinusoidal"
-                    crs.false_easting = 0.0
-                    crs.false_northing = 0.0
-                    crs.longitude_of_central_meridian = 0.0
-                    crs.longitude_of_prime_meridian = 0.0
-                    crs.semi_major_axis = 6371007.181
-                    crs.inverse_flattening = 0.0
-
-                    # Coordinate attributes
-                    x.standard_name = "projection_x_coordinate"
-                    x.long_name = "x coordinate of projection"
-                    x.units = "m"
-                    y.standard_name = "projection_y_coordinate"
-                    y.long_name = "y coordinate of projection"
-                    y.units = "m"
-
-                    lat.standard_name = "latitude_coordinate"
-                    lat.long_name = "latitude coordinate"
-                    lat.units = "deg"
-                    lon.standard_name = "longitude_coordinate"
-                    lon.long_name = "longitude coordinate"
-                    lon.units = "deg"
-
-                    # Other attributes
-                    nco.title = "Burn Days"
-                    nco.subtitle = "Burn Days Detection by MODIS since 1970."
-                    nco.description = "The day that a fire is detected."
-                    nco.date = pd.to_datetime(str(today)).strftime("%Y-%m-%d")
-                    nco.projection = "MODIS Sinusoidal"
-                    nco.Conventions = "CF-1.6"
-
-                    # Variable Attrs
-                    times.units = "days since 1970-01-01"
-                    times.standard_name = "time"
-                    times.calendar = "gregorian"
-                    days = np.array([
-                        self._convert_ordinal_to_unix_day(d[0], d[1]) for d in [self._extract_date_parts(f) for f in
-                                                                                files]
-                    ])
-
-                    # Write dimension data
-                    x[:] = xs
-                    y[:] = ys
-                    lon[:] = lons
-                    lat[:] = lats
-                    times[:] = days
-
-                    # One file a time, write the arrays
-                    for tile_index, f in tqdm(enumerate(files), position=0, file=sys.stdout):
-                        match = re.match(self._file_regex, os.path.basename(f))
-                        if match is None:
-                            continue
-
-                        regex_group_dict = match.groupdict()
-
-                        try:
-                            ds = gdal.Open(f).GetSubDatasets()[0][0]
-                            hdf = gdal.Open(ds)
-                        except Exception as e:
-                            print(f"Could not open {f} for building ncdf: {str(e)}")
-                            variable[tile_index, :, :] = np.full((ny, nx), fill_value)
-                            continue
-
-                        data = hdf.GetRasterBand(1)
-                        array = data.ReadAsArray()
-                        nulls = np.where(array < 0)
-
-                        year = int(regex_group_dict["year"])
-                        array = self._convert_dates(array, year)
-
-                        array[nulls] = fill_value
-
-                        if array.shape == (ny, nx):
-                            variable[tile_index, :, :] = array
-                        else:
-                            print(f + ": failed, had wrong dimensions, inserting a blank array in its place.")
-                            variable[tile_index, :, :] = np.full((ny, nx), fill_value)
-
-                    # Done
-                    nco.close()
+                # Done
+                nco.close()
 
             except Exception as e:
                 # Log the error and move on to the next tile
-                logger.error(f"Error processing tile {tile_id}: {str(e)}")
+                # logger.error(f"Error processing tile {tile_id}: {str(e)}")
+                raise OSError(f"Error processing tile {tile_id}: {str(e)}")
 
     @staticmethod
     def _verify_hdf_file(file_path) -> bool:
@@ -773,7 +842,8 @@ class BurnData(LPDAAC):
 
 
 class LandCover(Base):
-    """EarthAccess-based Land Cover data access for FireDPy.
+    """EarthAccess-based Land Cover data access for firedpy.
+
     Handles cases where burn area tiles don't match land cover tiles.
     """
 
@@ -794,6 +864,20 @@ class LandCover(Base):
             "h10v04": ["h10v02", "h09v03"],
             "h10v05": ["h10v06", "h09v06"]
         }
+
+    def __repr__(self):
+        """Return representation string for a LandCover object."""
+        name = self.__class__.__name__
+        attrs = {}
+        for key, attr in self.__dict__.items():
+            if "data_frame" in key:
+                attr = f"{type(attr)} {attr.shape}"  # Too big for preview
+            if not key.startswith("_"):  # Avoid secrets/private attributes
+                attrs[key] = attr
+        address = hex(id(self))
+        msgs = [f"\n   {k}='{v}'" for k, v in attrs.items()]
+        msg = " ".join(msgs)
+        return f"<{name} object at {address}> {msg}"
 
     def _setup_earthaccess(self):
         """Setup EarthAccess authentication for land cover data."""
@@ -920,7 +1004,7 @@ class LandCover(Base):
         else:
             shutil.move(tmp_files[0], mosaic_path)
 
-    def get_land_cover(self, tiles=None, land_cover_type=LandCoverType.IGBP):
+    def get_land_cover(self, tiles, land_cover_type=LandCoverType.IGBP):
         """Download and process land cover data with EarthAccess.
 
         Parameters
@@ -949,11 +1033,8 @@ class LandCover(Base):
             return
 
         # Match possible land cover type arguments
-        # if isinstance(land_cover_type, int):
-        #     land_cover_int = land_cover_type
-        #     land_cover_type = LandCoverType(land_cover_int)
-        # if isinstance(land_cover_type, LandCoverType):
-        #     land_cover_int = land_cover_type.value
+        if isinstance(land_cover_type, LandCoverType):
+            land_cover_type = land_cover_type.value
 
         # Find available tiles that can cover our region
         print(f"Getting land cover data using EarthAccess for region: {tiles}")
@@ -976,7 +1057,8 @@ class LandCover(Base):
                     # Check if mosaic already exists
                     lc_dir = self.land_cover_dir
                     mosaic_dir = lc_dir.joinpath(tile, year, "mosaics")
-                    output_file = f"lc_mosaic_{land_cover_type}_{year}.tif"
+                    tag = f"{tile}_{land_cover_type}_{year}"
+                    output_file = f"lc_mosaic_{tag}.tif"
                     mosaic_path = os.path.join(mosaic_dir, output_file)
                     os.makedirs(mosaic_dir, exist_ok=True)
                     if os.path.exists(mosaic_path):
@@ -1021,6 +1103,15 @@ class LandCover(Base):
                         if downloaded_files:
                             msg = f"   Land cover data ready for {tile} {year}"
                             print(msg)
+
+                            # This only creates a single netcdf per year and
+                            # tile. The way the filesytem and loop here is
+                            # organized, that's all we can do here. Later,
+                            # the method that adds this attribute to the
+                            # dataframe assumes it is a full study area mosaic
+                            # so we are simply dropping missed event points,
+                            # which isn't ideal. Though it works, it doesn't
+                            # seem like this was the original intention.
                             self.mosaic_landuse(
                                 downloaded_files,
                                 mosaic_path,
@@ -1047,7 +1138,7 @@ class EcoRegion(Base):
         Parameters
         ----------
         out_dir : str | pathlib.PosixPath
-            Path to FiredPy output directory.
+            Path to firedpy output directory.
         """
         super().__init__(out_dir)
         self._eco_region_ftp_url = (
@@ -1058,9 +1149,10 @@ class EcoRegion(Base):
             self.eco_region_raster_dir,
             "NA_CEC_Eco_Level3_modis.tif"
         )
-        self._ref_cols = ["NA_L3CODE", "NA_L3NAME", "NA_L2CODE", "NA_L2NAME",
-                          "NA_L1CODE", "NA_L1NAME", "NA_L3KEY", "NA_L2KEY",
-                          "NA_L1KEY"]
+        self._ref_cols = [
+            "NA_L3CODE", "NA_L3NAME", "NA_L2CODE", "NA_L2NAME", "NA_L1CODE",
+            "NA_L1NAME", "NA_L3KEY", "NA_L2KEY", "NA_L1KEY"
+        ]
         self.eco_region_data_frame = None
         self._file_regex = r"MCD64A1" + self._post_regex
 
@@ -1069,8 +1161,10 @@ class EcoRegion(Base):
         name = self.__class__.__name__
         attrs = {}
         for key, attr in self.__dict__.items():
-            # Avoid secrets/private attributes
-            if not key.startswith("_"):
+            if "data_frame" in key:
+                if attr is not None:
+                    attr = f"{type(attr)} {attr.shape}"  # Too big for preview
+            if not key.startswith("_"):  # Avoid secrets/private attributes
                 attrs[key] = attr
         address = hex(id(self))
         msgs = [f"\n   {k}='{v}'" for k, v in attrs.items()]
@@ -1232,6 +1326,6 @@ class EcoRegion(Base):
 
         # Create a reference table for ecoregions
         eco_ref = eco[self._ref_cols].drop_duplicates()
-        eco_ref = eco_ref.applymap(self._normalize_string)
+        eco_ref = eco_ref.map(self._normalize_string)
         eco_ref.to_csv(self.eco_region_csv_path, index=False)
         self.eco_region_data_frame = eco_ref

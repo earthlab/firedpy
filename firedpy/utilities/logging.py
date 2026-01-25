@@ -1,4 +1,4 @@
-"""FiredPy Logging Utilities.
+"""firedpy Logging Utilities.
 
 Run init_logger here with a target directory after creating a logging object
 (`logger = logging.getLogger(__name__)`).
@@ -19,12 +19,12 @@ LOG_LEVELS = {
 
 
 def init_logger(out_dir, log_level="DEBUG"):
-    """Initiate logging to a file for a given FiredPy project directory.
+    """Initiate logging to a file for a given firedpy project directory.
 
     Parameters
     ----------
     out_dir : str | pathlib.PosixPath
-        The output directory for the FiredPy run.
+        The output directory for the firedpy run.
     log_level : str
         Level of logging detail to write to the log file.
     """

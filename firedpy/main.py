@@ -8,7 +8,7 @@ from http.cookiejar import CookieJar
 from logging import getLogger
 from pathlib import Path
 
-from firedpy.data_classes import BurnData, EcoRegion, LandCover
+from firedpy.data_classes import ATTR_DESCS, BurnData, EcoRegion, LandCover
 from firedpy.enums import LandCoverType, ShapeType
 from firedpy.model_classes import ModelBuilder
 # from firedpy.utilities.argument_parsing import FiredpyArgumentParser
@@ -142,10 +142,9 @@ def run_all(
     n_cores=0,
     full_csv=True,
     username=None,
-    password=None,
-    test=False
+    password=None
 ):
-    """Run all steps of the FiredPy modeling pipeline.
+    """Run all steps of the firedpy modeling pipeline.
 
     Parameters
     ----------
@@ -174,7 +173,7 @@ def run_all(
     shape_type : str
         Build shapefiles from the event data frame. Specify either "shp",
         "gpkg", or both. Shapefiles of both daily progression and overall
-        event perimeters will be written to the 'outputs/shapefiles' folder of 
+        event perimeters will be written to the 'outputs/shapefiles' folder of
         the chosen project directory. These will be saved in the specified
         geopackage format (.gpkg), ERSI Shapefile format (.shp), or save them
         in both formats using the file basename of the fire event data frame
@@ -230,18 +229,12 @@ def run_all(
     out_dir = Path(out_dir).expanduser()
     init_logger(out_dir=out_dir)
     logger.info(
-        f"Running FiredPy for years {start_year} to {end_year} for MODIS "
+        f"Running firedpy for years {start_year} to {end_year} on MODIS "
         f"tiles: {tiles}."
     )
 
-    # Get the ecoregion data
-    # This also initiates the project directory and it's subfolders and
-    # downloads the MODIS world grid (Base method init), let's adjust here for
-    # clarity
-    eco_region_data = EcoRegion(out_dir=out_dir)
-    eco_region_data.get_eco_region()
-
     # Get the burn data
+    logger.info("Collecting MODIS burn data.")
     burn_data = BurnData(
         out_dir=out_dir,
         username=username,
@@ -264,17 +257,20 @@ def run_all(
     )
 
     # Build event perimeters
+    logger.info("Building event perimeter geometries.")
     event_perimeters = models.build_events()
 
     # Build the event geodataframe
     gdf = models.build_points(
-        event_perimeter_list=event_perimeters,
-        shape_file_path=shape_file
+        event_perimeters=event_perimeters,
+        shape_file=shape_file
     )
 
     # Add secondary attributes
     gdf = models.add_fire_attributes(gdf=gdf)
     if land_cover_type != LandCoverType.NONE:
+        lc_desc = ATTR_DESCS["landcover"][land_cover_type]
+        logger.info(f"Adding landcover attributes: {lc_desc}.")
         land_cover = LandCover(
             out_dir=out_dir,
             n_cores=n_cores,
@@ -290,7 +286,16 @@ def run_all(
             tiles=tiles,
             land_cover_type=land_cover_type
         )
+
+    # What is this doing? (buffering with an envelope)
     gdf = models.process_geometry(gdf)
+
+    # Add ecoregion attributes
+    eco_desc = ATTR_DESCS["ecoregions"][eco_region_type]
+    msg = f"Adding ecoregion data: {eco_desc}, Level {eco_region_level}."
+    logger.info(msg)
+    eco_region_data = EcoRegion(out_dir=out_dir)
+    eco_region_data.get_eco_region()
     gdf = models.add_eco_region_attributes(
         gdf=gdf,
         eco_region_type=eco_region_type,
@@ -430,7 +435,7 @@ def main():
 
 if __name__ == "__main__":
     out_dir = "~/scratch/firedpy/test"
-    tiles = ["h08v04", "h09v04", "h08v05", "h09v05"]
+    tiles = ["h08v04", "h09v04"]
     tile_name = None
     start_year = 2020
     end_year = 2021
@@ -454,22 +459,22 @@ if __name__ == "__main__":
         username = lines[0].strip()
         password = lines[1].strip()
 
-    # run_all(
-    #     out_dir=out_dir,
-    #     tiles=tiles,
-    #     tile_name=tile_name,
-    #     start_year=start_year,
-    #     end_year=end_year,
-    #     daily=daily,
-    #     spatial_param=spatial_param,
-    #     temporal_param=temporal_param,
-    #     shape_file=shape_file,
-    #     shape_type=shape_type,
-    #     eco_region_level=eco_region_level,
-    #     eco_region_type=eco_region_type,
-    #     land_cover_type=land_cover_type,
-    #     n_cores=n_cores,
-    #     full_csv=full_csv,
-    #     username=username,
-    #     password=password
-    # )
+    run_all(
+        out_dir=out_dir,
+        tiles=tiles,
+        tile_name=tile_name,
+        start_year=start_year,
+        end_year=end_year,
+        daily=daily,
+        spatial_param=spatial_param,
+        temporal_param=temporal_param,
+        shape_file=shape_file,
+        shape_type=shape_type,
+        eco_region_level=eco_region_level,
+        eco_region_type=eco_region_type,
+        land_cover_type=land_cover_type,
+        n_cores=n_cores,
+        full_csv=full_csv,
+        username=username,
+        password=password
+    )

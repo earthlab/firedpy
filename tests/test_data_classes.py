@@ -546,7 +546,7 @@ class TestEcoRegion(unittest.TestCase):
         mock_to_csv.assert_called_once_with(eco_region._eco_region_csv_path, index=False)
 
         # Check that `eco_region_data_frame` is assigned correctly
-        pd.testing.assert_frame_equal(eco_region.eco_region_data_frame, mock_df.applymap(str))
+        pd.testing.assert_frame_equal(eco_region.eco_region_data_frame, mock_df.map(str))
 
     @patch("geopandas.read_file")
     @patch.object(EcoRegion, "_rasterize_vector_data")

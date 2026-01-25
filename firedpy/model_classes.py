@@ -9,6 +9,7 @@ import sys
 from argparse import Namespace
 from concurrent.futures import as_completed, ProcessPoolExecutor
 from datetime import datetime
+from logging import getLogger
 from typing import List, Set, Dict, Tuple
 
 import geopandas as gpd
@@ -26,6 +27,9 @@ from firedpy import DATA_DIR
 from firedpy.enums import LandCoverType, EcoRegionType
 from firedpy.data_classes import Base
 from firedpy.spatial import MODIS_CRS
+from firedpy.utilities.logging import init_logger
+
+logger = getLogger(__name__)
 
 
 def process_file_perimeter(nc_file_path, out_dir, spatial_param,
@@ -208,19 +212,49 @@ class RandomAccessSet:
 
 
 class EventGrid(Base):
-    """
+    """Gridded event delineation methods.
+
     For a single file, however large, find sites with any burn detections
     in the study period, loop through these sites and group by the space-time
     window, save grouped events to a data frame on disk.
-
-    Args:
-        spatial_param (int): The allowed distance from the center of the window in index space
-
     """
 
-    def __init__(self, out_dir: str, spatial_param: int = 5, temporal_param: int = 11,
-                 area_unit: str = "Unknown", time_unit: str = "days since 1970-01-01", nc_file_path: str = None,
-                 input_array: np.array = None, coordinates: Dict[str, np.array] = None):
+    def __init__(
+            self,
+            out_dir,
+            spatial_param=5,
+            temporal_param=11,
+            area_unit="Unknown",
+            time_unit="days since 1970-01-01",
+            nc_file_path=None,
+            input_array=None,
+            coordinates=None
+    ):
+        """Initialize EventGrid object.
+
+        TODO: Check the definitions/types of the last two arguments here.
+
+        Parameter
+        ---------
+        out_dir : str | pathlib.PosixPath
+            Path to firedpy project directory.
+        spatial_param : int
+            The number of cells (~463 m resolution) to search for neighboring
+            burn detections. Defaults to 5 cells in all directions. Defaults
+            to 5.
+        temporal_param : int
+            The number of days to search for neighboring burn detections.
+            Defaults to 11.
+        area_unit : str
+            Area Unit. Currently unused and defaults to 'Unknown'.
+        time_unit : str
+            The time unit to use when parsing dates. Defaults to days since
+            1970-01-01.
+        nc_file_path : str | pathlib.PosixPath
+            Path to the input NetCDF4 file containing the original burn data.
+        input_array : np.ndarray
+        coordinates : dict[str, np.ndarray]
+        """
         super().__init__(out_dir)
         self.spatial_param = spatial_param
         self.temporal_param = temporal_param
@@ -228,17 +262,23 @@ class EventGrid(Base):
         self._time_unit = time_unit
         self.current_event_id = 0
 
-        if nc_file_path is not None:
+        if nc_file_path:
             with xr.open_dataset(nc_file_path) as burns:
-                self._coordinates = {dim: np.array(burns.coords[dim].values) for dim in ['y', 'x', 'time']}
+                self._coordinates = {}
+                for dim in ["y", "x", "time"]:
+                    self._coordinates[dim] = np.array(burns.coords[dim].values)
                 self._input_array = burns.value.values
+
         elif input_array is not None:
             if coordinates is None:
-                raise ValueError('If specifying input array, must also provide coordinates parameter')
+                msg = "coordinates parameter also required with input array."
+                raise ValueError(msg)
             self._coordinates = coordinates
             self._input_array = input_array
+
         else:
-            raise ValueError('Must input either nc_file_path or input_array parameter')
+            msg = "Must input either nc_file_path or input_array parameter"
+            raise ValueError(msg)
 
     def _get_spatial_window(self, y, x, array_dims):
         """
@@ -253,9 +293,7 @@ class EventGrid(Base):
         right = min(array_dims[1], x + self.spatial_param)
 
         def get_edge_positions(dim, coord, param):
-            """
-            Helper function to compute center and origin.
-            """
+            """Compute center and origin."""
             edges_lower = [t for t in range(param)]
             edges_upper = [dim - t - 1 for t in range(param)]
             is_edge = True
@@ -272,10 +310,15 @@ class EventGrid(Base):
 
             return center, origin, is_edge
 
-        ycenter, oy, is_y_edge = get_edge_positions(array_dims[0], y, self.spatial_param)
-        xcenter, ox, is_x_edge = get_edge_positions(array_dims[1], x, self.spatial_param)
+        dim0 = array_dims[0]
+        dim1 = array_dims[1]
+        sp = self.spatial_param
+        ycenter, oy, is_y_edge = get_edge_positions(dim0, y, sp)
+        xcenter, ox, is_x_edge = get_edge_positions(dim1, x, sp)
 
-        return top, bottom, left, right, [ycenter, xcenter], [oy, ox], is_x_edge or is_y_edge
+        edge = is_x_edge or is_y_edge
+
+        return top, bottom, left, right, [ycenter, xcenter], [oy, ox], edge
 
     def _get_available_cells(self):
         """
@@ -310,13 +353,13 @@ class EventGrid(Base):
         for pair in tqdm(available_pairs, position=progress_position,
                          file=sys.stdout, desc=progress_description):
             y, x = pair
+
             top, bottom, left, right, center, origin, is_edge = \
                 self._get_spatial_window(y, x, dims)
-            center_y, center_x = center
 
+            center_y, center_x = center
             window = self._input_array[:, top:bottom + 1, left:right + 1]
             center_burn = window[:, center_y, center_x]
-
             valid_center_burn_indices = np.where(center_burn > 0)[0]
             valid_center_burn_values = center_burn[valid_center_burn_indices]
 
@@ -324,12 +367,19 @@ class EventGrid(Base):
                 overlapping_event_ids = RandomAccessSet()
                 events_to_remove = set()
 
-                # In each time slice we have a possible range of 30 days (hdf files are monthly temporal resolution)
-                l = max(0, int(valid_center_burn_indices[i] - time_index_buffer)) if not all_t else 0
-                r = min(nz, int(valid_center_burn_indices[i] + time_index_buffer) + 1) if not all_t else nz
+                # In each time slice we have a possible range of 30 days
+                if all_t:
+                    l = 0
+                    r = nz
+                else:
+                    n = int(valid_center_burn_indices[i] - time_index_buffer)
+                    l = max(0, n)
+                    r = min(nz, n + 1)
 
                 burn_window = window[l:r, :, :]
-                val_locs = np.where(abs(burn_value - burn_window) <= self.temporal_param)
+                val_locs = np.where(
+                    abs(burn_value - burn_window) <= self.temporal_param
+                )
                 y_locs, x_locs = val_locs[1], val_locs[2]
                 oy, ox = origin
 
@@ -342,22 +392,24 @@ class EventGrid(Base):
                 for i, val in enumerate(vals):
                     c = (np.float32(ys[i]), np.float32(xs[i]), np.uint16(val))
 
-                    if c in identified_points:  # O(1) time
-                        overlapping_event_ids.add(identified_points[c])  # O(1) time
+                    if c in identified_points:
+                        overlapping_event_ids.add(identified_points[c])
                     else:
                         new_spacetime_coords.add(c)
 
-                event = EventPerimeter(event_id=self.current_event_id, spacetime_coordinates=new_spacetime_coords,
-                                       is_edge=is_edge)
+                event = EventPerimeter(
+                    event_id=self.current_event_id,
+                    spacetime_coordinates=new_spacetime_coords,
+                    is_edge=is_edge
+                )
 
                 if overlapping_event_ids.list:
-                    to_keep_id = sorted([e for e in overlapping_event_ids.list], key=lambda l: len(
-                        perimeters.get(EventPerimeter(l, set())).spacetime_coordinates))[-1]
 
-                    to_keep = perimeters.get(EventPerimeter(to_keep_id, set()))  # O(1) time
+                    to_keep_id = sorted([e for e in overlapping_event_ids.list], key=lambda l: len(perimeters.get(EventPerimeter(l, set())).spacetime_coordinates))[-1]
+                    to_keep = perimeters.get(EventPerimeter(to_keep_id, set()))
                     for event_id in overlapping_event_ids.set:
                         if event_id != to_keep_id:
-                            to_merge = perimeters.get(EventPerimeter(event_id, set()))  # O(1) time
+                            to_merge = perimeters.get(EventPerimeter(event_id, set()))
                             to_keep.add_spacetime_coordinates(to_merge.spacetime_coordinates)
 
                             to_keep.is_edge = to_keep.is_edge or to_merge.is_edge
@@ -610,18 +662,17 @@ class ModelBuilder(Base):
 
     def build_events(self):
         """Build wildfire events tile by tile and merge together."""
-        print('Building fire event perimeters')
-
         # Initialize the event container
+        print("Building fire event perimeters.")
         fire_events = []
         if self._n_cores == 1:
             # Run serially
-            for i, file in enumerate(self.files):
+            for i, nc_file_path in enumerate(self.files):
                 out_dir = self.out_dir
                 temp_param = self.temporal_param
                 space_param = self.spatial_param
                 out = process_file_perimeter(
-                    file,
+                    nc_file_path,
                     out_dir,
                     temp_param,
                     space_param,
@@ -632,20 +683,19 @@ class ModelBuilder(Base):
             # Run in parallel
             with ProcessPoolExecutor(self._n_cores) as pool:
                 jobs = []
-                for i, file in enumerate(self.files):
+                for i, nc_file_path in enumerate(self.files):
                     out_dir = self.out_dir
                     temp_param = self.temporal_param
                     space_param = self.spatial_param
                     job = pool.submit(
                         process_file_perimeter,
-                        file,
+                        nc_file_path,
                         out_dir,
                         temp_param,
                         space_param,
                         i
                     )
                     jobs.append(job)
-
                 for job in tqdm(as_completed(jobs), total=len(jobs)):
                     fire_events.extend(job.result())
 
@@ -678,24 +728,54 @@ class ModelBuilder(Base):
         clipped_gdf = gdf.clip(shp)
         return clipped_gdf
 
-    def build_points(self, event_perimeter_list: List[EventPerimeter], shape_file_path: str = None):
-        # Extract data from EventPerimeter objects and build DataFrame
-        df = pd.DataFrame([
-            [event.event_id, coord[1], coord[0], self._convert_unix_day_to_calendar_date(coord[2])]
-            for event in event_perimeter_list for coord in event.spacetime_coordinates
-        ], columns=["id", "x", "y", "date"])
+    def build_points(
+            self,
+            event_perimeters,
+            shape_file=None
+    ):
+        """Build point geometries of fire events.
+
+        Parameters
+        ----------
+        event_perimeters : List[firedpy.model_classes.EventPerimeter]
+            List of EventPerimeter objects.
+        shape_file : str | pathlib.PosixPath
+            Path to the shapefile representing the target study area. Defaults
+            to None, full MODIS tile extents will be used.
+
+        Returns
+        -------
+        geopandas.geodataframe.GeoDataFrame : A geodataframe representing
+
+        """
+        # Build a datetime coordinate dataframe from the events
+        data = []
+        for event in event_perimeters:
+            for coord in event.spacetime_coordinates:
+                eid = event.event_id
+                coord0 = coord[0]
+                coord1 = coord[1]
+                coord3 = self._convert_unix_day_to_calendar_date(coord[2])
+                entry = [eid, coord1, coord0, coord3]
+                data.append(entry)
+        df = pd.DataFrame(data, columns=["id", "x", "y", "date"])
 
         # Center pixel coordinates
-        df["x"] = df["x"] + (self.geom[1] / 2)
-        df["y"] = df["y"] + (self.geom[-1] / 2)
+        df.loc[:, "x"] = df["x"] + (self.geom[1] / 2)
+        df.loc[:, "y"] = df["y"] + (self.geom[-1] / 2)
 
         # Each entry gets a point object from the x and y coordinates.
         print("Converting data frame to spatial object...")
-        df["geometry"] = df[["x", "y"]].apply(lambda x: Point(tuple(x)), axis=1)
-        gdf = gpd.GeoDataFrame(df, crs=self.crs.proj4, geometry=df["geometry"])
+        df.loc[:, "geometry"] = df[["x", "y"]].apply(
+            lambda x: Point(tuple(x)),
+            axis=1
+        )
+        gdf = gpd.GeoDataFrame(df, crs=self.crs.proj4, geometry="geometry")
 
-        if shape_file_path is not None:
-            gdf = self._clip_to_shape_file(gdf, shape_file_path)
+        # Clip to study area if requested
+        if shape_file is not None:
+            gdf = self._clip_to_shape_file(gdf, shape_file)
+
         return gdf
 
     def _modis_to_lat_lon(self, x_sinu, y_sinu):
@@ -770,7 +850,7 @@ class ModelBuilder(Base):
         return gdf
 
     def add_land_cover_attributes(self, gdf, tiles, land_cover_type=0):
-        """Add landcover attributes to a FiredPy GeoDataFrame.
+        """Add landcover attributes to a firedpy GeoDataFrame.
 
         Parameters
         ----------
@@ -882,6 +962,7 @@ class ModelBuilder(Base):
                 # Open the land cover raster and add attributes to sub df
                 lc = rasterio.open(lc_file)
                 sgdf.loc[:, "lc_code"] = sgdf.apply(point_query, axis=1)
+                sgdf = sgdf[sgdf["lc_code"] != 255]  # Out-of-tile points
                 idgrp = sgdf.groupby("id")
                 sgdf.loc[:, "lc_mode"] = idgrp["lc_code"].transform(self._mode)
                 sgdfs.append(sgdf)
@@ -1019,10 +1100,19 @@ class ModelBuilder(Base):
             gdf = self._add_attributes_from_na_cec(gdf, eco_region_level)
         else:
             gdf = self._add_attributes_from_wwf(gdf)
-
         return gdf
 
     def process_geometry(self, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+        """Process event geometries.
+
+        Parameters
+        ----------
+        gdf : geopandas.
+
+        Returns
+        -------
+
+        """
         print("Creating buffer...")
         geometry = gdf.buffer(1 + (self._res / 2))
         gdf["geometry"] = geometry
