@@ -29,11 +29,11 @@ class TileChoice(enum.Enum):
 class LandCoverType(enum.IntEnum):
     """MODIS Land Cover Types.
 
-    LC_Type1 : Annual International Geosphere-Biosphere Programme (IGBP)
-    LC_Type2 : Annual University of Maryland (UMD)
-    LC_Type3 : Annual Leaf Area Index (LAI)
-    LC_Type4 : Annual BIOME-Biogeochemical Cycles (BGC)
-    LC_Type5 : Annual Plant Functional Types (PFT)
+    LC_Type1 : International Geosphere-Biosphere Programme (IGBP) scheme
+    LC_Type2 : University of Maryland (UMD) scheme
+    LC_Type3 : MODIS-derived Leaf Area Index (LAI/fPAR) scheme
+    LC_Type4 : MODIS-derived Net Primary Production (NPP) scheme
+    LC_Type5 : Plant Functional Type (PFT) scheme
     """
     NONE = 0
     IGBP = 1

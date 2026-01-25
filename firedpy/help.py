@@ -1,5 +1,6 @@
-HELP_TEXT = {
+HELP = {
     "name": "src",
+    "out_dir": "Project output directory path. Required.",
     "cleanup": (
         """
         If set then the burn area and landcover files will be removed after
@@ -8,10 +9,8 @@ HELP_TEXT = {
     ),
     "daily": (
         """
-        You may specify whether to create the daily polygons or just the
-        event-level perimeter for your analysis area. If this flag is set, the
-        daily and event polygons will be created, otherwise only the event
-        level.
+        Create daily polygons in addition to event-level perimeters for your
+        analysis area.
         """
     ),
     "data": (
@@ -27,16 +26,7 @@ HELP_TEXT = {
         'fired_events.csv' and 'fired_daily.csv' if daily data is requested.
         """
     ),
-    "earthdata": (
-        """
-        Please input your NASA Earthdata username and password in order to
-        download the land cover data. If you do not have an Earthdata account,
-        you can register at https://urs.earthdata.nasa.gov/. To avoid seeing
-        this prompt again, you can set the FIREDPY_ED_USER and FIREDPY_ED_PWD
-        environment variables.
-        """
-    ),
-    "eco": (
+    "eco_type": (
         """
         You can specify the ecoregion type as either 'world' or 'na':\n
         'world' = World Terrestrial Ecoregions (World Wildlife Fund (WWF))
@@ -54,6 +44,14 @@ HELP_TEXT = {
         used. Defaults to None.
         """
     ),
+    "eco_level": (
+        """
+        The desired Ecoregions level from the North American Commission for
+        Environmental Cooperation (CEC). Levels 1 to 3 are available, with
+        level 1 representing the broadest scale and level III representing the
+        most detailed. Defaults to 1.
+        """
+    ),
     "full_csv": (
         """
         If set full attribute table will exported to csv. If not included only
@@ -67,19 +65,25 @@ HELP_TEXT = {
         supplied will prompt the user for a value. Defaults to False.
         """
     ),
-    "lc": (
+    "lc_type": (
         """
-        To include land cover as an attribute, provide a number corresponding
-        with a MODIS/Terra+Aqua Land Cover (MCD12Q1) category followed with
-        :username:password of your NASA's Earthdata service account. Available
-        land cover categories:\n
+        The target land cover source used to characterize each fire event.
+        Provide a number corresponding with a MODIS/Terra+Aqua Land Cover
+        (MCD12Q1). Available land cover categories:\n
 
-            1: IGBP global vegetation classification scheme,
-            2: University of Maryland (UMD) scheme,
-            3: MODIS-derived LAI/fPAR scheme.
+            1: IGBP global vegetation classification scheme\n
+            2: University of Maryland (UMD) scheme\n
+            3: MODIS-derived LAI/fPAR scheme\n
+            4: Annual BIOME-Biogeochemical Cycles (BGC)\n
+            5: Annual Plant Functional Types (PFT)\n
 
-        If you do not have an account register at
-        https://urs.earthdata.nasa.gov/home. Defaults to None.
+        An Earthdata account is required. If you don't have one, register at
+        https://urs.earthdata.nasa.gov/home. If you have an account, firedpy
+        will use any of the authentication options outlined here:
+
+        https://earthaccess.readthedocs.io/en/latest/user_guide/authenticate/
+
+        Defaults to None.
         """
     ),
     "n_cores": "Number of cores to use for parallel processing.",
@@ -95,7 +99,7 @@ HELP_TEXT = {
         and 'modis_events.gpkg').
         """
     ),
-    "tile": (
+    "tiles": (
         """
         You may specify the tiles as a list of characters (no quotes no
         spaces) (e.g., ['h08v04', 'h09v04']). Alternatively, provide a path
@@ -110,7 +114,7 @@ HELP_TEXT = {
     "sp": (
         """
         The number of cells (~463 m resolution) to search for neighboring burn
-        detections. Defaults to 5 cells in all directions.
+        detections. Defaults to 8 cells in all directions.
         """
     ),
     "tile_name": (
@@ -122,9 +126,20 @@ HELP_TEXT = {
     "tmp": (
         """
         The number of days to search for neighboring burn detections. Defaults
-        to 11 days between events.
+        to 3 days between events.
         """
     ),
-    "end_year": "The last year of fired events.",
-    "start_year": "The first year of fired events.",
+    "st": (
+        """
+        Build shapefiles from the event data frame. Specify either "shp",
+        "gpkg", or both. Shapefiles of both daily progression and overall
+        event perimeters will be written to the 'outputs/shapefiles' folder of
+        the chosen project directory. These will be saved in the specified
+        geopackage format (.gpkg), ERSI Shapefile format (.shp), or save them
+        in both formats using the file basename of the fire event data frame
+        (e.g. 'modis_events_daily.gpkg' and 'modis_events.gpkg').
+        """
+    ),
+    "year1": "The first year of fired events.",
+    "year2": "The last year of fired events.",
 }

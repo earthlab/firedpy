@@ -1,7 +1,7 @@
+"""firedpy run methods."""
 import os
 import resource
 import shutil
-import time
 import urllib.request
 
 from http.cookiejar import CookieJar
@@ -9,10 +9,8 @@ from logging import getLogger
 from pathlib import Path
 
 from firedpy.data_classes import ATTR_DESCS, BurnData, EcoRegion, LandCover
-from firedpy.enums import LandCoverType, ShapeType
+from firedpy.enums import ShapeType
 from firedpy.model_classes import ModelBuilder
-# from firedpy.utilities.argument_parsing import FiredpyArgumentParser
-from firedpy.utilities.create_readme import make_read_me
 from firedpy.utilities.logging import init_logger
 
 logger = getLogger(__name__)
@@ -125,7 +123,7 @@ def test_earthdata_credentials(username, password):
     urllib.request.urlopen(request)
 
 
-def run_all(
+def run_firedpy(
     out_dir,
     tiles,
     tile_name=None,
@@ -136,13 +134,11 @@ def run_all(
     temporal_param=3,
     shape_file=None,
     shape_type="gpkg",
-    eco_region_level=None,
-    eco_region_type="na",
-    land_cover_type=1,
-    n_cores=0,
+    eco_region_level=1,
+    eco_region_type=None,
+    land_cover_type=None,
     full_csv=True,
-    username=None,
-    password=None
+    n_cores=0
 ):
     """Run all steps of the firedpy modeling pipeline.
 
@@ -150,8 +146,9 @@ def run_all(
     ----------
     out_dir : str
         Project output directory path. Required.
-    tiles : list
-        List of MODIS tiles (e.g., ['h08v04', 'h09v04']). Required.
+    tiles : str | list
+        A string representing a single MODIS tile (e.g., 'h08v04') or a list
+        representing multiple tiles (e.g., ['h08v04', 'h09v04']). Required.
     tile_name : str | NoneType
         The name of the MODIS tile being run? Shouldn't there be multiple?
         How is this different from above, defaulting to None for now.
@@ -210,14 +207,16 @@ def run_all(
             3: MODIS-derived LAI/fPAR scheme
 
         If you do not have an account register at
-        https://urs.earthdata.nasa.gov/home. Defaults to 1.
-    n_cores : int
-        Number of cores to use for parallel processing. Defaults to 0
-        or all available cores.
+        https://urs.earthdata.nasa.gov/home.
+
+        Defaults to None.
     full_csv : bool
         Export all attributes to CSV. Defaults to only x and y coordinates,
         event date, and event id will be exported to a CSV. Defaults to
         True.
+    n_cores : int
+        Number of cores to use for parallel processing. Defaults to 0
+        or all available cores.
     username : str
         Username for a NASA Earthdata Account. Defaults to None, will
         prompt user.
@@ -226,28 +225,27 @@ def run_all(
         prompt user.
     """
     # Setup logging for this output directory
-    out_dir = Path(out_dir).expanduser()
+    out_dir = Path(out_dir).expanduser().absolute()
     init_logger(out_dir=out_dir)
     logger.info(
         f"Running firedpy for years {start_year} to {end_year} on MODIS "
         f"tiles: {tiles}."
     )
 
+    # If a single tile string is given, make it a list
+    if isinstance(tiles, str):
+        tiles = [tiles]
+
     # Get the burn data
     logger.info("Collecting MODIS burn data.")
-    burn_data = BurnData(
-        out_dir=out_dir,
-        username=username,
-        password=password,
-        n_cores=n_cores
-    )
+    burn_data = BurnData(out_dir=out_dir, n_cores=n_cores)
     burn_data.get_burns(
         tiles=tiles,
         start_year=start_year,
         end_year=end_year
     )
 
-    # Create Model Builder object
+    # Create a model builder object
     models = ModelBuilder(
         out_dir=out_dir,
         tiles=tiles,
@@ -266,16 +264,19 @@ def run_all(
         shape_file=shape_file
     )
 
-    # Add secondary attributes
+    date_range = burn_data.get_date_range(start_year=start_year, end_year=end_year)
+
+
+    # Add initial fire characteristic
     gdf = models.add_fire_attributes(gdf=gdf)
-    if land_cover_type != LandCoverType.NONE:
-        lc_desc = ATTR_DESCS["landcover"][land_cover_type]
+
+    # Add land cover characteristic if requested
+    if land_cover_type:
+        lc_desc = ATTR_DESCS["landcover"][str(land_cover_type)]
         logger.info(f"Adding landcover attributes: {lc_desc}.")
         land_cover = LandCover(
             out_dir=out_dir,
-            n_cores=n_cores,
-            username=username,
-            password=password
+            n_cores=n_cores
         )
         land_cover.get_land_cover(
             tiles=tiles,
@@ -291,21 +292,22 @@ def run_all(
     gdf = models.process_geometry(gdf)
 
     # Add ecoregion attributes
-    eco_desc = ATTR_DESCS["ecoregions"][eco_region_type]
-    msg = f"Adding ecoregion data: {eco_desc}, Level {eco_region_level}."
-    logger.info(msg)
-    eco_region_data = EcoRegion(out_dir=out_dir)
-    eco_region_data.get_eco_region()
-    gdf = models.add_eco_region_attributes(
-        gdf=gdf,
-        eco_region_type=eco_region_type,
-        eco_region_level=eco_region_level
-    )
+    if eco_region_type:
+        eco_desc = ATTR_DESCS["ecoregions"][eco_region_type]
+        msg = f"Adding ecoregion data: {eco_desc}, Level {eco_region_level}."
+        logger.info(msg)
+        eco_region_data = EcoRegion(out_dir=out_dir)
+        eco_region_data.get_eco_region()
+        gdf = models.add_eco_region_attributes(
+            gdf=gdf,
+            eco_region_type=eco_region_type,
+            eco_region_level=eco_region_level
+        )
 
     # Calculate fire spread speed and maximum travel vectors
     gdf = models.add_kg_attributes(gdf)
 
-    # Set paths
+    # Set output paths
     out_dir = os.path.expanduser(out_dir)
     date_range = burn_data.get_date_range(
         start_year=start_year,
@@ -329,14 +331,16 @@ def run_all(
         base_filename=event_base,
         shape_type=shape_type
     )
-    shape_dir = os.path.join(out_dir, "outputs", "shapefiles")
-    table_dir = os.path.join(out_dir, "tables")
-    csv_path = os.path.join(table_dir, base_file_name + ".csv")
+
+    model_outputs_dir = Path(out_dir).joinpath("outputs")
+    shape_dir = model_outputs_dir.joinpath("shapefiles")
+    table_dir = model_outputs_dir.joinpath("tables")
+    csv_path = table_dir.joinpath(f"{base_file_name}.csv")
+    shape_dir.mkdir(parents=True, exist_ok=True)
+    table_dir.mkdir(exist_ok=True)
 
     # Process event data
     if daily:
-        os.makedirs(shape_dir, exist_ok=True)
-        os.makedirs(table_dir, exist_ok=True)
         output_csv_path = str(csv_path).replace(".csv", "_daily.csv")
         gdf = models.process_daily_data(
             gdf=gdf,
@@ -356,89 +360,14 @@ def run_all(
         full_csv=full_csv
     )
 
-    return base_file_name
-
-
-def main():
-    # Start the timer (seconds, not as helpful for prompted inputs)
-    start = time.perf_counter()
-
-    # Get the maximum resource use for this process (fix this, it's broken)
-    initial_memory = peak_memory()
-
-    # Parse user arguments
-    resolver = FiredpyArgumentParser()
-    args = resolver.resolve()
-
-    # Break out arguments for easier editing/readability
-    out_dir = args.out_dir
-    tile_name = args.tile_name
-    tiles = args.tiles
-    daily = args.daily
-    start_year = args.date_range[0]
-    end_year = args.date_range[1]
-    spatial_param = args.spatial_param
-    temporal_param = args.temporal_param
-    shapefile = args.shapefile
-    shape_type = args.shape_typem
-    n_cores = args.n_cores
-    full_csv = args.full_csv
-    username = args.username
-    password = args.password
-
-    # Run the model
-    file_base = run_all(
-        out_dir=out_dir,
-        tiles=tiles,
-        tile_name=tile_name,
-        start_year=start_year,
-        end__year=end_year,
-        daily=daily,
-        spatial_param=spatial_param,
-        temporal_param=temporal_param,
-        shapefile=shapefile,
-        shape_type=shape_type,
-        n_cores=n_cores,
-        full_csv=full_csv,
-        username=username,
-        password=password
-    )
-
-    # Done.
-    end = time.perf_counter()
-    seconds = end - start
-    minutes = seconds / 60
-    print(f"Job completed in {minutes:.2f} minutes")
-    peak_mem = (peak_memory() - initial_memory) / 1_024 ** 3
-    print(f"Peak memory usage: {peak_mem:.2f} GB")
-    make_read_me(
-        out_dir=out_dir,
-        tile_name=tile_name,
-        file_base=file_base,
-        input=1,
-        first_date=start_year,
-        last_date=end_year,
-        daily=daily,
-        spatial_param=spatial_param,
-        temporal=temporal_param,
-        shapefile=shapefile,
-        shape_type=shape_type,
-        job_time=seconds,
-        job_memory=peak_mem,
-        n_cores=n_cores
-    )
-
-    # Remove intermediate files if requested
-    if args.cleanup:
-        cleanup_intermediate_files(out_dir)
+    return gdf, base_file_name
 
 
 if __name__ == "__main__":
-    out_dir = "~/scratch/firedpy/test"
-    tiles = ["h08v04", "h09v04"]
-    tile_name = None
+    project_directory = out_dir = "~/scratch/firedpy/test2"
+    tiles = "h08v04"
     start_year = 2020
-    end_year = 2021
+    end_year = 2022
     daily = True
     spatial_param = 8
     temporal_param = 3
@@ -449,25 +378,3 @@ if __name__ == "__main__":
     land_cover_type = 1
     n_cores = 1
     full_csv = True
-    username = None
-    password = None
-
-    run_all(
-        out_dir=out_dir,
-        tiles=tiles,
-        tile_name=tile_name,
-        start_year=start_year,
-        end_year=end_year,
-        daily=daily,
-        spatial_param=spatial_param,
-        temporal_param=temporal_param,
-        shape_file=shape_file,
-        shape_type=shape_type,
-        eco_region_level=eco_region_level,
-        eco_region_type=eco_region_type,
-        land_cover_type=land_cover_type,
-        n_cores=n_cores,
-        full_csv=full_csv,
-        username=username,
-        password=password
-    )

@@ -10,7 +10,7 @@ from argparse import Namespace
 from concurrent.futures import as_completed, ProcessPoolExecutor
 from datetime import datetime
 from logging import getLogger
-from typing import List, Set, Dict, Tuple
+from typing import List, Set, Tuple
 
 import geopandas as gpd
 import pandas as pd
@@ -27,7 +27,6 @@ from firedpy import DATA_DIR
 from firedpy.enums import LandCoverType, EcoRegionType
 from firedpy.data_classes import Base
 from firedpy.spatial import MODIS_CRS
-from firedpy.utilities.logging import init_logger
 
 logger = getLogger(__name__)
 
@@ -508,14 +507,14 @@ class ModelBuilder(Base):
             shutil.copy(src_path, dest_path)
         return dest_path
 
-    def _copy_land_cover_ref(self, land_cover_type: LandCoverType) -> str:
+    def _copy_land_cover_ref(self, land_cover_type: int) -> str:
         lookup = DATA_DIR.joinpath(
-            'land_cover',
-            f'MCD12Q1_LegendDesc_Type{land_cover_type.value}.csv'
+            "land_cover",
+            f"MCD12Q1_LegendDesc_Type{land_cover_type}.csv"
         )
-        land_cover_out_dir_path = os.path.join(
-            self.out_dir, 'tables', 'land_cover',
-            f"MCD12Q1_LegendDesc_Type{land_cover_type.value}.csv"
+        land_cover_out_dir_path = self.out_dir.joinpath(
+            "tables", "land_cover",
+            f"MCD12Q1_LegendDesc_Type{land_cover_type}.csv"
         )
         return self._copy_file(lookup, land_cover_out_dir_path)
 
@@ -879,20 +878,18 @@ class ModelBuilder(Base):
         """
         # Match possible land cover type argument types
         print("Adding land cover attributes...")
-        is_int = isinstance(land_cover_type, int)
-        is_lctype = isinstance(land_cover_type, LandCoverType)
-        if is_int and not is_lctype:
-            land_cover_type = LandCoverType(land_cover_type)
+        if isinstance(land_cover_type, str):
+            land_cover_type = int(land_cover_type)
+        if isinstance(land_cover_type, LandCoverType):
+            land_cover_type = land_cover_type.value
 
         # We'll need to specify which type of land_cover
         lc_descriptions = {
-            LandCoverType.IGBP: "IGBP global vegetation classification scheme",
-            LandCoverType.UMD: "University of Maryland (UMD) scheme",
-            LandCoverType.MODIS_LAI: "MODIS-derived LAI/fPAR scheme",
-            LandCoverType.MODIS_BGC: (
-                "MODIS-derived Net Primary Production (NPP) scheme"
-            ),
-            LandCoverType.PFT: "Plant Functional Type (PFT) scheme."
+            1: "IGBP global vegetation classification scheme",
+            2: "University of Maryland (UMD) scheme",
+            3: "MODIS-derived LAI/fPAR scheme",
+            4: "MODIS-derived Net Primary Production (NPP) scheme",
+            5: "Plant Functional Type (PFT) scheme."
         }
 
         # Rasterio point querier (why define here?)
@@ -990,9 +987,9 @@ class ModelBuilder(Base):
         # Different levels have different sources
         institution = "(NA-Commission for Environmental Cooperation)"
         eco_types = {
-            "NA_L3CODE": f"Level III Ecoregions {institution}",
+            "NA_L1CODE": f"Level I Ecoregions {institution}",
             "NA_L2CODE": f"Level II Ecoregions {institution}",
-            "NA_L1CODE": f"Level I Ecoregions {institution}"
+            "NA_L3CODE": f"Level III Ecoregions {institution}"
         }
 
         # Read in the Level File (contains every level) and reference table
@@ -1191,34 +1188,74 @@ class ModelBuilder(Base):
         print("Dissolving polygons...")
         gdf = gdf.dissolve(by="id", as_index=False)
         print("Calculating perimeter lengths...")
-        gdf["tot_perim"] = gdf["geometry"].length
+        gdf["tot_perim"] = gdf["geometry"].to_crs(MODIS_CRS).length
         print("Converting polygons to multipolygons...")
         gdf["geometry"] = gdf["geometry"].apply(self._as_multi_polygon)
 
         return gdf
 
-    def save_event_data(self, gdf: gpd.GeoDataFrame, output_csv_path: str, event_shape_path: str, event_gpkg_path: str,
-                        full_csv: bool):
+    def save_event_data(
+            self,
+            gdf,
+            output_csv_path,
+            event_shape_path,
+            event_gpkg_path,
+            full_csv
+    ):
+        """Save event data to various output formats.
+
+        Parameters
+        ----------
+        gdf : geopandas.geodataframe.GeoDataFrame
+            A fully processed firedpy event data frame.
+        output_csv_path : str | pathlib.PosixPath
+            Target file path for the output CSV table.
+        event_shape_path : str | pathlib.PosixPath
+            Target file path for the output ESRI Shapefile. Defaults to None.
+            One of `event_shape_path` or `event_gpkg_path` must be written.
+        event_gpkg_path : str | pathlib.PosixPath
+            Target file path for the output Geopackage. If None
+            no file will be written. Defaults to None. One of
+            `event_shape_path` or `event_gpkg_path` must be written.
+        full_csv : bool
+            Write all attributes from input geodataframe to a CSV. Defaults to
+            False and includes only a subset of attributes: "x", "y", "id",
+            "ig_date", and "last_date".
+        """
+        output_csv_path = str(output_csv_path)
+        if event_shape_path:
+            event_shape_path = str(event_shape_path)
+        if event_gpkg_path:
+            event_gpkg_path = str(event_gpkg_path)
         event_csv = output_csv_path[:-4] + "_events" + ".csv"
+        logger.info(f"Writing CSV file to {event_csv}")
         if full_csv:
+            del gdf["geometry"]
             gdf.to_csv(event_csv, index=False)
         else:
             to_raw_csv = gdf[["x", "y", "id", "ig_date", "last_date"]]
             to_raw_csv.to_csv(event_csv, index=False)
 
-        self.save_data(gdf, event_shape_path, event_gpkg_path)
+        self.save_data(gdf, event_shape_path, event_gpkg_path, csv_path=None)
 
     @staticmethod
-    def save_data(gdf: gpd.GeoDataFrame, shape_path: str = None, gpkg_path: str = None, csv_path: str = None):
+    def save_data(
+        gdf: gpd.GeoDataFrame,
+        shape_path: str = None,
+        gpkg_path: str = None,
+        csv_path: str = None
+    ):
         if csv_path:
             gdf.to_csv(csv_path, index=False)
 
-        if gpkg_path is not None:
+        if gpkg_path:
+            logger.info(f"Writing geodataframe file to {gpkg_path}")
+            print(f"Saving file to {gpkg_path}")
             gdf.to_file(gpkg_path, driver="GPKG")
-            print("Saving file to " + gpkg_path)
 
-        if shape_path is not None:
-            print('Writing shape file')
+        if shape_path:
+            print(f"Writing geodataframe to {shape_path}")
+            logger.info(f"Writing geodataframe file to {shape_path}")
             if 'date' in gdf.columns:
                 gdf['date'] = [str(d) for d in gdf['date']]
             gdf['ig_date'] = [str(d) for d in gdf['ig_date']]
@@ -1258,11 +1295,16 @@ class ModelBuilder(Base):
                 print(f"Reprojecting from {sgdf.crs} to {src.crs}")
                 sgdf = sgdf.to_crs(src.crs)
 
-            # Extract centroid coordinates from geometry (handles points, polygons, multipolygons)
-            coords = [(geom.centroid.x, geom.centroid.y) for geom in sgdf.geometry]
+            # Extract centroid coordinates from geometry (handles points, 
+            # polygons, multipolygons)
+            coords = [
+                (geom.centroid.x, geom.centroid.y) for geom in sgdf.geometry
+            ]
 
             sampled_vals = list(src.sample(coords))
-            sgdf['kg_zone'] = [val[0] if val[0] != src.nodata else np.nan for val in sampled_vals]
+            sgdf['kg_zone'] = [
+                v[0] if v[0] != src.nodata else np.nan for v in sampled_vals
+            ]
 
         sgdf['kg_mode'] = sgdf.groupby('id')['kg_zone'].transform(self._mode)
         sgdf['kg_desc'] = sgdf['kg_mode'].map(KG_LEGEND)

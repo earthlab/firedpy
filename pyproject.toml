@@ -41,4 +41,4 @@ version = {attr = "firedpy.__version__"}
 firedpy = ["data/*"]
 
 [project.scripts]
-firedpy = "firedpy.main:main"
+firedpy = "firedpy.cli:firedpy"

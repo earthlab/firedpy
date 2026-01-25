@@ -42,11 +42,11 @@ ATTR_DESCS = {
         "world": "World Terrestrial Ecoregions (World Wildlife Fund)"
     },
     "landcover": {
-        1: "Annual International Geosphere-Biosphere Programme (IGBP)",
-        2: "Annual University of Maryland (UMD)",
-        3: "Annual Leaf Area Index (LAI)",
-        4: "Annual BIOME-Biogeochemical Cycles (BGC)",
-        5: "Annual Plant Functional Types (PFT)"
+        "1": "Annual International Geosphere-Biosphere Programme (IGBP)",
+        "2": "Annual University of Maryland (UMD)",
+        "3": "Annual Leaf Area Index (LAI)",
+        "4": "Annual BIOME-Biogeochemical Cycles (BGC)",
+        "5": "Annual Plant Functional Types (PFT)"
     }
 }
 

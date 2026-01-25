@@ -18,7 +18,7 @@ LOG_LEVELS = {
 }
 
 
-def init_logger(out_dir, log_level="DEBUG"):
+def init_logger(out_dir, log_level="INFO"):
     """Initiate logging to a file for a given firedpy project directory.
 
     Parameters
