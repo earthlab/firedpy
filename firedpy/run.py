@@ -269,8 +269,6 @@ def run_firedpy(
         shape_file=shape_file
     )
 
-    date_range = burn_data.get_date_range(start_year=start_year, end_year=end_year)
-
     # Add initial fire characteristic
     gdf = models.add_fire_attributes(gdf=gdf)
 

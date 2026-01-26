@@ -744,8 +744,8 @@ class ModelBuilder(Base):
 
         Returns
         -------
-        geopandas.geodataframe.GeoDataFrame : A geodataframe representing
-
+        geopandas.geodataframe.GeoDataFrame : A geodataframe of points
+            representing MODIS tiles with burn signals.
         """
         # Build a datetime coordinate dataframe from the events
         data = []
@@ -779,7 +779,9 @@ class ModelBuilder(Base):
 
     def _modis_to_lat_lon(self, x_sinu, y_sinu):
         # Define the MODIS sinusoidal projection (SR-ORG:6974)
-        modis_sinu_proj = Proj("+proj=sinu +R=6371007.181 +nadgrids=@null +wktext")
+        modis_sinu_proj = Proj(
+            "+proj=sinu +R=6371007.181 +nadgrids=@null +wktext"
+        )
 
         # Define the WGS84 projection (EPSG:4326)
         wgs84_proj = Proj(proj="latlong", datum="WGS84")
@@ -791,20 +793,18 @@ class ModelBuilder(Base):
 
     def add_fire_attributes(self, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         print("Adding fire attributes ...")
-
         gdf['pixels'] = gdf.groupby(['id', 'date'])['id'].transform('count')
-
         gdf['ig_utm_x'] = gdf.groupby(['id', 'date'])['x'].nth(0)
-
         gdf['ig_utm_y'] = gdf.groupby(['id', 'date'])['y'].nth(0)
-
         group = gdf.groupby('id')
-
-        gdf['date'] = gdf['date'].apply(lambda x: datetime.strptime(x, '%Y-%m-%d'))
+        gdf['date'] = gdf['date'].apply(
+            lambda x: datetime.strptime(x, '%Y-%m-%d')
+        )
 
         gdf['ig_date'] = group['date'].transform('min')
-
-        gdf['ig_day'] = gdf['ig_date'].apply(lambda x: datetime.strftime(x, '%j'))
+        gdf['ig_day'] = gdf['ig_date'].apply(
+            lambda x: datetime.strftime(x, '%j')
+        )
 
         gdf['ig_month'] = gdf['ig_date'].apply(lambda x: x.month)
         gdf['ig_year'] = gdf['ig_date'].apply(lambda x: x.year)
@@ -832,7 +832,9 @@ class ModelBuilder(Base):
         gdf['mn_grw_km2'] = gdf['mn_grw_px'].apply(self._to_kms)
         gdf['mu_grw_km2'] = gdf['mu_grw_px'].apply(self._to_kms)
 
-        max_date = pd.DataFrame(group[['date', 'pixels']].apply(self._max_growth_date).reset_index())
+        max_date = pd.DataFrame(group[['date', 'pixels']].apply(
+            self._max_growth_date).reset_index()
+        )
         max_date = max_date.rename(columns={0: 'mx_grw_dte'})
         gdf = gdf.merge(max_date[['id', 'mx_grw_dte']], on="id")
 
@@ -1083,8 +1085,8 @@ class ModelBuilder(Base):
         eco_region_level : int
             The desired Ecoregions level from the North American Commission for
             Environmental Cooperation (CEC). Levels 1 to 3 are available, with
-            level 1 representing the broadest scale and level III representing the
-            most detailed. Defaults to 1.
+            level 1 representing the broadest scale and level III representing
+            the most detailed. Defaults to 1.
 
         Returns
         -------
@@ -1099,16 +1101,18 @@ class ModelBuilder(Base):
             gdf = self._add_attributes_from_wwf(gdf)
         return gdf
 
-    def process_geometry(self, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    def process_geometry(self, gdf):
         """Process event geometries.
 
         Parameters
         ----------
-        gdf : geopandas.
+        gdf : geopandas.geodataframe.GeoDataFrame
+            A firedpy geodataframe of burn events.
 
         Returns
         -------
-
+        geopandas.geodataframe.GeoDataFrame : The geodataframe with processed
+            geometries.
         """
         print("Creating buffer...")
         geometry = gdf.buffer(1 + (self._res / 2))
@@ -1178,21 +1182,36 @@ class ModelBuilder(Base):
 
         return gdf
 
-    def process_event_data(self, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-        gdf = gdf.drop(['pixels', 'date', 'event_day', 'dy_ar_km2'], axis=1)
-        if 'did' in gdf.columns:
-            gdf = gdf.drop(['did'])
-        if 'fid' in gdf.columns:
-            gdf = gdf.drop(['fid'])
+    def process_event_data(self, gdf):
+        """Process a firedpy geodataframe for non-daily ouputs.
+
+        Parameters
+        ----------
+        gdf : geopandas.geodataframe.GeoDataFrame
+            A firedpy geodataframe of burn events.
+
+        Returns
+        -------
+        geopandas.geodataframe.GeoDataFrame : The processed geodataframe.
+        """
+        edf = gdf.copy()
+        edf = edf.drop(["pixels", "date", "event_day", "dy_ar_km2"], axis=1)
+        if "did" in gdf.columns:
+            edf = edf.drop(["did"])
+        if "fid" in edf.columns:
+            edf = edf.drop(["fid"])
 
         print("Dissolving polygons...")
-        gdf = gdf.dissolve(by="id", as_index=False)
-        print("Calculating perimeter lengths...")
-        gdf["tot_perim"] = gdf["geometry"].to_crs(MODIS_CRS).length
-        print("Converting polygons to multipolygons...")
-        gdf["geometry"] = gdf["geometry"].apply(self._as_multi_polygon)
+        edf = edf.dissolve(by="id", as_index=False)
+        edf.loc[:, "date"] = edf["ig_date"]  # We need the date field later
 
-        return gdf
+        print("Calculating perimeter lengths...")
+        edf["tot_perim"] = edf["geometry"].to_crs(MODIS_CRS).length
+
+        print("Converting polygons to multipolygons...")
+        edf["geometry"] = edf["geometry"].apply(self._as_multi_polygon)
+
+        return edf
 
     def save_event_data(
             self,
@@ -1230,8 +1249,9 @@ class ModelBuilder(Base):
         event_csv = output_csv_path[:-4] + "_events" + ".csv"
         logger.info(f"Writing CSV file to {event_csv}")
         if full_csv:
-            del gdf["geometry"]
-            gdf.to_csv(event_csv, index=False)
+            df = gdf.copy()
+            del df["geometry"]
+            df.to_csv(event_csv, index=False)
         else:
             to_raw_csv = gdf[["x", "y", "id", "ig_date", "last_date"]]
             to_raw_csv.to_csv(event_csv, index=False)
@@ -1295,7 +1315,7 @@ class ModelBuilder(Base):
                 print(f"Reprojecting from {sgdf.crs} to {src.crs}")
                 sgdf = sgdf.to_crs(src.crs)
 
-            # Extract centroid coordinates from geometry (handles points, 
+            # Extract centroid coordinates from geometry (handles points,
             # polygons, multipolygons)
             coords = [
                 (geom.centroid.x, geom.centroid.y) for geom in sgdf.geometry
