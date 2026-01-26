@@ -80,7 +80,7 @@ def generate_path(proj_dir, base_filename, shape_type):
     return paths
 
 
-def peak_memory():
+def get_peak_memory():
     """Get maximum resident usage size of current process.
 
     NOTE: This probably isn't doing what we want.
@@ -223,6 +223,11 @@ def run_firedpy(
     password : str
         Password for a NASA Earthdata Account. Defaults to None, will
         prompt user.
+
+    Returns
+    -------
+    geopandas.geodataframe.GeoDataFrame : A geodataframe of fire event
+        perimeters and attributes.
     """
     # Setup logging for this output directory
     out_dir = Path(out_dir).expanduser().absolute()
@@ -265,7 +270,6 @@ def run_firedpy(
     )
 
     date_range = burn_data.get_date_range(start_year=start_year, end_year=end_year)
-
 
     # Add initial fire characteristic
     gdf = models.add_fire_attributes(gdf=gdf)
@@ -360,7 +364,7 @@ def run_firedpy(
         full_csv=full_csv
     )
 
-    return gdf, base_file_name
+    return gdf
 
 
 if __name__ == "__main__":

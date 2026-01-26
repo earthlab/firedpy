@@ -1,40 +1,83 @@
 import os
-import textwrap
 
 from datetime import datetime, timedelta
+from pathlib import Path
 
-import pandas as pd
-
-
-def format_date(date_str):
-    year = int(date_str[:4])
-    start_of_year = datetime(year=year, month=1, day=1)
-    return start_of_year + timedelta(int(date_str[4:]))
+from firedpy import DATA_DIR
 
 
-def format_name(input_type, tilename):
-    if input_type == 3:
-        return tilename
-    return tilename.upper().split("_")
+SUMMARY_TEMPLATE = DATA_DIR.joinpath("SUMMARY_TEMPLATE.txt")
 
 
-def make_read_me(gdf, out_dir, tile_name, file_base, input, daily,
-                 spatial_param, temporal_param, shapefile, shp_type,
-                 job_time, n_cores, job_memory=None):
+def add_file_list(lines, output_directory):
+    """Make a formatted list of files."""
+    # Get all output files
+    tables = list(output_directory.glob("**/*.csv"))
+    gpkgs = list(output_directory.glob("**/*.gpkg"))
+    shps = list(output_directory.glob("**/*.shp"))
+
+    # Find the files line and add in the appropriate entries
+    new_lines = []
+    i = 1
+    for line in lines:
+        if "{files}" in line:
+            if tables:
+                new_lines.append(f"    1.{i} Tables\n")
+                i += 1
+                for item in tables:
+                    new_lines.append(f"        - {str(item)}\n")
+            if gpkgs:
+                new_lines.append(f"    1.{i} Geopackages\n")
+                i += 1
+                for item in gpkgs:
+                    new_lines.append(f"        - {str(item)}\n")
+            if shps:
+                new_lines.append(f"    1.{i} Shapefiles\n")
+                i += 1
+                for item in shps:
+                    new_lines.append(f"        - {str(item)}\n")
+        else:
+            new_lines.append(line)
+
+    return new_lines
+
+
+def replace_values(parameters, line):
+    """Replace instances of keys in line with their values.
+
+    Parameters
+    ----------
+    paramters : dict
+        A dictionary of parameters with keys representing strings to replace
+        and values representing replacement strings.
+    line : str
+        A string that may contain the strings to be replaced.
+
+    Returns
+    -------
+    str : A formatted string with replacements.
+    """
+    for string, replacement in parameters.items():
+        line = line.replace(string, str(replacement))
+    return line
+
+
+def make_read_me(gdf, project_directory, tiles, spatial_param,
+                 temporal_param, shapefile, runtime, n_cores,
+                 peak_memory=None):
     """Write a summary file describing a firedpy run.
 
     Parameters
     ----------
     gdf : geopandas.geodataframe.GeoDataFrame
         The geodataframe output from a firedpy run.
-    out_dir : str | pathlib.PosixPath
+    project_directory : str | pathlib.PosixPath
         The project directory containing all outputs of firedpy run used to
         build `gdf`.
-    tile_name : str
-    file_base : str
-        The file name base used to save all firedpy model outputs.
-    input : int
-        I don't know
+    tiles : str
+        The list of MODIS tile IDs used to build the fire event data.
+    event_table_fpath : str
+        The path to final event table.
     daily : bool
         If the firedpy run represents daily polygons or just the event-level
         perimeter for your analysis area.
@@ -45,369 +88,74 @@ def make_read_me(gdf, out_dir, tile_name, file_base, input, daily,
         The number of days to search for neighboring burn detections.
     shapefile : str | pathlib.PosixPath
         Path to a shapefile to use for the fire study area.
-    shp_type : str
-        The output formats of the spatial saved from the firedpy run.
-    job_time : int
-        The total job runtime in seconds.
+    runtime : int
+        The total job runtime in minutes.
     n_cores : int
         The number of CPU cores used to perform the firedpy run.
-    job_memory : float
+    peak_memory : float
         The maximum memory usage reached during the firedpy run. Defaults to
         None, no summary written for this parameter.
     """
     # Infer the first and last date from the dataframe
     date1 = gdf["date"].min()
     date2 = gdf["date"].max()
-    datetag1 = f"{date1.year}{date1.month:02d}{date1.day:02d}"
-    datetag2 = f"{date2.year}{date2.month:02d}{date2.day:02d}"
+    modis_date1 = date1.strftime("January %Y")
+    modis_date2 = date2.strftime("December %Y")
+    event_date1 = date1.strftime("%B %Y")
+    event_date2 = date2.strftime("%B %Y")
 
-    file_base = "_".join(file_base.split("_")[:-3])
-    file_name = f"{file_base}_{datetag1}_to_{datetag2}"
+    # List all output tables and spatial vector files
+    project_directory = Path(project_directory).expanduser()
+    output_directory = project_directory.joinpath("outputs")
+    csvs = list(output_directory.glob("**/*csv"))
 
-    first_event = date1.strftime("%B %Y")
-    last_event = date2.strftime("%B %Y")
+    # Assign specific files to variables
 
-    if tile_name:
-        name = tile_name
-    else:
-        name = file_base.split("_")
+    # The run name is in the CSVs, ant there will always be at least one
+    run_name = "_".join(csvs[0].name.split("_")[:-4])
 
-    daily_text = (
-        """
-        Daily polygons are included and the event identification numbers are
-        the same for both files, but the event-level product has only single
-        polygons for each entire event, while the daily product has separate
-        polygons for each date per event.
-        """
-    )
-    lpdaac_url = "https://lpdaac.usgs.gov/products/mcd64a1v061/"
-    repo_url = "https://github.com/earthlab/firedpy"
-    citation = (
-        """
-        Balch, J.K.; St. Denis, L.A.; Mahood, A.L.; Mietkiewicz, N.P.;
-        Williams, T.M.; McGlinchy, J.; Cook, 'M.C. FIRED (Fire Events
-        Delineation): An Open, Flexible Algorithm and Database of US Fire
-        Events Derived from the MODIS Burned Area Product'. (2001–2019).
-        Remote Sens. 2020, 12, 3498. https://doi.org/10.3390/rs12213498 \n
-        """
-    )
-    top_message = (
-        f"""
-        This is event-level polygons for the fire event delineation (FIRED)
-        product for MODIS grid tiles", *name, "from {date1}
-        to {date2}. It is derived from the MODIS MCD64A1 burned area product
-        (see {lpdaac_url} for more details).
-        The MCD64A1 is a monthly raster grid of estimated burned dates starting
-        in November 2001. Firedpy ({repo_url}) is an
-        algorithm that converts these rasters into events by stacking the
-        entire time series into a spatial-temporal data cube, then uses an
-        algorithm to assign event identification numbers to pixels that fit
-        into the same 3-dimensional spatial temporal window. This particular
-        dataset was created using a spatial parameter of {spatial_param}
-        pixels and {temporal_param} days.
-        {daily_text}
-        See the associated paper for more details on the methods and more:
-        {citation}
-        """
-        )
+    # Infer CPU count if default (0 for all) is used
+    if n_cores == 0:
+        n_cores = os.cpu_count() - 1
 
-    # Write the README file
-    readme_path = os.path.join(out_dir, "outputs", f"{file_base}_README.txt")
-    readme_path = os.path.expanduser(readme_path)
-    with open(readme_path, "w") as text_file:
-        print("-------------------\n", file=text_file)
-        print("ABSTRACT\n", file=text_file)
-        print("-------------------\n", file=text_file)
-        print(textwrap.dedent(top_message), file=text_file)
-        print(
-            """-------------------\n
-        GENERAL INFORMATION\n
-        -------------------\n
+    # This is a stand in until we figure out how to track peak memory use
+    if not peak_memory:
+        peak_memory = "N/A"
 
-        1. Title of Dataset:  FIRED """, *name, f"""\n
+    # Create a tile string
+    tile_string = str(tiles)[1:-1]
 
-        2. Authors: Jennifer K. Balch, Lise A. St. Denis, Adam L. Mahood,
-        Nathan P.  Mietkiewicz, Travis Williams, Joe McGlinchy, Maxwell C. 
-        Cook, Estelle J. Lindrooth, Erick A. Verleye.\n
+    # Define replacement parameters
+    parameters = {
+        "{tile_string}": tile_string,
+        "{modis_date1}": modis_date1,
+        "{modis_date2}": modis_date2,
+        "{spatial_param}": spatial_param,
+        "{temporal_param}": temporal_param,
+        "{run_name}": run_name,
+        "{event_date1}": event_date1,
+        "{event_date2}": event_date2,
+        "{runtime}": f"{runtime:.2f}",
+        "{peak_memory}": peak_memory,
+        "{n_cores}": n_cores
+    }
 
-        3. Contact information: jennifer.balch@colorado.edu; adam.mahood@colorado.edu\n
+    # Read in the template
+    with open(SUMMARY_TEMPLATE, "r") as template:
+        lines = template.readlines()
 
-        4. Date of data collection:{first_event} - {last_event}\n
+    # Custom work for the files, which could be different each time
+    lines_w_files = add_file_list(lines, output_directory)
 
-        --------------------------\n
-        SHARING/ACCESS INFORMATION\n
-        --------------------------\n
+    # Format template
+    formatted_lines = []
+    for line in lines_w_files:
+        formatted_line = replace_values(parameters, line)
+        formatted_lines.append(formatted_line)
 
-        1. Licenses/restrictions placed on the data: MIT\n
-
-        2. Links to publications that cite or use the data: TBD\n
-
-        3. Links to other publicly accessible locations of the data: None\n
-
-        4. Recommended citation for the data: \n
-
-        Balch, J.K.; St. Denis, L.A.; Mahood, A.L.; Mietkiewicz, N.P.;
-        Williams, T.M.; McGlinchy, J.; Cook, M.C. FIRED (Fire Events
-        Delineation): An Open, Flexible Algorithm and Database of US Fire
-        Events Derived from the MODIS Burned Area Product (2001–2019). Remote
-        Sens. 2020, 12, 3498. https://doi.org/10.3390/rs12213498\n 
-        """,
-            file=text_file
-        )
-
-        print("-------------------\n", file=text_file)
-        print("DATA & FILE OVERVIEW\n", file=text_file)
-        print("-------------------\n", file=text_file)
-        print("1. File List: \n", file=text_file)
-        if daily == 'yes' and shapefile:
-            print("     1. Tables: ", file=text_file)
-            print("         A. {}_events.csv\n".format(file_name), file=text_file)
-            print("         B. {}_daily.csv\n".format(file_name), file=text_file)
-            print(
-                "i. This is each fired event split into daily polygons. Each polygon will have an id for the event ("
-                "which may encompass multiple polygons), and a unique date.\n",
-                file=text_file)
-            print("     2. Shapefiles: \n ", file=text_file)
-            if shp_type == 'gpkg':
-                print("         A. {}_events.gpkg\n".format(file_name), file=text_file)
-                print("         B. {}_daily.gpkg\n".format(file_name), file=text_file)
-                print(
-                    "i. This is each fired event split into daily polygons. Each polygon will have an id for the "
-                    "event (which may encompass multiple polygons), and a unique date.\n",
-                    file=text_file)
-            if shp_type == 'shp':
-                print("         A. {}_events.shp\n".format(file_name), file=text_file)
-                print("         B. {}_daily.shp\n".format(file_name), file=text_file)
-                print(
-                    "i. This is each fired event split into daily polygons. Each polygon will have an id for the "
-                    "event (which may encompass multiple polygons), and a unique date.\n",
-                    file=text_file)
-            if shp_type == 'both':
-                print("         A. {}_events.shp\n".format(file_name), file=text_file)
-                print("         B. {}_daily.shp\n".format(file_name), file=text_file)
-                print(
-                    "i. This is each fired event split into daily polygons. Each polygon will have an id for the "
-                    "event (which may encompass multiple polygons), and a unique date.\n",
-                    file=text_file)
-                print("         C. {}_events.gpkg\n".format(file_name), file=text_file)
-                print("         D. {}_daily.gpkg\n".format(file_name), file=text_file)
-                print(
-                    "i. This is each fired event split into daily polygons. Each polygon will have an id for the "
-                    "event (which may encompass multiple polygons), and a unique date.\n",
-                    file=text_file)
-
-        elif daily == 'yes' and shapefile == False:
-            print("     1. Tables:\n ", file=text_file)
-            print("         A. {}_events.csv\n".format(file_name), file=text_file)
-            print("         B. {}_daily.csv\n".format(file_name), file=text_file)
-            print("i. This is each fired event split into daily polygons. Each polygon will have an id for the event "
-                  "(which may encompass multiple polygons), and a unique date.\n", file=text_file)
-        elif daily == 'no' and shapefile:
-            print("     1. Table:\n ", file=text_file)
-            print("         A. {}_events.csv\n".format(file_name), file=text_file)
-            print("     2. Shapefile: \n", file=text_file)
-            if shp_type == 'gpkg':
-                print("         A. {}_events.gpkg\n".format(file_name), file=text_file)
-            if shp_type == 'shp':
-                print("         A. {}_events.shp\n".format(file_name), file=text_file)
-            if shp_type == 'both':
-                print("         A. {}_events.shp\n".format(file_name), file=text_file)
-                print("         B. {}_events.gpkg\n".format(file_name), file=text_file)
-
-        else:
-            print("     1. Table:\n ", file=text_file)
-            print("         A. {}_events.csv\n".format(file_name), file=text_file)
-        print("-------------------\n", file=text_file)
-        print("METHODOLOGICAL INFORMATION\n", file=text_file)
-        print("-------------------\n", file=text_file)
-        print(" 1. Spatial window: {} \n".format(spatial_param), file=text_file)
-        print(" 2. Temporal window: {} \n".format(temporal_param), file=text_file)
-        print("See Balch et al 2020 for complete methods. DOI: https://doi.org/10.3390/rs12213498\n", file=text_file)
-        print("-------------------\n", file=text_file)
-        if shapefile:
-            if shp_type == 'gpkg':
-                print("DATA-SPECIFIC INFORMATION FOR: {}_events.csv and {}_events.gpkg".format(file_name, file_name),
-                      file=text_file)
-            if shp_type == 'shp':
-                print("DATA-SPECIFIC INFORMATION FOR: {}_events.csv and {}_events.shp".format(file_name, file_name),
-                      file=text_file)
-            if shp_type == 'both':
-                print("DATA-SPECIFIC INFORMATION FOR: {}_events.csv, {}_events.gpkg, {}_events.shp".format(file_name,
-                                                                                                           file_name,
-                                                                                                           file_name),
-                      file=text_file)
-        else:
-            print("DATA-SPECIFIC INFORMATION FOR: {}_events.csv".format(file_name), file=text_file)
-
-        print("-------------------\n", file=text_file)
-        print("1. Number of variables: 24\n", file=text_file)
-        print("3. Projection information (proj4 string): +proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a=6371007.181 "
-              "+b=6371007.181 +units=m +no_defs\n", file=text_file)
-        print(
-            "3.1. The projection is the native projection from the MODIS MCD64A1 burned area product from which this "
-            "dataset is derived. The MCD64A1 product is a raster grid with a resolution of 463 meters. More info at "
-            "https://lpdaac.usgs.gov/products/mcd64a1v006/ \n",
-            file=text_file)
-        print("""4. Variable List: \n
-        A. Name: id \n
-        	i. Description: Unique identifier of the fire event.\n
-        B. Name: ig_date\n
-            i. Description: The earliest date contained in the event \n
-        C. Name: ig_day \n
-            i. Description: The day of the year of the earliest date contained in the event \n
-        D. Name: ig_month \n
-            i. Description: The month of the earliest date contained in the event \n
-        E. Name: ig_year\n
-            i. Description: The year of the earliest date contained in the event. \n
-        F. Name: last_date \n
-            i. Description: The latest date contained in the event \n
-        G. Name: event_day  \n
-            i. Description: Days since ignition date + 1 (ignition date is day 1)  \n
-        H. Name: pixels  \n
-            i. Description: Total number of pixels burned that day.  \n
-        I. Name: tot_px  \n
-            i. Description:  Total pixels burned for the entire event.  \n
-        J. Name: tot_ar_km2  \n
-            i. Description: Area burned in square kilometers for the entire event.  \n
-        K. Name: fsr_px_dy  \n
-            i. Description: Total pixels burned for the entire event divided by the duration of the fire event.  \n
-        L. Name: fsr_km2_dy  \n
-            i. Description: Total kilometers burned for the entire event divided by the duration of the fire event.  \n
-        M. Name: mx_grw_px  \n
-            i. Description: maximum growth in pixels  \n
-        N. Name: mn_grw_px  \n
-            i. Description: minimum growth in pixels  \n
-        O. Name: mu_grw_px  \n
-            i. Description: mean growth in pixels  \n
-        P. Name: mx_grw_km2  \n
-            i. Description: maximum growth in square kilometers  \n
-        Q. Name: mn_grw_km2  \n
-            i. Description: minimum growth in square kilometers  \n
-        R. Name: mu_grw_km2 \n
-            i. Description: mean growth in square kilometers  \n
-        S. Name: mx_grw_dte  \n
-            i. Description: date of maximum  \n
-        T. Name: lc_code  \n
-            i. Description: Numeric code for the land_cover type extracted from the MODIS land_cover product for the year preceding the fire.  \n
-        U. Name: lc_mode  \n
-            i. Description: Numeric code for the land_cover type extracted from the MODIS land_cover product for the year preceding the fire.  \n
-        V. Name: lc_name  \n
-            i. Description: Character string of the land_cover type from the year before the fire.  \n
-        W. Name: lc_desc  \n
-            i. Description: Character string description of the land_cover type from the year before the fire.  \n
-        X. Name: lc_type  \n
-            i. Description: Which land_cover classification type was used from the MCD12Q1 product? Default is IGBP global vegetation classification scheme  \n
-        Y. Name: eco_mode \n
-            i. Description: Modal ecoregion code \n
-        Z. Name: eco_type  \n
-            i. Description: Which type and level of ecoregion classification was used (North america EPA (levels 1-3) vs World Wildlife Federation)  \n
-        AA. Name: eco_name \n
-            i. Description: Character string of the ecoregion type where the event occurred.  \n
-        BB. Name: ig_utm_x \n
-            i. Description: estimated ignition x coordinate  \n
-        CC. Name: ig_utm_y \n
-            i. Description: estimated ignition y coordinate  \n
-        DD. Name: tot_perim  \n
-            i. Description: Total perimeter of the fire event. \n""", file=text_file)
-        if daily == 'yes':
-            print("-------------------\n", file=text_file)
-            if shapefile:
-                if shp_type == 'gpkg':
-                    print("DATA-SPECIFIC INFORMATION FOR: {}_daily.csv and {}_daily.gpkg".format(file_name, file_name),
-                          file=text_file)
-                if shp_type == 'shp':
-                    print("DATA-SPECIFIC INFORMATION FOR: {}_daily.csv and {}_daily.shp".format(file_name, file_name),
-                          file=text_file)
-                if shp_type == 'both':
-                    print("DATA-SPECIFIC INFORMATION FOR: {}_daily.csv, {}_daily.gpkg, {}_daily.shp".format(file_name,
-                                                                                                            file_name,
-                                                                                                            file_name),
-                          file=text_file)
-            else:
-                print("DATA-SPECIFIC INFORMATION FOR: {}_daily.csv".format(file_name), file=text_file)
-            print("-------------------\n", file=text_file)
-            filepath = os.path.join(out_dir, 'outputs', 'tables',
-                                    file_name + "_daily.csv")
-            reader = pd.read_csv(filepath)
-            row_count = len(reader)
-            print("1. Number of variables: 29\n", file=text_file)
-            print("2. Number of cases/rows: {}\n".format(row_count), file=text_file)
-            print(
-                "3. Projection information (proj4 string): +proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a=6371007.181 +b=6371007.181 +units=m +no_defs\n",
-                file=text_file)
-            print(
-                "3.1. The projection is the native projection from the MODIS MCD64A1 burned area product from which this dataset is derived. The MCD64A1 product is a raster grid with a resolution of 463 meters. More info at https://lpdaac.usgs.gov/products/mcd64a1v006/ \n",
-                file=text_file)
-            print("""4. Variable list:  \n
-            EE. Name: id \n
-    		      i. Description: Unique identifier of the fire event. \n
-    		FF. Name: did \n
-    		      i. Description: unique identifier of the day within the event \n
-    		GG. Name: date  \n
-    		      i. Description: date that the area burned \n
-    		HH. Name: ig_date \n
-    		      i. Description: The earliest date contained in the event \n
-    		II. Name: ig_day  \n
-    		      i. Description: The day of the year of the earliest date contained in the event \n
-    		JJ. Name: ig_month  \n
-    		      i. Description: The month of the earliest date contained in the event \n
-    		KK. Name: ig_year \n
-    		      i. Description: The year of the earliest date contained in the event. \n
-    		LL. Name: last_date \n
-    	           i. Description: The latest date contained in the event \n
-    		MM. Name: event_day  \n
-    		      i. Description: Days since ignition date + 1 (ignition date is day 1) \n
-    		NN. Name: pixels \n
-    		      i. Description: Total number of pixels burned that day.  \n
-    		OO. Name: tot_px  \n
-    		      i. Description:  Total pixels burned for the entire event.  \n
-    		PP. Name: dy_ar_km2 -  \n
-    		      i. Description:  Area burned in square kilometers that day.  \n
-    		QQ. Name: tot_ar_km2 \n
-    		      i. Description: Area burned in square kilometers for the entire event.  \n
-    		RR. Name: fsr_px_dy \n
-    		      i. Description: Total pixels burned for the entire event divided by the duration of the fire event.  \n
-    		SS. Name: fsr_km2_dy \n
-    		      i. Description: Total kilometers burned for the entire event divided by the duration of the fire event.  \n
-    		TT. Name: mx_grw_px \n
-    		      i. Description: Maximum daily fire growth per event in pixels \n
-    		UU. Name: mn_grw_px \n
-    		      i. Description: Minimum daily fire growth per event in pixels \n
-    		VV. Name: mu_grw_px \n
-    		      i. Description: Mean daily fire growth per event in pixels \n
-    		WW. Name: mx_grw_km2 \n
-    		      i. Description: Maximum daily fire growth per event in square kilometers \n
-    		XX. Name: mn_grw_km2 \n
-    		      i. Description: Minimum daily fire growth per event in square kilometers \n
-    		YY. Name: mu_grw_km2 \n
-    		      i. Description: Mean daily fire growth per event in square kilometers \n
-    		ZZ. Name: mx_grw_dte  \n
-    		      i. Description: Date of maximum fire growth \n
-    		AAA. Name: lc_code \n
-    		      i. Description: Numeric code for the land_cover type extracted from the MODIS land_cover product for the year preceding the fire.  \n
-    		BBB. Name: lc_mode \n
-    		      i. Description: Numeric code for the land_cover type extracted from the MODIS land_cover product for the year preceding the fire. \n
-    		CCC. Name: lc_name \n
-    		      i. Description: Character string of the land_cover type from the year before the fire.  \n
-    		DDD. Name: lc_desc \n
-    		      i. Description: Character string description of the land_cover type from the year before the fire.  \n
-    		EEE. Name: lc_type \n
-    		      i. Description: The land_cover classification scheme used \n
-    		FFF. Name: eco_mode \n
-    		      i. Description: modal ecoregion type \n
-    		GGG. Name: eco_type \n
-    		      i. Description: modal ecoregion type \n
-    		HHH. Name: eco_name \n
-    		      i. Description: Character string of the land_cover type from the year before the fire.  \n
-    		III. Name: ig_utm_x \n
-    		      i. Description: estimated ignition x coordinate \n
-    		JJJ. Name: ig_utm_y \n
-    		      i. Description: estimated ignition y coordinate""", file=text_file)
-        print(f"""
-        --------------------------\n
-        RUNTIME INFORMATION\n
-        --------------------------\n
-        Time to complete: {job_time} seconds
-        # Peak memory usage: {job_memory} GB
-        Cores used: {n_cores}
-        """, file=text_file)
+    # Write to a README in the outputs directory
+    fname = f"{run_name.upper()}_README.txt"
+    fpath = output_directory.joinpath(fname)
+    with open(fpath, "w") as summary:
+        for line in formatted_lines:
+            summary.write(line)

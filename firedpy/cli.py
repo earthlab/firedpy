@@ -1,6 +1,8 @@
 """firedpy Command Line Interface (CLI)."""
 import click
 import time
+import tracemalloc
+
 import firedpy
 
 from firedpy.help import HELP
@@ -33,17 +35,15 @@ def firedpy(project_directory, tiles, start_year, end_year, daily,
             eco_region_level, eco_region_type, land_cover_type, n_cores,
             full_csv, cleanup):
     """firedpy command line interface."""
-    # Start the timer (seconds, not as helpful for prompted inputs)
+    # Start the timer and memory tracer
     start = time.perf_counter()
-
-    # Get the maximum resource use for this process (fix this)
-    # initial_memory = peak_memory()
+    tracemalloc.start()
 
     # Covert tile list from string to Python list
     tiles = tiles.split()
 
     # Run with user parameters
-    gdf, base_file_name = run_firedpy(
+    gdf = run_firedpy(
         out_dir=project_directory,
         tiles=tiles,
         start_year=start_year,
@@ -60,29 +60,30 @@ def firedpy(project_directory, tiles, start_year, end_year, daily,
         n_cores=n_cores
     )
 
+    # Get the maximum resource use for this process (fix this)
+    _, peak_memory = tracemalloc.get_traced_memory()
+    peak_memory = round(peak_memory / 1024 ** 3, 2)
+    tracemalloc.stop()
+
     # Done.
     end = time.perf_counter()
     seconds = end - start
-    minutes = seconds / 60
-    print(f"Job completed in {minutes:.2f} minutes")
+    runtime = seconds / 60
+    print(f"Job completed in {runtime:.2f} minutes")
 
     # peak_mem = (peak_memory() - initial_memory) / 1_024 ** 3
-    # print(f"Peak memory usage: {peak_mem:.2f} GB")
+    print(f"Peak memory usage: {peak_memory:.2f} GB")
 
     make_read_me(
         gdf=gdf,
-        out_dir=project_directory,
-        tile_name=None,
-        file_base=base_file_name,
-        input=1,
-        daily=daily,
+        project_directory=project_directory,
+        tiles=tiles,
         spatial_param=spatial_param,
         temporal_param=temporal_param,
         shapefile=shape_file,
-        shp_type=shape_type,
-        job_time=seconds,
+        runtime=runtime,
         n_cores=n_cores,
-        # job_memory=peak_mem,
+        peak_memory=peak_memory,
     )
 
     # Remove intermediate files if requested
