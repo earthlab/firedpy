@@ -32,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - *Reasons include:*
         - Prioritization of simplicity and quick development time over benefits of IDE functionality and convenience.
         - Inconsistent use of hints in existing code base.
-        - Lack of consistent, dedicated development team for proper implementation (code will be managed by Geography students).
+        - Lack of consistent, dedicated development team for proper implementation (code will be managed by rotating Geography students).
         - Redundancy with docstring type declarations.
 
 ### Added
