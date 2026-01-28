@@ -10,14 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [2.0.1] - 2026
 ### Changed
 - **Regoranized code to allow for Python package installation**
-    - *Moved all Python scripts to `firedpy` folder*
+    - *Moved all Python scripts to `firedpy/` folder*
         - Scripts in `src` moved directly into `firedpy`.
-            - `src/spatial` moved to `firedpy/utilities/spatial`.
-        - Scripts in `bin` moved directly into `firedpy` and `firedpy.py` moved to `run.py` to avoid name conflicts with package.
-        - Scripts in `utilities` moved to `firedpy/utilities`.
+            - `src/spatial/` moved to `firedpy/utilities/spatial/`.
+        - Scripts in `bin/` moved directly into `firedpy/` and `firedpy.py` moved to `run.py` to avoid name conflicts with package.
+        - Scripts in `utilities/` moved to `firedpy/utilities/`.
     - *Moved code within scripts in general reorganization effort*
         - Moved "HELP" string constants from `src/__init__.py` to dictionary to `firepy/help.py`.
-    - *Moved data in `ref` into `firedpy/data` which is now handled as embedded package data.*
+    - *Moved data in `ref/` into `firedpy/data/` which is now handled as embedded package data.*
 
 - **Began process of refactoring to comply with Python Enhancement Proposal (PEP) recommendations:**
     - *Notable PEP recommendations include:*
