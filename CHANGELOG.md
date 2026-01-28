@@ -13,7 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - *Moved all Python scripts to `firedpy/` folder*
         - Scripts in `src/` moved directly into `firedpy/`.
             - `src/spatial/` moved to `firedpy/utilities/spatial/`.
-        - Scripts in `bin/` moved directly into `firedpy/` and `firedpy.py` moved to `run.py` to avoid name conflicts with package.
+        - Scripts in `bin/` moved directly into `firedpy/` 
+            - `bin/firedpy.py` moved to `firedpy/run.py` to avoid name conflicts with package.
         - Scripts in `utilities/` moved to `firedpy/utilities/`.
     - *Moved code within scripts in general reorganization effort*
         - Moved "HELP" string constants from `src/__init__.py` to dictionary to `firepy/help.py`.
