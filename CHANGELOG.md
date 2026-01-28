@@ -32,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
             - https://peps.python.org/pep-0257/
 - **Removed most type hinting and began inevitable debate over utility of practice in this context.**
     - *Reasons include:*
-        - Prioritization of simplicity and quick development time over benefits of IDE functionality and enhanced coder type awareness.
+        - Prioritization of simplicity and quick development time over benefits of IDE integration and enhanced coder type awareness.
         - Inconsistent use of hints in existing code base.
         - Lack of consistent, dedicated development team for proper implementation (code will be managed by rotating Geography students).
         - Redundancy with docstring type declarations.
