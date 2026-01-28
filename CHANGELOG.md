@@ -21,10 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Began process of refactoring to comply with Python Enhancement Proposal (PEP) recommendations:**
     - *Notable PEP recommendations include:*
-        - PEP-8: Style Guide for Python Code*
+        - PEP-8: Style Guide for Python Code
             - This is somewhat flexible, but is generally considered as a set of standards, is beneficial to readability, and is built into code linting checks embedded in continous integration and deployment (CI/CD).
             - https://peps.python.org/pep-0008/
-        - *PEP-257: Docstring Conventions*
+        - PEP-257: Docstring Conventions
             - Provides a human readable description of function/class purpose, arguments, and outputs.
             - Will enable automated documentation with tools such as Sphinx (https://www.sphinx-doc.org/en/master/).
             - https://peps.python.org/pep-0257/
