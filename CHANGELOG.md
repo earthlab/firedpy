@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         - Scripts in `utilities/` moved to `firedpy/utilities/`.
     - *Moved code within scripts in general reorganization effort*
         - Moved "HELP" string constants from `src/__init__.py` to dictionary in `firepy/help.py`.
+        - Various other portions of code shifted around as well, too many to outline briefly.
     - *Moved data in `ref/` into `firedpy/data/` which is now handled as embedded package data.*
 
 - **Began process of refactoring to comply with Python Enhancement Proposal (PEP) recommendations:**
