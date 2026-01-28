@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - *Moved all Python scripts to `firedpy/` folder*
         - Scripts in `src/` moved directly into `firedpy/`.
             - `src/spatial/` moved to `firedpy/utilities/spatial/`.
-        - Scripts in `bin/` moved directly into `firedpy/` 
+        - Scripts in `bin/` moved directly into `firedpy/`.
             - `bin/firedpy.py` moved to `firedpy/run.py` to avoid name conflicts with package.
         - Scripts in `utilities/` moved to `firedpy/utilities/`.
     - *Moved code within scripts in general reorganization effort*
@@ -42,9 +42,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Simple GDAL discovery routine added to `setup.py` script:**
     - Called through `pyproject.toml`
     - Enables firedpy to use existing system installations of GDAL/OGR
-    - Keeps Python environment lighter weight and reduces installation times
-    - Provides an alternative to conda for users who prefer native Python package installations (e.g.,  Python Installs Packages or pip)
-    - Is a necessary step for hosting firedpy on the Python Packaging Index (PyPI): https://pypi.org/
+    - Keeps Python environment lighter weight and reduces installation times.
+    - Provides an alternative to conda for users who prefer native Python package installations (e.g.,  Python Installs Packages or pip).
+    - Is a necessary step for hosting firedpy on the Python Packaging Index (PyPI): https://pypi.org/.
 
 
 ## [2.0.0] - 2023
