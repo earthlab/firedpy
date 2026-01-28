@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [2.0.1] - 2026
 ### Changed
 - Regoranized code to allow for Python package installation
-    - Moved all Python scripts to `firedpy` folder
+    - *Moved all Python scripts to `firedpy` folder*
         - Scripts in `src` moved directly into `firedpy`.
             - `src/spatial` moved to `firedpy/utilities/spatial`.
         - Scripts in `bin` moved directly into `firedpy` and `firedpy.py` moved to `run.py` to avoid name conflicts with package.
