@@ -9,17 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.0.1] - 2026
 ### Changed
-- Regoranized code to allow for Python package installation
-    - **Moved all Python scripts to `firedpy` folder**
+- **Regoranized code to allow for Python package installation**
+    - Moved all Python scripts to `firedpy` folder
         - Scripts in `src` moved directly into `firedpy`.
             - `src/spatial` moved to `firedpy/utilities/spatial`.
         - Scripts in `bin` moved directly into `firedpy` and `firedpy.py` moved to `run.py` to avoid name conflicts with package.
         - Scripts in `utilities` moved to `firedpy/utilities`.
-    - **Moved code within scripts in general reorganization effort**
+    - Moved code within scripts in general reorganization effort
         - Moved "HELP" string constants from `src/__init__.py` to dictionary to `firepy/help.py`.
-    - **Moved data in `ref` into `firedpy/data` which is now handled as embedded package data.**
+    - Moved data in `ref` into `firedpy/data` which is now handled as embedded package data.
 
-- Began process of refactoring to comply with Python Enhancement Proposal (PEP) recommendations:
+- **Began process of refactoring to comply with Python Enhancement Proposal (PEP) recommendations:**
     - **Notable PEP recommendations include:**
         - *PEP-8: Style Guide for Python Code*
             - This is somewhat flexible, but is generally considered as a set of standards, is beneficial to readability, and is built into code linting checks embedded in continous integration and deployment (CI/CD).
@@ -28,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
             - Provides a human readable description of function/class purpose, arguments, and outputs.
             - Will enable automated documentation with tools such as Sphinx (https://www.sphinx-doc.org/en/master/).
             - https://peps.python.org/pep-0257/
-- Removed most type hinting and began inevitable debate over utility of practice in this context.
+- **Removed most type hinting and began inevitable debate over utility of practice in this context.**
     - Reasons include:
         - Prioritization of simplicity and quick development time over benefits of IDE functionality and convenience.
         - Inconsistent use of hints in existing code base.
@@ -36,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         - Redundancy with docstring type declarations.
 
 ### Added
-- Packaging code added to `pyproject.toml` file, which is recommended practice as per PEP-621:
+- **Packaging code added to `pyproject.toml` file, which is recommended practice as per PEP-621:**
     - https://peps.python.org/pep-0621/
 - Simple GDAL discovery routine held in `setup.py` script:
     - Called through `pyproject.toml`
