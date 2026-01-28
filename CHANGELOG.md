@@ -30,10 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
             - https://peps.python.org/pep-0257/
 - Removed most type hinting and began inevitable debate over utility of practice in this context.
     - Reasons include:
+        - Prioritization of simplicity and quick development time over benefits of IDE functionality and convenience.
         - Inconsistent use of hints in existing code base.
-        - Lack of consistent, dedicated development team for proper implementation (code will be managed by Geography students)
-        - Redundancy with docstring type declarations
-        - Priority of simplicity and quick development time over benefits of IDE functionality and convenience.
+        - Lack of consistent, dedicated development team for proper implementation (code will be managed by Geography students).
+        - Redundancy with docstring type declarations.
 
 ### Added
 - Packaging code added to `pyproject.toml` file, which is recommended practice as per PEP-621:
