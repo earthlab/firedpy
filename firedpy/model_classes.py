@@ -26,7 +26,7 @@ from tqdm import tqdm
 from firedpy import DATA_DIR
 from firedpy.enums import LandCoverType, EcoRegionType
 from firedpy.data_classes import Base
-from firedpy.spatial import MODIS_CRS
+from firedpy.utilities.spatial import MODIS_CRS
 
 logger = getLogger(__name__)
 

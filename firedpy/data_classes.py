@@ -30,7 +30,7 @@ from tqdm import tqdm
 from firedpy import DATA_DIR
 from firedpy.enums import LandCoverType
 from firedpy.modis_earthaccess import setup_modis_earthaccess
-from firedpy.spatial import hdf4_to_geotiff
+from firedpy.utilities.spatial import hdf4_to_geotiff
 
 gdal.UseExceptions()
 logger = logging.getLogger(__name__)
