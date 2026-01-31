@@ -34,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Pip Dependencies**
     - Added a `requirements.txt` file.
     - Replicates the `environment.yaml` for conda.
-    - Is called throught `setup.py` which is called through `pyproject.toml` via the `dynamic` entry ("version" and "dependencies")
+    - Is called throught `setup.py` which is coordinated through `pyproject.toml` via the `dynamic` entry ("version" and "dependencies")
 - **Removed most type hinting and began inevitable debate over utility of practice in this context.**
     - *Reasons include:*
         - Redundancy with docstring type declarations.
