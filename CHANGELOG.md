@@ -46,12 +46,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - https://peps.python.org/pep-0621/
 - **Simple GDAL discovery routine added to `setup.py` script:**
     - Called through `pyproject.toml`
-    - Enables firedpy to use existing system installations of GDAL/OGR
+    - Enables firedpy to use existing system installations of GDAL/OGR.
     - Keeps Python environment lighter weight and reduces installation times.
     - Provides an alternative to conda for users who prefer native Python package installations (e.g.,  Python Installs Packages or pip).
     - Is a necessary step for hosting firedpy on the Python Packaging Index (PyPI): https://pypi.org/.
 - **Map of MODIS tile IDs added to data/images**
-    - Should help both to identify target MODIS tiles and to visualize the process.
+    - Should help both to identify target MODIS tiles and to visualize part of the firedpy classify process.
 
 ## [2.0.0] - 2023
 
