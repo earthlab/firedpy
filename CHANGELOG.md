@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
             - Provides a human readable description of function/class purpose, arguments, and outputs.
             - Will enable automated documentation with tools such as Sphinx (https://www.sphinx-doc.org/en/master/).
             - https://peps.python.org/pep-0257/
+- **Dependencies
 - **Removed most type hinting and began inevitable debate over utility of practice in this context.**
     - *Reasons include:*
         - Prioritization of simplicity and quick development time over benefits of IDE integration and enhanced coder type awareness.
@@ -37,7 +38,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         - Lack of consistent, dedicated development team for proper implementation (code will be managed by rotating Geography students).
         - Redundancy with docstring type declarations.
 
-### Added
 - **Packaging code added to `pyproject.toml` file, which is recommended practice as per PEP-621:**
     - https://peps.python.org/pep-0621/
 - **Simple GDAL discovery routine added to `setup.py` script:**

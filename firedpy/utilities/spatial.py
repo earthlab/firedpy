@@ -1,6 +1,8 @@
 """Spatial data manipulation utilities."""
 import os
 
+from difflib import SequenceMatcher
+
 import geopandas as gpd
 import pandas as pd
 
@@ -25,6 +27,51 @@ MODIS_CRS = (
     AXIS["Easting",EAST],AXIS["Northing",NORTH]]
     """
 )
+
+
+def country_to_tiles(country):
+    """Return a list of MODIS tiles for a country or list of countries.
+
+    Parameters
+    ----------
+    country : str | list[str]
+        A string representing a single country or a list of strings
+        representing multiple countries. Not case sensitive, but avoid using
+        accents.
+
+    Returns
+    -------
+    list[str] : A list of strings representing MODIS tiles that intersect with
+        with the the target cotunry or countries.
+    """
+    # These files are stored as Geopackages in the data directory
+    ddir = DATA_DIR.joinpath("individual_countries/")
+
+    # Is one or multiple countries?
+    if isinstance(country, str):
+        country = [country]
+
+    # Collect all MODIS tiles
+    tiles = []
+    for cntry in country:
+        # Match user provided name to available list of countries
+        files = {file.stem: file for file in list(ddir.glob("*gpkg"))}
+        key = cntry.lower().replace(" ", "_")
+
+        # Give candidate files if name not found
+        try:
+            file = files[key]
+        except KeyError:
+            similars = similar_strings(key, list(files))
+            msg = (f"{country} not recognized in given format, similar "
+                   f"options include: {similars}")
+            print(msg)
+            raise
+
+        # Run shape to tiles
+        tiles += shape_to_tiles(file)
+
+    return tiles
 
 
 def shape_to_tiles(shape_path):
@@ -60,6 +107,31 @@ def shape_to_tiles(shape_path):
     tiles = pd.unique(shared["tile"].values)
 
     return tiles
+
+
+def similar_strings(string, strings, threshold_ratio=0.7):
+    """Return a similar strings from a list to a target string.
+
+    Parameters
+    ----------
+    string : str
+        A target string to find similar matches to.
+    strings : list[str]
+        A list of strings to match with the target string.
+    threshold_ratio : float
+        A threshold ratio of similarity used to find matching strings.
+
+    Returns
+    -------
+    list[str] : A list of similar strings over a given threshold similarity
+        ratio.
+    """
+    matches = []
+    for strng in strings:
+        ratio = SequenceMatcher(isjunk=None, a=string, b=strng).ratio()
+        if ratio >= threshold_ratio:
+            matches.append(strng)
+    return matches
 
 
 def get_hdf_datasets(fpath, pattern=None):

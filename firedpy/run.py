@@ -12,6 +12,7 @@ from firedpy.data_classes import ATTR_DESCS, BurnData, EcoRegion, LandCover
 from firedpy.enums import ShapeType
 from firedpy.model_classes import ModelBuilder
 from firedpy.utilities.logging import init_logger
+from firedpy.utilities.spatial import country_to_tiles
 
 logger = getLogger(__name__)
 
@@ -125,7 +126,7 @@ def test_earthdata_credentials(username, password):
 
 def run_firedpy(
     out_dir,
-    tiles,
+    tiles=None,
     tile_name=None,
     start_year=2000,
     end_year=2025,
@@ -138,7 +139,8 @@ def run_firedpy(
     eco_region_type=None,
     land_cover_type=None,
     full_csv=True,
-    n_cores=0
+    n_cores=0,
+    country=None
 ):
     """Run all steps of the firedpy modeling pipeline.
 
@@ -238,8 +240,11 @@ def run_firedpy(
     )
 
     # If a single tile string is given, make it a list
-    if isinstance(tiles, str):
-        tiles = [tiles]
+    if country:
+        tiles = country_to_tiles(country)
+    else:
+        if isinstance(tiles, str):
+            tiles = [tiles]
 
     # Get the burn data
     logger.info("Collecting MODIS burn data.")
