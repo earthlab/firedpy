@@ -39,7 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - *Reasons include:*
         - Redundancy with docstring type declarations.
         - Prioritization of simplicity and quick development time over benefits of IDE integration and enhanced coder type awareness.
-        - Lack of consistent, dedicated development team for proper implementation (code will be managed by rotating geography students).
+        - Lack of consistent, dedicated development team for proper implementation (code will be managed by rotating graduate students).
         - Inconsistent use of hints in existing code base.
 - **Packaging code added to `pyproject.toml` file, which is recommended practice as per PEP-621:**
     - https://peps.python.org/pep-0621/
