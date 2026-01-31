@@ -96,7 +96,10 @@ class Base:
         )
 
         # Can we shorten this or use another method?
-        self._post_regex = r"\.A(?P<year>\d{4})(?P<ordinal_day>\d{3})\.h(?P<horizontal_tile>\d{2})v(?P<vertical_tile>\d{2})\.061\.(?P<prod_year>\d{4})(?P<prod_ordinal_day>\d{3})(?P<prod_hourminute>\d{4})(?P<prod_second>\d{2})\.hdf$"
+        self._post_regex = r"\.A(?P<year>\d{4})(?P<ordinal_day>\d{3})\.h\
+            (?P<horizontal_tile>\d{2})v(?P<vertical_tile>\d{2})\.061\.\
+                (?P<prod_year>\d{4})(?P<prod_ordinal_day>\d{3})\
+                    (?P<prod_hourminute>\d{4})(?P<prod_second>\d{2})\.hdf$"
 
         # Initialize output directory folders and files
         self._initialize_save_dirs()
@@ -209,7 +212,8 @@ class LPDAAC(Base):
         """
         super().__init__(out_dir)
         self._lp_daac_url = None
-        self._date_regex = r"(?P<year>\d{4})\.(?P<month>\d{2})\.(?P<day>\d{2})\/"
+        self._date_regex = r"(?P<year>\d{4})\.(?P<month>\d{2})\.\
+            (?P<day>\d{2})\/"
         self._parallel_cores = None
         self._username = username
         self._password = password
@@ -360,10 +364,13 @@ class LPDAAC(Base):
         return year_paths
 
     def _generate_tile(self, regex_group_dict: Dict[str, str]):
-        return f"h{regex_group_dict['horizontal_tile']}v{regex_group_dict['vertical_tile']}"
+        horizontal_tile = regex_group_dict["horizontal_tile"]
+        vertical_tile = regex_group_dict["vertical_tile"]
+        return f"h{horizontal_tile}v{vertical_tile}"
 
     def _get_available_files(self, year_path: str, tiles: List[str] = None):
-        request = requests.get(urllib.parse.urljoin(self._lp_daac_url, year_path))
+        url = urllib.parse.urljoin(self._lp_daac_url, year_path)
+        request = requests.get(url)
         soup = BeautifulSoup(request.text, "html.parser")
         files = []
         for link in [link["href"] for link in soup.find_all("a", href=True)]:
@@ -903,7 +910,7 @@ class LandCover(Base):
         except Exception as e:
             print(f"EarthAccess setup failed for land cover: {e}")
 
-    def _generate_local_hdf_path(self, tile: str, year: str, remote_name: str) -> str:
+    def _generate_local_hdf_path(self, tile, year, remote_name):
         return os.path.join(self.land_cover_dir, tile, year, remote_name)
 
     def _generate_local_hdf_dir(self, tile: str, year: str) -> str:
@@ -912,9 +919,8 @@ class LandCover(Base):
     def _generate_land_cover_mosaic_dir(self, tile: str, year: str) -> str:
         return os.path.join(self.land_cover_dir, tile, str(year), "mosaics")
 
-    def _find_available_tiles_for_region(self, requested_tiles: List[str]) -> List[str]:
-        """Find available land cover tiles that can cover the requested region."""
-
+    def _find_available_tiles_for_region(self, requested_tiles):
+        """Find available land cover tiles that cover the requested region."""
         try:
             # Get all available tiles for a sample year
             granules = earthaccess.search_data(
@@ -962,8 +968,8 @@ class LandCover(Base):
     def mosaic_landuse(self, downloaded_files, mosaic_path, land_cover_type):
         """Merge a list of MODIS HDF files into one GeoTiff.
 
-        TODO: Will there ever be multiple downloaded files 
-            from LandCover.get_land_cover? I was assuming there would be since
+        TODO: Will there ever be multiple downloaded files from
+            LandCover.get_land_cover? I was assuming there would be since
             we are labeling the final output tiff "mosaic" but it looks like
             the earthaccess method that downloads the originals takes in
             one tile at a time.
@@ -1183,26 +1189,27 @@ class EcoRegion(Base):
         return f"<{name} object at {address}> {msg}"
 
     @staticmethod
-    def _normalize_string(string):  # ----------------------------------------> Finish docstring
-        """Fix character inconsistencies between ecoregion level strings.
-
-        Parameters
-        ----------
-        string : str
-
-        Returns
-        -------
-        str
-        """
-
+    def _normalize_string(string):
         def capitalize_special(s):
-            """Handles capitalization for special characters within a string."""
+            """Handle capitalization for special characters within a string."""
             if "/" in s:
-                s = "/".join([segment.capitalize() if segment.upper() != "USA" else segment.upper() for segment in
-                              s.split("/")])
+                segments = []
+                for segment in s.split("/"):
+                    if segment.upper() != "USA":
+                        segment = segment.capitalize()
+                    else:
+                        segment = segment.upper()
+                    segments.append(segment)
+                s = "/".join(segments)
             if "-" in s:
-                s = "-".join([segment.title() if segment.upper() != "USA" else segment.upper() for segment in
-                              s.split("-")])
+                segments = []
+                for segment in s.split("-"):
+                    if segment.upper() != "USA":
+                        segment = segment.title()
+                    else:
+                        segment = segment.upper()
+                    segments.append(segment)
+                s = "-".join(segments)
             return s
 
         # Split string into words
@@ -1301,9 +1308,12 @@ class EcoRegion(Base):
                     "rasterizing the eco region file"
                 )
 
-            file = [
-                os.path.join(burn_dir, f) for f in glob(os.path.join(burn_dir, "*")) if re.match(self._file_regex, os.path.basename(f)) is not None
-            ][0]
+            # Find the matching file
+            files = []
+            for f in glob(os.path.join(burn_dir, "*")):
+                if re.match(self._file_regex, os.path.basename(f)) is not None:
+                    files.append(os.path.join(burn_dir, f))
+            file = files[0]
             file_pointer = gdal.Open(file)
             dataset_pointer = file_pointer.GetSubDatasets()[0][0]
             ds = gdal.Open(dataset_pointer)

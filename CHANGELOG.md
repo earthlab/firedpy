@@ -30,13 +30,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
             - Provides a human readable description of function/class purpose, arguments, and outputs.
             - Will enable automated documentation with tools such as Sphinx (https://www.sphinx-doc.org/en/master/).
             - https://peps.python.org/pep-0257/
-- **Dependencies
+### Added
+- **Pip Dependencies**
+    - Added a `requirements.txt` file
+    - Replicates the `environment.yaml` for conda.
+    - Is called throught `setup.py` which is called through `pyproject.toml`.
 - **Removed most type hinting and began inevitable debate over utility of practice in this context.**
     - *Reasons include:*
-        - Prioritization of simplicity and quick development time over benefits of IDE integration and enhanced coder type awareness.
-        - Inconsistent use of hints in existing code base.
-        - Lack of consistent, dedicated development team for proper implementation (code will be managed by rotating Geography students).
         - Redundancy with docstring type declarations.
+        - Prioritization of simplicity and quick development time over benefits of IDE integration and enhanced coder type awareness.
+        - Lack of consistent, dedicated development team for proper implementation (code will be managed by rotating geography students).
+        - Inconsistent use of hints in existing code base.
 
 - **Packaging code added to `pyproject.toml` file, which is recommended practice as per PEP-621:**
     - https://peps.python.org/pep-0621/
@@ -46,7 +50,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Keeps Python environment lighter weight and reduces installation times.
     - Provides an alternative to conda for users who prefer native Python package installations (e.g.,  Python Installs Packages or pip).
     - Is a necessary step for hosting firedpy on the Python Packaging Index (PyPI): https://pypi.org/.
-
+- **Map of MODIS tile IDs added to data/images**
+    - Should help both to identify target MODIS tiles and to visualize the process.
 
 ## [2.0.0] - 2023
 
