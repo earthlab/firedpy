@@ -44,7 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Packaging code added to `pyproject.toml` file, which is recommended practice as per PEP-621:**
     - https://peps.python.org/pep-0621/
 - **Simple GDAL discovery routine added to `setup.py` script:**
-    - Called through `pyproject.toml`.
+    - Called through `setup.py`.
     - Enables firedpy to use existing system installations of GDAL/OGR.
     - Keeps Python environment lighter weight and reduces installation times.
     - Provides an alternative to conda for users who prefer native Python package installations (e.g.,  Python Installs Packages or pip).
