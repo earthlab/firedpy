@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [2.0.1] - 2026
 ### Changed
 - **Regoranized code to allow for Python package installation**
-    - *Moved all Python scripts to `firedpy/` folder*
+    - *Moved all Python scripts to `firedpy/` folder*.
         - Scripts in `src/` moved directly into `firedpy/`.
             - `src/spatial/` moved to `firedpy/utilities/spatial/`.
         - Scripts in `bin/` moved directly into `firedpy/`.
@@ -32,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
             - https://peps.python.org/pep-0257/
 ### Added
 - **Pip Dependencies**
-    - Added a `requirements.txt` file
+    - Added a `requirements.txt` file.
     - Replicates the `environment.yaml` for conda.
     - Is called throught `setup.py` which is called through `pyproject.toml`.
 - **Removed most type hinting and began inevitable debate over utility of practice in this context.**
@@ -45,7 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Packaging code added to `pyproject.toml` file, which is recommended practice as per PEP-621:**
     - https://peps.python.org/pep-0621/
 - **Simple GDAL discovery routine added to `setup.py` script:**
-    - Called through `pyproject.toml`
+    - Called through `pyproject.toml`.
     - Enables firedpy to use existing system installations of GDAL/OGR.
     - Keeps Python environment lighter weight and reduces installation times.
     - Provides an alternative to conda for users who prefer native Python package installations (e.g.,  Python Installs Packages or pip).
