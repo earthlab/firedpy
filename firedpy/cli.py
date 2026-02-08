@@ -32,8 +32,20 @@ USER_SOURCES = [
 ]
 
 
-def print_parameters(params):
-    """Print the user and default parameters out from CLI context object."""
+def confirm_parameters(params):
+    """Print chosen parameters out and confirm if interactive.
+
+    Parameters
+    ----------
+    params : dict
+        Parameter name-value pairs chosen from Firedpy CLI user input or by
+        default.
+
+    Returns
+    -------
+    bool : Boolean indicating whether to continue with the firedpy run or to
+        cancel (only for interactive mode).
+    """
     # Collect user vs default parameter value pairs
     defaults = {}
     user_provided = {}
@@ -47,7 +59,7 @@ def print_parameters(params):
             value = f"{value} days"
         if key == "spatial_param":
             value = (
-                f"{value} pixels. Nominally ~{value * 463:,.0f} m but varies "
+                f"{value} pixels (nominally ~{value * 463:,.0f} m but varies "
                 "by location)"  # Let's calculate this value!
             )
         if source not in USER_SOURCES:
@@ -68,10 +80,12 @@ def print_parameters(params):
         for key, value in defaults.items():
             click.echo(f"    {key}: {value}")
 
-    # Give them a few seconds to decide to cancel the process
-    wait = 3
-    click.echo(f"Running firedpy in {wait} seconds...")
-    time.sleep(wait)
+    # If interactive, prompt user for confirmation
+    proceed = True
+    if params["interactive"]:
+        proceed = click.confirm("Confirm parameters and proceed?")
+
+    return proceed
 
 
 def _prompts(ctx, _, interactive):
@@ -92,8 +106,9 @@ def _prompts(ctx, _, interactive):
                     value = Path(value).absolute().expanduser()
                 if key == "n_cores" and value == 0:
                     value = os.cpu_count()
-                click.echo(f"  {key}={value}")
+                click.echo(f"    {key}={value}")
                 ctx.params[key] = value
+        click.echo("")
     return interactive
 
 
@@ -131,10 +146,6 @@ def _prompts(ctx, _, interactive):
               help=CLI_HELP["cleanup"])
 def cli(**params):
     """firedpy command line interface."""
-    # Start the timer and memory tracer
-    start = time.perf_counter()
-    tracemalloc.start()
-
     # Raise an error if parameters were supplied without the project directory
     projdir = params["project_directory"]
     if not projdir:
@@ -150,22 +161,28 @@ def cli(**params):
         params["n_cores"] = os.cpu_count()
 
     # Print out the parameter values for non-user supplied defaults
-    print_parameters(params)
+    confirmed = confirm_parameters(params)
 
-    # The interactive flag isn't present in the main function
-    del params["interactive"]
+    # Run if the user confirms to the parameters
+    if confirmed:
+        # Start the timer and memory tracer
+        start = time.perf_counter()
+        tracemalloc.start()
 
-    # Run with user parameters
-    _ = fired(**params)
+        # The interactive flag isn't present in the main function
+        del params["interactive"]
 
-    # Get the maximum resource use for this process (fix this)
-    _, peak_memory = tracemalloc.get_traced_memory()
-    peak_memory = round(peak_memory / 1024 ** 3, 2)
-    tracemalloc.stop()
+        # Run with user parameters
+        _ = fired(**params)
 
-    # Done.
-    end = time.perf_counter()
-    seconds = end - start
-    runtime = seconds / 60
-    click.echo(f"Job completed in {runtime:.2f} minutes")
-    click.echo(f"Peak memory usage: {peak_memory:.2f} GB")
+        # Get the maximum resource use for this process (fix this)
+        _, peak_memory = tracemalloc.get_traced_memory()
+        peak_memory = round(peak_memory / 1024 ** 3, 2)
+        tracemalloc.stop()
+
+        # Done.
+        end = time.perf_counter()
+        seconds = end - start
+        runtime = seconds / 60
+        click.echo(f"Job completed in {runtime:.2f} minutes")
+        click.echo(f"Peak memory usage: {peak_memory:.2f} GB")
