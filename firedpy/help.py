@@ -65,8 +65,8 @@ HELP = {
     ),
     "interactive": (
         """
-        Interactive Mode. Any required argument that is not supplied will
-        prompt the user for a value. Defaults to False.
+        Interactive Mode. Firedpy will prompt the user for all parameter
+        values. Defaults to False.
         """
     ),
     "land_cover_type": (

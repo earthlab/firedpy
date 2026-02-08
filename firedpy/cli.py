@@ -7,10 +7,12 @@ https://gist.github.com/jzbruno/d167d256f6c426e2b6fdf2dbfc1ba3c9
 
 """
 import click
+import os
 import re
 import time
 import tracemalloc
 
+from click.core import ParameterSource
 from pathlib import Path
 
 import firedpy
@@ -26,7 +28,36 @@ CONTEXT_SETTINGS = {
 }
 
 
-def prompts(ctx, _, interactive):
+def print_parameters(ctx):
+    """Print the user and default parameters out from CLI context object."""
+    # Collect user vs default parameter value pairs
+    defaults = {}
+    user_provided = {}
+    for key, value in ctx.params.items():
+        source = click.get_current_context().get_parameter_source(key)
+        if source == ParameterSource.DEFAULT:
+            defaults[key] = value
+        else:
+            user_provided[key] = value
+
+    # Alert user to choices so they understand the defaults if used
+    if user_provided:
+        print("Running firedpy with the following user-supplied values: ")
+        for key, value in user_provided.items():
+            print(f"    {key}: {value}")
+    if defaults:
+        print("Using the following default values: ")
+        for key, value in defaults.items():
+            print(f"    {key}: {value}")
+
+    # Give them a few seconds to decide to cancel the process
+    wait = 3
+    print(f"Running firedpy in {wait} seconds...")
+    time.sleep(wait)
+
+
+def _prompts(ctx, _, interactive):
+    """Callback click function that prompts the user for parameter values."""
     if interactive:
         click.echo(
             "Using interactive mode, please enter parameter values as "
@@ -39,16 +70,16 @@ def prompts(ctx, _, interactive):
             value = click.prompt(prompt, default=default)
             if key == "project_directory" and value == ".":
                 value = Path(value).absolute().expanduser()
+            if key == "n_cores" and value == 0:
+                value = os.cpu_count()
             print(f"  {key}={value}")
             ctx.params[key] = value
-    else:
-        click.echo("Not using interactive mode.")
     return interactive
 
 
-@click.command(context_settings=CONTEXT_SETTINGS)
+@click.command(no_args_is_help=True, context_settings=CONTEXT_SETTINGS)
 @click.version_option(version=firedpy.__version__)
-@click.option("-i", "--interactive", is_flag=True, callback=prompts,
+@click.option("-i", "--interactive", is_flag=True, callback=_prompts,
               help=HELP["interactive"])
 @click.option("-p", "--project_directory", default=None, required=True,
               is_eager=True, help=HELP["interactive"])
@@ -84,6 +115,19 @@ def cli(ctx, **params):
     # Start the timer and memory tracer
     start = time.perf_counter()
     tracemalloc.start()
+
+    # Make sure the project directory looks good if interactive wasn't used
+    projdir = ctx.params["project_directory"]
+    if projdir == "." or "~" in projdir:
+        ctx.params["project_directory"] = Path(projdir).absolute().expanduser()
+
+    # Make sure the cpu core count looks good if interactive wasn't used
+    n_cores = ctx.params["n_cores"]
+    if n_cores == 0:
+        ctx.params["n_cores"] = os.cpu_count()
+
+    # Print out the parameter values for non-user supplied defaults
+    print_parameters(ctx)
 
     # The interactive flag isn't present in the main function
     del params["interactive"]
