@@ -6,7 +6,7 @@ ATTR_HELP = {
     },
     "eco_region_type": {
         "world": "World Terrestrial Ecoregions (World Wildlife Fund)",
-        "na": "North American ecoregions (Omernick, 1987)"
+        "na": "North American Ecoregions (Omernick, 1987)"
     },
     "land_cover_type": {
         1: "International Geosphere-Biosphere Programme (IGBP) scheme",
@@ -17,8 +17,8 @@ ATTR_HELP = {
     },
     "shape_type": {
         "shp": "ESRI Shapefile",
-        "gpkg": "Geopackage",
-        "both": "Both ESRI Shapefile and Geopackage"
+        "gpkg": "GeoPackage",
+        "both": "Both ESRI Shapefile and GeoPackage"
     }
 }
 
@@ -30,21 +30,17 @@ CLI_HELP = {
         after each run to save disk space in between multiple runs.
         """
     ),
+    "country": (
+        """
+        Country. The name of a country to use as a study area. If not provided,
+        either a `tiles` or `shape_file` parameter is required. Country
+        overrides `tiles` parameter. Defaults to 'Iceland'.
+        """
+    ),
     "daily": (
         """
         Daily. Create daily polygons in addition to event-level perimeters for
         your analysis area.
-        """
-    ),
-    "data": (
-        """
-        Data. The project directory you would like to use for  and output data
-        files. Defaults to a temporary directory 'firedpy/data/outputs'.
-        """
-    ),
-    "country": (
-        """
-        The name of a country to use as a study area. Defaults to None.
         """
     ),
     "eco_region_type": (
@@ -92,7 +88,7 @@ CLI_HELP = {
     "interactive": (
         """
         Interactive Mode. Firedpy will prompt the user for all parameter
-        values. Defaults to False.
+        values and confirm selections before proceeding. Defaults to False.
         """
     ),
     "land_cover_type": (
@@ -128,22 +124,23 @@ CLI_HELP = {
         Required (Use "." for the present directory).
         """
     ),
+    "project_name": (
+        """
+        A name used to identify the output files of this project. Defaults to
+        None, which will use the name of the parent run directory.
+        """
+    ),
     "shape_file": (
         """
-        Shapefiles. Provide this option if you would like to build shapefiles
-        from the event data frame. Specify either "shp", "gpkg", or both.
-        Shapefiles of both daily progression and overall event perimeters will
-        be written to the 'outputs/shapefiles' folder of the chosen project
-        directory. These will be saved in the specified geopackage format
-        (.gpkg), ERSI Shapefile format (.shp), or save them in both formats
-        using the file basename of the fire event data frame (e.g.
-        'modis_events_daily.gpkg' and 'modis_events.gpkg').
+        Shapefile. A shapefile representing the target study area. If not
+        provided, either a `tiles` or `country` parameter is required. This
+        overrides the `country` and `tiles` parameters. Defaults to None.
         """
     ),
     "shape_type": (
         """
         Shapefile Type. The file format for the output event GeodataDataFrame.
-        Specify "shp" for an ESRI Shapefil, "gpkg" for a Geopackage, or "both"
+        Specify "shp" for an ESRI Shapefile, "gpkg" for a Geopackage, or "both"
         to write both formats to file. Shapefiles of both daily
         progression and overall event perimeters will be written to the
         'outputs/shapefiles' folder of the chosen project directory.
@@ -170,14 +167,10 @@ CLI_HELP = {
     ),
     "tiles": (
         """
-        Tiles. A list of MODIS tile IDs as a list of characters (no quotes no
-        spaces) (e.g., ['h08v04', 'h09v04']). Alternatively, provide a path
-        to a shapefile with either a '.shp' or '.gpkg' extension to use its
-        intersecting MODIS tiles. In the `src` directory, you can access any of
-        the 50 states by specifying 'ref/us_states/state_name.gpkg', all 7
-        continents by specifying 'ref/continents/continent_name.gpkg', and a
-        country by 'ref/individual_countries/country_name.gpkg'. A list of all
-        available countries can be found in the ReadMe.
+        Tiles. A string representing a single MODIS tile (e.g., 'h08v04') or a
+        string representing multiple tiles separated by spaces (e.g.,
+        'h08v04 h09v04'). If not provided, a `country` or `shape_file`
+        parameter is required. Defaults to None
         """
     )
 }

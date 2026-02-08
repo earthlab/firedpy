@@ -127,21 +127,21 @@ def test_earthdata_credentials(username, password):
 
 def fired(
     project_directory,
+    project_name=None,  # Changing this soon to like project name
+    country="Iceland",
     tiles=None,
-    tile_name=None,
+    shape_file=None,
     start_year=2000,
     end_year=2025,
-    daily=True,
     spatial_param=8,
     temporal_param=3,
-    shape_file=None,
+    daily=True,
     shape_type="gpkg",
     eco_region_level=1,
     eco_region_type=None,
     land_cover_type=None,
     full_csv=True,
     n_cores=0,
-    country=None,
     cleanup=False
 ):
     """Run all steps of the firedpy modeling pipeline.
@@ -153,30 +153,32 @@ def fired(
     ----------
     project_directory : str
         Project output directory path. Required.
+    project_name : str | NoneType
+        A name used to identify the output files of this project. Defaults to
+        None, which will use the name of the parent run directory.
+    country : str
+        The name of a country to use as a study area. Defaults to 'Iceland'.
     tiles : str | list
         A string representing a single MODIS tile (e.g., 'h08v04'), a string
         representing multiple tiles separated by spaces (e.g., 'h08v04 h09v04')
         or a list representing multiple tiles (e.g., ['h08v04', 'h09v04']).
         If None, a `country` or `shape_file` parameter is required.
-    tile_name : str | NoneType
-        The name of the MODIS tile being run? Shouldn't there be multiple?
-        How is this different from above, defaulting to None for now.
+    shape_file : str
+        Path to a shapefile to use for the fire study area. Defaults to None.
+        If not provided, a `tiles` or `country` parameter is required.
     start_year : int
         The first year of fire events. Defaults to 2000.
     end_year : int
         The last year of fire events. Defaults to 2025.
-    daily : boolean
-        Create the daily polygons or just the event-level perimeter for your
-        analysis area. If this flag is set, the daily and event polygons will
-        be created, otherwise only the event level.
     spatial_param : int
         The number of cells (~463 m resolution) to search for neighboring burn
         detections. Defaults to 5 cells in all directions.
     temporal_param : int
         The number of days to search for neighboring burn detections.
-    shape_file : str
-        Path to a shapefile to use for the fire study area. Defaults to None.
-        If not provided, a `tiles` or `country` parameter is required.
+    daily : boolean
+        Create the daily polygons or just the event-level perimeter for your
+        analysis area. If this flag is set, the daily and event polygons will
+        be created, otherwise only the event level.
     shape_type : str
         Build shapefiles from the event data frame. Specify either "shp",
         "gpkg", or both. Shapefiles of both daily progression and overall
@@ -215,6 +217,8 @@ def fired(
             1: IGBP global vegetation classification scheme
             2: University of Maryland (UMD) scheme
             3: MODIS-derived LAI/fPAR scheme
+            4: Annual BIOME-Biogeochemical Cycles (BGC)
+            5: Annual Plant Functional Types (PFT)
 
         If you do not have an account register at
         https://urs.earthdata.nasa.gov/home.
@@ -227,8 +231,6 @@ def fired(
     n_cores : int
         Number of cores to use for parallel processing. Defaults to 0
         or all available cores.
-    country : str
-        The name of a country to use as a study area. Defaults to None.
     cleanup : bool
         Cleanup. If set then the burn area and landcover files will be removed
         after each run to save disk space in between multiple runs. Defaults
@@ -330,10 +332,9 @@ def fired(
     )
     date1 = date_range[0][0]
     date2 = date_range[-1][0]
-    if tile_name:
-        base_file_name = f"fired_{tile_name}_{date1}_to_{date2}"
-    else:
-        base_file_name = f"fired_{date1}_to_{date2}"
+    if not project_name:
+        project_name = Path(project_directory).name
+    base_file_name = f"fired_{project_name}_{date1}_to_{date2}"
     daily_base = f"{base_file_name}_daily"
     event_base = f"{base_file_name}_events"
     daily_shape_path, daily_gpkg_path = generate_path(
@@ -394,18 +395,21 @@ def fired(
     return gdf
 
 
-# if __name__ == "__main__":
-#     project_directory = out_dir = "~/scratch/firedpy/test2"
-#     tiles = "h08v04"
-#     start_year = 2020
-#     end_year = 2022
-#     daily = True
-#     spatial_param = 8
-#     temporal_param = 3
-#     shape_file = None
-#     shape_type = "gpkg"
-#     eco_region_level = 1
-#     eco_region_type = "na"
-#     land_cover_type = 1
-#     n_cores = 1
-#     full_csv = True
+if __name__ == "__main__":
+    project_directory = '/home/travis/scratch/firedpy/test2'
+    interactive = True
+    tiles = None
+    country = 'United States of America'
+    shape_file = None
+    start_year = 2000
+    end_year = 2025
+    daily = False
+    spatial_param = 8  # pixels (nominally ~3,704 m but varies by location)
+    temporal_param = 3  # days
+    shape_type = 'gpkg'  # GeoPackage
+    eco_region_level = 1  # Level I - Least Detailed
+    eco_region_type = 'na'  # North American Ecoregions (Omernick, 1987)
+    land_cover_type = 1  # International Geosphere-Biosphere Programme (IGBP) scheme
+    full_csv = False
+    n_cores = 32
+    cleanup = False
