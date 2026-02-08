@@ -1,4 +1,29 @@
-HELP = {
+ATTR_HELP = {
+    "eco_region_level": {
+        1: "Level I - Least Detailed",
+        2: "Level III - Mid-level Detail",
+        3: "Level III - Most Detailed"
+    },
+    "eco_region_type": {
+        "world": "World Terrestrial Ecoregions (World Wildlife Fund)",
+        "na": "North American ecoregions (Omernick, 1987)"
+    },
+    "land_cover_type": {
+        1: "International Geosphere-Biosphere Programme (IGBP) scheme",
+        2: "University of Maryland (UMD) scheme",
+        3: "MODIS-derived Leaf Area Index (LAI/fPAR) scheme",
+        4: "MODIS-derived Net Primary Production (NPP) scheme",
+        5: "Plant Functional Type (PFT) scheme"
+    },
+    "shape_type": {
+        "shp": "ESRI Shapefile",
+        "gpkg": "Geopackage",
+        "both": "Both ESRI Shapefile and Geopackage"
+    }
+}
+
+
+CLI_HELP = {
     "cleanup": (
         """
         Cleanup. If set then the burn area and landcover files will be removed
@@ -48,6 +73,7 @@ HELP = {
         representing the most detailed. Defaults to 1.
         """
     ),
+    "end_year": "Last Year. The last year of fired events.",
     "file": (
         """
         File Name. The file name of the resulting dataframe. This will be saved
@@ -114,6 +140,16 @@ HELP = {
         'modis_events_daily.gpkg' and 'modis_events.gpkg').
         """
     ),
+    "shape_type": (
+        """
+        Shapefile Type. The file format for the output event GeodataDataFrame.
+        Specify "shp" for an ESRI Shapefil, "gpkg" for a Geopackage, or "both"
+        to write both formats to file. Shapefiles of both daily
+        progression and overall event perimeters will be written to the
+        'outputs/shapefiles' folder of the chosen project directory.
+        """
+    ),
+    "start_year": "First Year. The first year of fired events.",
     "spatial_param": (
         """
         Spatial Parameter. The number of cells (~463 m resolution) to search
@@ -143,16 +179,5 @@ HELP = {
         country by 'ref/individual_countries/country_name.gpkg'. A list of all
         available countries can be found in the ReadMe.
         """
-    ),
-    "shape_type": (
-        """
-        Shapefile Type. The file format for the output event GeodataDataFrame.
-        Specify "shp" for an ESRI Shapefil, "gpkg" for a Geopackage, or "both"
-        to write both formats to file. Shapefiles of both daily
-        progression and overall event perimeters will be written to the
-        'outputs/shapefiles' folder of the chosen project directory.
-        """
-    ),
-    "start_year": "First Year. The first year of fired events.",
-    "end_year": "Last Year. The last year of fired events.",
+    )
 }
