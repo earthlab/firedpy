@@ -33,10 +33,22 @@ USER_SOURCES = [
 
 
 def clean_params(params):
-    """Adjust parameters for proper data types and specific translations."""
+    """Adjust parameters for proper data types and specific translations.
+
+    Parameters
+    ----------
+    params : dict
+        Parameter name-value pairs chosen from Firedpy CLI user input or by
+        default.
+
+    Returns
+    -------
+    dict : A copy of the original parameter dictionary with needed adjustments
+        and translations.
+    """
     clean_params = {}
     for key, value in params.items():
-        # Translate any 'None's to None
+        # We had to use "None" instead of None for default value acceptance
         if value == "None":
             value = None
 
@@ -45,7 +57,7 @@ def clean_params(params):
             if value:
                 value = Path(value).absolute().expanduser()
 
-        # Infer the name if not provided
+        # Infer the project name if not provided
         if key == "project_name" and value is None:
             proj_dir = Path(params["project_directory"])
             value = proj_dir.absolute().expanduser().name
@@ -80,7 +92,7 @@ def confirm_parameters(params):
         source = click.get_current_context().get_parameter_source(key)
 
         # Make these human readable with more context
-        if source not in USER_SOURCES:
+        if source not in USER_SOURCES and key != "project_directory":
             defaults[key] = value
         else:
             user_provided[key] = value
@@ -108,7 +120,15 @@ def confirm_parameters(params):
 
 
 def helpful_print(key, value):
-    """Print firedpy key value pair so that it's easy to paste into script."""
+    """Print key value pair so that they're easy to read & paste into a script.
+
+    Parameters
+    ----------
+    key : str
+        A string representing a firedpy parameter name.
+    value : str
+        A value associated with the firedpy parameter key.
+    """
     # Give the user units for spatial and temporal values specifcally
     if key == "spatial_param":
         value = (
@@ -175,6 +195,7 @@ def _prompts(ctx, _, interactive):
     "-p", "--project_directory",
     required=True,
     is_eager=True,
+    default=None,
     help=CLI_HELP["interactive"]
 )
 @click.option(
@@ -280,7 +301,7 @@ def cli(**params):
     if not projdir:
         raise ValueError("A value for the `project_directory` is required.")
 
-    # Clean and confirm parameter values for non-user supplied defaults
+    # Clean and confirm parameter values
     params = clean_params(params)
     confirmed = confirm_parameters(params)
 
@@ -289,7 +310,7 @@ def cli(**params):
         start = time.perf_counter()
         tracemalloc.start()
 
-        # The interactive flag isn't present in the main function
+        # The interactive option isn't in the main function
         del params["interactive"]
 
         # Run with user parameters
