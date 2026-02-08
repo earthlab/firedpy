@@ -11,6 +11,7 @@ from pathlib import Path
 from firedpy.data_classes import ATTR_DESCS, BurnData, EcoRegion, LandCover
 from firedpy.enums import ShapeType
 from firedpy.model_classes import ModelBuilder
+from firedpy.utilities.create_readme import make_read_me
 from firedpy.utilities.logging import init_logger
 from firedpy.utilities.spatial import country_to_tiles
 
@@ -124,8 +125,8 @@ def test_earthdata_credentials(username, password):
     urllib.request.urlopen(request)
 
 
-def run_firedpy(
-    out_dir,
+def fired(
+    project_directory,
     tiles=None,
     tile_name=None,
     start_year=2000,
@@ -140,17 +141,23 @@ def run_firedpy(
     land_cover_type=None,
     full_csv=True,
     n_cores=0,
-    country=None
+    country=None,
+    cleanup=False
 ):
     """Run all steps of the firedpy modeling pipeline.
 
+    TODO: Consolidate some of these code chunks to make it a bit easier to
+        read.
+
     Parameters
     ----------
-    out_dir : str
+    project_directory : str
         Project output directory path. Required.
     tiles : str | list
-        A string representing a single MODIS tile (e.g., 'h08v04') or a list
-        representing multiple tiles (e.g., ['h08v04', 'h09v04']). Required.
+        A string representing a single MODIS tile (e.g., 'h08v04'), a string
+        representing multiple tiles separated by spaces (e.g., 'h08v04 h09v04')
+        or a list representing multiple tiles (e.g., ['h08v04', 'h09v04']).
+        If None, a `country` or `shape_file` parameter is required.
     tile_name : str | NoneType
         The name of the MODIS tile being run? Shouldn't there be multiple?
         How is this different from above, defaulting to None for now.
@@ -168,7 +175,8 @@ def run_firedpy(
     temporal_param : int
         The number of days to search for neighboring burn detections.
     shape_file : str
-        Path to a shapefile to use for the fire study area.
+        Path to a shapefile to use for the fire study area. Defaults to None.
+        If not provided, a `tiles` or `country` parameter is required.
     shape_type : str
         Build shapefiles from the event data frame. Specify either "shp",
         "gpkg", or both. Shapefiles of both daily progression and overall
@@ -219,12 +227,12 @@ def run_firedpy(
     n_cores : int
         Number of cores to use for parallel processing. Defaults to 0
         or all available cores.
-    username : str
-        Username for a NASA Earthdata Account. Defaults to None, will
-        prompt user.
-    password : str
-        Password for a NASA Earthdata Account. Defaults to None, will
-        prompt user.
+    country : str
+        The name of a country to use as a study area. Defaults to None.
+    cleanup : bool
+        Cleanup. If set then the burn area and landcover files will be removed
+        after each run to save disk space in between multiple runs. Defaults
+        to False.
 
     Returns
     -------
@@ -232,19 +240,19 @@ def run_firedpy(
         perimeters and attributes.
     """
     # Setup logging for this output directory
-    out_dir = Path(out_dir).expanduser().absolute()
+    out_dir = Path(project_directory).expanduser().absolute()
     init_logger(out_dir=out_dir)
     logger.info(
         f"Running firedpy for years {start_year} to {end_year} on MODIS "
         f"tiles: {tiles}."
     )
 
-    # If a single tile string is given, make it a list
+    # Format study area parameters
     if country:
         tiles = country_to_tiles(country)
     else:
         if isinstance(tiles, str):
-            tiles = [tiles]
+            tiles = tiles.replace("'", "").split()
 
     # Get the burn data
     logger.info("Collecting MODIS burn data.")
@@ -367,21 +375,37 @@ def run_firedpy(
         full_csv=full_csv
     )
 
+    # make_read_me(
+    #     gdf=gdf,
+    #     project_directory=project_directory,
+    #     tiles=tiles,
+    #     spatial_param=spatial_param,
+    #     temporal_param=temporal_param,
+    #     shapefile=shape_file,
+    #     runtime=runtime,
+    #     n_cores=n_cores,
+    #     peak_memory=peak_memory,
+    # )
+
+    # # Remove intermediate files if requested
+    # if cleanup:
+    #     cleanup_intermediate_files(project_directory)
+
     return gdf
 
 
-if __name__ == "__main__":
-    project_directory = out_dir = "~/scratch/firedpy/test2"
-    tiles = "h08v04"
-    start_year = 2020
-    end_year = 2022
-    daily = True
-    spatial_param = 8
-    temporal_param = 3
-    shape_file = None
-    shape_type = "gpkg"
-    eco_region_level = 1
-    eco_region_type = "na"
-    land_cover_type = 1
-    n_cores = 1
-    full_csv = True
+# if __name__ == "__main__":
+#     project_directory = out_dir = "~/scratch/firedpy/test2"
+#     tiles = "h08v04"
+#     start_year = 2020
+#     end_year = 2022
+#     daily = True
+#     spatial_param = 8
+#     temporal_param = 3
+#     shape_file = None
+#     shape_type = "gpkg"
+#     eco_region_level = 1
+#     eco_region_type = "na"
+#     land_cover_type = 1
+#     n_cores = 1
+#     full_csv = True

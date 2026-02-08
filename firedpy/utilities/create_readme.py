@@ -1,6 +1,5 @@
 import os
 
-from datetime import datetime, timedelta
 from pathlib import Path
 
 from firedpy import DATA_DIR

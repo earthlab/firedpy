@@ -1,34 +1,30 @@
 HELP = {
-    "name": "src",
-    "out_dir": "Project output directory path. Required.",
     "cleanup": (
         """
-        If set then the burn area and landcover files will be removed after
-        each run to save disk space in between multiple runs.
+        Cleanup. If set then the burn area and landcover files will be removed
+        after each run to save disk space in between multiple runs.
         """
     ),
     "daily": (
         """
-        Create daily polygons in addition to event-level perimeters for your
-        analysis area.
+        Daily. Create daily polygons in addition to event-level perimeters for
+        your analysis area.
         """
     ),
     "data": (
         """
-        The project directory you would like to use for  and output data files.
-        Defaults to a temporary directory 'firedpy/data/outputs'.
+        Data. The project directory you would like to use for  and output data
+        files. Defaults to a temporary directory 'firedpy/data/outputs'.
         """
     ),
-    "file": (
+    "country": (
         """
-        The file name of the resulting dataframe. This will be saved in the
-        'outputs/tables' folder of the chosen project directory. Defaults to
-        'fired_events.csv' and 'fired_daily.csv' if daily data is requested.
+        The name of a country to use as a study area. Defaults to None.
         """
     ),
-    "eco_type": (
+    "eco_region_type": (
         """
-        You can specify the ecoregion type as either 'world' or 'na':\n
+        Ecoregion Type. Specify the ecoregion type as either 'world' or 'na':\n
         'world' = World Terrestrial Ecoregions (World Wildlife Fund (WWF))
         'na' = North American ecoregions (Omernick, 1987)
 
@@ -44,32 +40,40 @@ HELP = {
         used. Defaults to None.
         """
     ),
-    "eco_level": (
+    "eco_region_level": (
         """
-        The desired Ecoregions level from the North American Commission for
-        Environmental Cooperation (CEC). Levels 1 to 3 are available, with
-        level 1 representing the broadest scale and level III representing the
-        most detailed. Defaults to 1.
+        Ecoregion Level. The desired Ecoregions level from the North American
+        Commission for Environmental Cooperation (CEC). Levels 1 to 3 are
+        available, with level 1 representing the broadest scale and level III
+        representing the most detailed. Defaults to 1.
+        """
+    ),
+    "file": (
+        """
+        File Name. The file name of the resulting dataframe. This will be saved
+        in the 'outputs/tables' folder of the chosen project directory.
+        Defaults to 'fired_events.csv' and 'fired_daily.csv' if daily data is
+        requested.
         """
     ),
     "full_csv": (
         """
-        If set full attribute table will exported to csv. If not included only
-        x and y coordinates, event date, and event id will be exported to a
-        csv.
+        Full CSV. Include a full set of attributes in the output CSV. If not
+        included only x and y coordinates, event date, and event id will be
+        exported to a csv.
         """
     ),
     "interactive": (
         """
-        Run the CLI in interactive mode. Any required argument that is not
-        supplied will prompt the user for a value. Defaults to False.
+        Interactive Mode. Any required argument that is not supplied will
+        prompt the user for a value. Defaults to False.
         """
     ),
-    "lc_type": (
+    "land_cover_type": (
         """
-        The target land cover source used to characterize each fire event.
-        Provide a number corresponding with a MODIS/Terra+Aqua Land Cover
-        (MCD12Q1). Available land cover categories:\n
+        Land Cover Type. The target land cover source used to characterize each
+        fire event. Provide a number corresponding with a MODIS/Terra+Aqua
+        Land Cover (MCD12Q1). Available land cover categories:\n
 
             1: IGBP global vegetation classification scheme\n
             2: University of Maryland (UMD) scheme\n
@@ -86,22 +90,51 @@ HELP = {
         Defaults to None.
         """
     ),
-    "n_cores": "Number of cores to use for parallel processing.",
-    "shp": (
+    "n_cores": (
         """
-        Provide this option if you would like to build shapefiles from the
-        event data frame. Specify either "shp", "gpkg", or both. Shapefiles of
-        both daily progression and overall event perimeters will be written to
-        the 'outputs/shapefiles' folder of the chosen project directory. These
-        will be saved in the specified geopackage format (.gpkg), ERSI
-        Shapefile format (.shp), or save them in both formats using the file
-        basename of the fire event data frame (e.g. 'modis_events_daily.gpkg'
-        and 'modis_events.gpkg').
+        N Cores. Number of cores to use for parallel processing. Defaults to
+        0 or all cores.
+        """
+    ),
+    "project_directory": (
+        """
+        Project directory path. Inputs and outputs will all be written here.
+        Required (Use "." for the present directory).
+        """
+    ),
+    "shape_file": (
+        """
+        Shapefiles. Provide this option if you would like to build shapefiles
+        from the event data frame. Specify either "shp", "gpkg", or both.
+        Shapefiles of both daily progression and overall event perimeters will
+        be written to the 'outputs/shapefiles' folder of the chosen project
+        directory. These will be saved in the specified geopackage format
+        (.gpkg), ERSI Shapefile format (.shp), or save them in both formats
+        using the file basename of the fire event data frame (e.g.
+        'modis_events_daily.gpkg' and 'modis_events.gpkg').
+        """
+    ),
+    "spatial_param": (
+        """
+        Spatial Parameter. The number of cells (~463 m resolution) to search
+        for neighboring burn detections. Defaults to 8 cells in all directions.
+        """
+    ),
+    "temporal_param": (
+        """
+        Temporal Parameter. The number of days to search for neighboring burn
+        detections. Defaults to 3 days between events.
+        """
+    ),
+    "tile_name": (  #<--------------------------------------------------------- This doesn't make sense
+        """
+        Tile Name. The name of the tile you would like to choose based on your
+        tile choice.
         """
     ),
     "tiles": (
         """
-        You may specify the tiles as a list of characters (no quotes no
+        Tiles. A list of MODIS tile IDs as a list of characters (no quotes no
         spaces) (e.g., ['h08v04', 'h09v04']). Alternatively, provide a path
         to a shapefile with either a '.shp' or '.gpkg' extension to use its
         intersecting MODIS tiles. In the `src` directory, you can access any of
@@ -111,35 +144,15 @@ HELP = {
         available countries can be found in the ReadMe.
         """
     ),
-    "sp": (
+    "shape_type": (
         """
-        The number of cells (~463 m resolution) to search for neighboring burn
-        detections. Defaults to 8 cells in all directions.
-        """
-    ),
-    "tile_name": (
-        """
-        The name of the tile you would like to choose based on your tile
-        choice.
+        Shapefile Type. The file format for the output event GeodataDataFrame.
+        Specify "shp" for an ESRI Shapefil, "gpkg" for a Geopackage, or "both"
+        to write both formats to file. Shapefiles of both daily
+        progression and overall event perimeters will be written to the
+        'outputs/shapefiles' folder of the chosen project directory.
         """
     ),
-    "tmp": (
-        """
-        The number of days to search for neighboring burn detections. Defaults
-        to 3 days between events.
-        """
-    ),
-    "st": (
-        """
-        Build shapefiles from the event data frame. Specify either "shp",
-        "gpkg", or both. Shapefiles of both daily progression and overall
-        event perimeters will be written to the 'outputs/shapefiles' folder of
-        the chosen project directory. These will be saved in the specified
-        geopackage format (.gpkg), ERSI Shapefile format (.shp), or save them
-        in both formats using the file basename of the fire event data frame
-        (e.g. 'modis_events_daily.gpkg' and 'modis_events.gpkg').
-        """
-    ),
-    "year1": "The first year of fired events.",
-    "year2": "The last year of fired events.",
+    "start_year": "First Year. The first year of fired events.",
+    "end_year": "Last Year. The last year of fired events.",
 }
