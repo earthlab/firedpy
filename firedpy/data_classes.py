@@ -30,7 +30,12 @@ from tqdm import tqdm
 from firedpy import DATA_DIR
 from firedpy.enums import LandCoverType
 from firedpy.modis_earthaccess import setup_modis_earthaccess
-from firedpy.utilities.spatial import hdf4_to_geotiff
+from firedpy.utilities.spatial import (
+    country_to_tiles,
+    hdf4_to_geotiff,
+    shape_to_tiles,
+    tiles_to_points
+)
 
 gdal.UseExceptions()
 logger = logging.getLogger(__name__)
@@ -96,10 +101,18 @@ class Base:
         )
 
         # Can we shorten this or use another method?
-        self._post_regex = r"\.A(?P<year>\d{4})(?P<ordinal_day>\d{3})\.h\
-            (?P<horizontal_tile>\d{2})v(?P<vertical_tile>\d{2})\.061\.\
-                (?P<prod_year>\d{4})(?P<prod_ordinal_day>\d{3})\
-                    (?P<prod_hourminute>\d{4})(?P<prod_second>\d{2})\.hdf$"
+        # This is used both to ensure the file format matches and to extract
+        # The year and day from the file name
+        self._post_regex = (
+            r"\.A(?P<year>\d{4})"
+            r"(?P<ordinal_day>\d{3})\.h"
+            r"(?P<horizontal_tile>\d{2})"
+            r"v(?P<vertical_tile>\d{2})\.061\."
+            r"(?P<prod_year>\d{4})"
+            r"(?P<prod_ordinal_day>\d{3})"
+            r"(?P<prod_hourminute>\d{4})"
+            r"(?P<prod_second>\d{2})\.hdf$"
+        )
 
         # Initialize output directory folders and files
         self._initialize_save_dirs()
@@ -176,23 +189,22 @@ class Base:
         del trgt
         del src_data
 
-    def _convert_dates(self, array, year) -> np.array:
+    def _convert_dates(self, array, year):
         """Convert every day in an array to days since Jan 1 1970"""
         # Loop through each position with data and convert
         ys, xs = np.where(array > 0)
         for y, x in zip(ys, xs):
             array[y, x] = self._convert_ordinal_to_unix_day(year, array[y, x])
-
         return array
 
-    def _generate_local_burn_hdf_dir(self, tile: str) -> str:
-        return os.path.join(self.hdf_dir, tile)
+    def _generate_local_burn_hdf_dir(self, tile):
+        return self.hdf_dir.joinpath(tile)
 
-    def _generate_local_nc_path(self, tile: str) -> str:
-        return os.path.join(self.nc_dir, f"{tile}.nc")
+    def _generate_local_nc_path(self, tile):
+        return self.nc_dir.joinpath(f"{tile}.nc")
 
-    def _generate_land_cover_mosaic_dir(self, tile: str, year: str) -> str:
-        return os.path.join(self.land_cover_dir, tile,  str(year), "mosaics")
+    def _generate_land_cover_mosaic_dir(self, tile, year):
+        return self.land_cover_dir.joinpath(tile,  str(year), "mosaics")
 
 
 class LPDAAC(Base):
@@ -503,15 +515,24 @@ class BurnData(LPDAAC):
 
         return download_requests
 
-    def get_burns(self, tiles, start_year=2000, end_year=2025):
+    def get_burns(self, tiles=None, country=None, shape_file=None,
+                  start_year=2000, end_year=2025):
         """Download MODIS burn data using EarthAccess.
 
-        NOTE: This completely replaces the legacy FTP/HTTP approach.
+        NOTE: One of tiles, country, or shapefile must be supplied. If mulitple
+            of these parameters are provided, shape_file supercedes country and
+            country supercedes tiles.
 
         Parameters
         ----------
         tiles : list
-            List of MODIS tiles (e.g., ['h08v04', 'h09v04']). Required.
+            List of MODIS tiles (e.g., ['h08v04', 'h09v04']).  Defaults to
+            None.
+        country : str
+            The name of a country to use as a study area. Defaults to None.
+        shape_file : str
+            Path to a shapefile to use for the fire study area. Defaults to
+            None.
         start_year : int
             The first year of fire events. Defaults to 2000.
         end_year : int
@@ -522,55 +543,39 @@ class BurnData(LPDAAC):
         print(f"Getting burn data using EarthAccess for tiles: {tiles}")
         print(f"📅 Date range: {start_date} to {end_date}")
 
+        auth = earthaccess.login(strategy="all")
+        if not auth:
+            raise RuntimeError("EarthAccess authentication failed")
+        else:
+            print("EarthAccess authentication successful.")
+
         try:
-            # Set credentials as environment variables for earthaccess
-            # os.environ["EARTHDATA_USERNAME"] = self._username
-            # os.environ["EARTHDATA_PASSWORD"] = self._password
-
-            auth = earthaccess.login(strategy="all")
-            if not auth:
-                raise RuntimeError("EarthAccess authentication failed")
-
             # Search for granules
             print(f"Searching for MCD64A1 granules: {start_date} - {end_date}")
-            granules = earthaccess.search_data(
-                short_name="MCD64A1",
-                version="061",
-                temporal=(start_date, end_date)
-            )
-            n_granules = len(granules)
-            print(f"Found {n_granules} total granules")
+            granule_dict = self._get_granules(tiles, country, shape_file,
+                                              start_date, end_date)
 
             # Filter for our specific tiles and download by tile
-            for tile in tiles:
+            for tile, granules in granule_dict.items():
                 print(f"Processing tile: {tile}")
 
-                # Filter granules for this tile
-                tile_granules = []
-                for granule in granules:
-                    granule_name = granule.get("meta", {}).get("native-id", "")
-                    if tile in granule_name:
-                        tile_granules.append(granule)
-                n_granules = len(tile_granules)
+                # Check if any granules were found
+                n_granules = len(granules)
                 print(f"   Found {n_granules} granules for tile {tile}")
-                if not tile_granules:
+                if not granules:
                     print(f"   No data found for tile {tile}")
                     continue
 
                 # Download granules for this tile
-                tile_download_dir = os.path.join(self.hdf_dir, tile)
+                tile_download_dir = self.hdf_dir.joinpath(tile)
                 os.makedirs(tile_download_dir, exist_ok=True)
                 print(f"   Downloading to: {tile_download_dir}")
                 try:
                     downloaded_files = earthaccess.download(
-                        tile_granules,
+                        granules,
                         tile_download_dir
                     )
                     print(f"   Downloaded {len(downloaded_files)} files")
-
-                    # Convert to NetCDF
-                    self._write_ncs([tile])
-                    print(f"   Created NetCDF for tile {tile}")
 
                 except Exception as e:
                     print(f"   Download failed for tile {tile}: {e}")
@@ -585,6 +590,52 @@ class BurnData(LPDAAC):
             raise RuntimeError(
                 f"Failed to get burn data with EarthAccess: {e}"
             )
+
+        # Convert to NetCDF
+        tiles = list(granule_dict)
+        self._write_ncs(tiles)
+        print(f"   Created NetCDF for tile {tiles}")
+
+        return tiles
+
+    def _get_granules(self, tiles, country, shape_file, start_date, end_date):
+        """Get Earth Access data granules using tile names."""
+        # Get tile list
+        if shape_file:
+            tiles = shape_to_tiles(shape_file)
+        elif country:
+            tiles = country_to_tiles(country)
+        else:
+            if not tiles:
+                raise KeyError(
+                    "One of `tiles`, `country`, or `shape_file` parameters"
+                    "must be supplied."
+                )
+
+        # Let's see if using points is quicker
+        points = tiles_to_points(tiles)
+
+        # Method two
+        granules = {}
+        for tile, point in tqdm(points.items(), total=len(tiles)):
+            granule = earthaccess.search_data(
+                short_name="MCD64A1",
+                version="061",
+                temporal=(start_date, end_date),
+                point=point
+            )
+            granules[tile] = granule
+
+        return granules
+
+    def _get_search_kwargs(self, tile, start_date, end_date):
+        kwargs = dict(
+            short_name="MCD64A1",
+            version="061",
+            temporal=(start_date, end_date),
+            granule_name=f"*{tile}*"
+        )
+        return kwargs
 
     def _write_modis_template_file(self):
         # Merge one year into a reference mosaic
@@ -610,9 +661,9 @@ class BurnData(LPDAAC):
         with rasterio.open(self._modis_template_path, "w+", **crs) as dst:
             dst.write(mosaic)
 
-    def _extract_date_parts(self, filename):
-        filename = os.path.basename(filename)
-        match = re.match(self._file_regex, filename)
+    def _extract_date_parts(self, path):
+        fname = path.name
+        match = re.match(self._file_regex, fname)
         if match:
             match_year = int(match.groupdict()["year"])
             match_day = int(match.groupdict()["ordinal_day"])
@@ -629,31 +680,36 @@ class BurnData(LPDAAC):
                         dates.append(date)
         return sorted(dates)
 
-    def _write_ncs(self, tiles: List[str]):
-        """
-        Take in a time series of files for the MODIS burn detection dataset and
-        create a singular netcdf file.
+    def _write_ncs(self, tiles):
+        """Convert a list of tiles associated with MODIS HDF4 to a NetCDF file.
+
+        Parameters
+        ----------
+        tiles : list[str]
+            A list of strings representing MODIS tile IDs.
         """
         # Build the netcdfs here
-        fill_value = -9999
-        for tile_id in tqdm(tiles):
+        fill_value = -9999  # Default fill value in original file is -1
+        for tile in tiles:
+
+            # Build/find file paths needed for this operation
+            nc_file_path = self._generate_local_nc_path(tile)
+            hdf_dir = self.hdf_dir.joinpath(tile)
+            if nc_file_path.exists():
+                print(f"{tile} netCDF file exists, skipping...")
+                continue
+            paths = []
+            for path in list(hdf_dir.glob("*.hdf")):
+                if self._extract_date_parts(path):
+                    paths.append(path)
+            files = sorted(paths, key=self._extract_date_parts)
+
+            if not files:
+                raise OSError(f"No HDF4 files for tile {tile} in {hdf_dir}")
+
             try:
-                nc_file_name = self._generate_local_nc_path(tile_id)
-                if os.path.exists(nc_file_name):
-                    print(f"{tile_id} netCDF file exists, skipping...")
-                    continue
-
-                hdf_dir = self.hdf_dir.joinpath(tile_id)
-                paths = []
-                for path in hdf_dir.glob("*.hdf"):
-                    if self._extract_date_parts(path):
-                        paths.append(path)
-                files = sorted(paths, key=self._extract_date_parts)
-                if not files:
-                    print(f"No hdf files for tile {tile_id} in {hdf_dir}")
-
                 # Use a sample to get geography information and geometries
-                print(f"Building netcdf for tile {tile_id}")
+                print(f"Building netcdf for tile {tile}")
                 sample = files[0]
                 ds = gdal.Open(sample).GetSubDatasets()[0][0]
                 hdf = gdal.Open(ds)
@@ -667,21 +723,10 @@ class BurnData(LPDAAC):
                 proj4 = crs.ExportToProj4()
 
                 # Use one tif (one array) for spatial attributes
-                metadata = hdf.GetMetadata()
                 array = data.ReadAsArray()
                 ny, nx = array.shape
                 xs = np.arange(nx) * geom[1] + geom[0]
                 ys = np.arange(ny) * geom[5] + geom[3]
-                lats = np.linspace(
-                    float(metadata["SOUTHBOUNDINGCOORDINATE"]),
-                    float(metadata["NORTHBOUNDINGCOORDINATE"]),
-                    ny
-                )
-                lons = np.linspace(
-                    float(metadata["WESTBOUNDINGCOORDINATE"]),
-                    float(metadata["EASTBOUNDINGCOORDINATE"]),
-                    nx
-                )
 
                 # Today's date for attributes
                 todays_date = dt.datetime.today()
@@ -689,7 +734,7 @@ class BurnData(LPDAAC):
 
                 # Create Dataset
                 nco = Dataset(
-                    nc_file_name,
+                    nc_file_path,
                     mode="w",
                     format="NETCDF4",
                     clobber=True
@@ -699,22 +744,10 @@ class BurnData(LPDAAC):
                 nco.createDimension("y", ny)
                 nco.createDimension("x", nx)
                 nco.createDimension("time", None)
-                nco.createDimension("lat", nx)
-                nco.createDimension("lon", ny)
 
                 # Variables
                 y = nco.createVariable("y", np.float64, ("y",))
                 x = nco.createVariable("x", np.float64, ("x",))
-                lat = nco.createVariable(
-                    "lat",
-                    np.float64,
-                    dimensions=("lat",)
-                )
-                lon = nco.createVariable(
-                    "lon",
-                    np.float64,
-                    dimensions=("lon",)
-                )
                 times = nco.createVariable("time", np.int16, ("time",))
                 variable = nco.createVariable(
                     "value",
@@ -730,7 +763,7 @@ class BurnData(LPDAAC):
                 # Check "https://cf-trac.llnl.gov/trac/ticket/77"
                 crs = nco.createVariable("crs", "c")
                 variable.setncattr("grid_mapping", "crs")
-                crs.spatial_ref = proj4
+                crs.spatial_ref = proj
                 crs.proj4 = proj4
                 crs.geo_transform = geom
                 crs.grid_mapping_name = "sinusoidal"
@@ -748,13 +781,6 @@ class BurnData(LPDAAC):
                 y.standard_name = "projection_y_coordinate"
                 y.long_name = "y coordinate of projection"
                 y.units = "m"
-
-                lat.standard_name = "latitude_coordinate"
-                lat.long_name = "latitude coordinate"
-                lat.units = "deg"
-                lon.standard_name = "longitude_coordinate"
-                lon.long_name = "longitude coordinate"
-                lon.units = "deg"
 
                 # Other attributes
                 nco.title = "Burn Days"
@@ -778,12 +804,11 @@ class BurnData(LPDAAC):
                 # Write dimension data
                 x[:] = xs
                 y[:] = ys
-                lon[:] = lons
-                lat[:] = lats
                 times[:] = days
 
                 # One file a time, write the arrays
-                for tile_index, f in tqdm(enumerate(files), position=0):
+                for tile_index, f in tqdm(enumerate(files), total=len(files),
+                                          position=0):
                     match = re.match(self._file_regex, os.path.basename(f))
                     if match is None:
                         continue
@@ -791,7 +816,7 @@ class BurnData(LPDAAC):
                     regex_group_dict = match.groupdict()
 
                     try:
-                        ds = gdal.Open(f).GetSubDatasets()[0][0]
+                        ds = gdal.Open(f).GetSubDatasets()[0][0]  #  check this is the right subdataset (Burn Date)
                         hdf = gdal.Open(ds)
                     except Exception as e:
                         print(f"Could not open {f} for building ncdf: {e}")
@@ -827,8 +852,8 @@ class BurnData(LPDAAC):
 
             except Exception as e:
                 # Log the error and move on to the next tile
-                # logger.error(f"Error processing tile {tile_id}: {str(e)}")
-                raise OSError(f"Error processing tile {tile_id}: {str(e)}")
+                # logger.error(f"Error processing tile {tile}: {str(e)}")
+                raise OSError(f"Error processing tile {tile}: {str(e)}")
 
     @staticmethod
     def _verify_hdf_file(file_path) -> bool:

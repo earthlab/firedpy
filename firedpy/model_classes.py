@@ -667,15 +667,12 @@ class ModelBuilder(Base):
         if self._n_cores == 1:
             # Run serially
             for i, nc_file_path in enumerate(self.files):
-                out_dir = self.out_dir
-                temp_param = self.temporal_param
-                space_param = self.spatial_param
                 out = process_file_perimeter(
-                    nc_file_path,
-                    out_dir,
-                    temp_param,
-                    space_param,
-                    i
+                    nc_file_path=nc_file_path,
+                    out_dir=self.out_dir,
+                    spatial_param=self.spatial_param,
+                    temporal_param=self.temporal_param,
+                    i=i
                 )
                 fire_events.extend(out)
         else:

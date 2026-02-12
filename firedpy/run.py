@@ -13,7 +13,6 @@ from firedpy.enums import ShapeType
 from firedpy.model_classes import ModelBuilder
 from firedpy.utilities.create_readme import make_read_me
 from firedpy.utilities.logging import init_logger
-from firedpy.utilities.spatial import country_to_tiles
 
 logger = getLogger(__name__)
 
@@ -147,7 +146,7 @@ def fired(
     """Run all steps of the firedpy modeling pipeline.
 
     TODO: Consolidate some of these code chunks to make it a bit easier to
-        read.
+        read. Maybe create a "Fired" class.
 
     Parameters
     ----------
@@ -250,17 +249,16 @@ def fired(
     )
 
     # Format study area parameters
-    if country:
-        tiles = country_to_tiles(country)
-    else:
-        if isinstance(tiles, str):
-            tiles = tiles.replace("'", "").split()
+    if isinstance(tiles, str):
+        tiles = tiles.replace("'", "").split()
 
     # Get the burn data
     logger.info("Collecting MODIS burn data.")
     burn_data = BurnData(out_dir=out_dir, n_cores=n_cores)
-    burn_data.get_burns(
+    tiles = burn_data.get_burns(
         tiles=tiles,
+        country=country,
+        shape_file=shape_file,
         start_year=start_year,
         end_year=end_year
     )
@@ -325,7 +323,6 @@ def fired(
     gdf = models.add_kg_attributes(gdf)
 
     # Set output paths
-    out_dir = os.path.expanduser(out_dir)
     date_range = burn_data.get_date_range(
         start_year=start_year,
         end_year=end_year
@@ -397,19 +394,19 @@ def fired(
 
 if __name__ == "__main__":
     project_directory = '/home/travis/scratch/firedpy/test2'
+    project_name = 'the_run_that_works'
     interactive = True
+    country = 'Iceland'
     tiles = None
-    country = 'United States of America'
     shape_file = None
     start_year = 2000
-    end_year = 2025
-    daily = False
+    end_year = 2002
     spatial_param = 8  # pixels (nominally ~3,704 m but varies by location)
     temporal_param = 3  # days
+    daily = True
     shape_type = 'gpkg'  # GeoPackage
-    eco_region_level = 1  # Level I - Least Detailed
+    eco_region_level = 3  # Level III - Most Detailed
     eco_region_type = 'na'  # North American Ecoregions (Omernick, 1987)
-    land_cover_type = 1  # International Geosphere-Biosphere Programme (IGBP) scheme
-    full_csv = False
-    n_cores = 32
-    cleanup = False
+    land_cover_type = 3  # MODIS-derived Leaf Area Index (LAI/fPAR) scheme
+    full_csv = True
+    n_cores = 1

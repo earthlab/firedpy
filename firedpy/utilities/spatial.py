@@ -1,5 +1,6 @@
 """Spatial data manipulation utilities."""
 import os
+import warnings
 
 from difflib import SequenceMatcher
 
@@ -104,9 +105,24 @@ def shape_to_tiles(shape_path):
     shared["h"] = shared["h"].apply(lambda x: "h{:02d}".format(int(x)))
     shared["v"] = shared["v"].apply(lambda x: "v{:02d}".format(int(x)))
     shared["tile"] = shared["h"] + shared["v"]
-    tiles = pd.unique(shared["tile"].values)
+    tiles = list(pd.unique(shared["tile"].values))
 
     return tiles
+
+
+def tiles_to_points(tiles):
+    """Convert a list of tiles to a list of points."""
+    modis = DATA_DIR.joinpath("modis", "modis_land.gpkg")
+    mdf = gpd.read_file(modis)
+    mdf = mdf.to_crs("epsg:4326")
+    tdf = mdf[mdf["name"].isin(tiles)]
+    with warnings.catch_warnings(category=UserWarning):
+        warnings.simplefilter("ignore")
+        tdf.loc[:, "geometry"] = tdf.centroid
+    points = {}
+    for _, row in tdf.iterrows():
+        points[row["name"]] = row["geometry"].x, row["geometry"].y
+    return points
 
 
 def similar_strings(string, strings, threshold_ratio=0.7):
