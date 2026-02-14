@@ -56,10 +56,6 @@ def generate_path(project_directory, base_filename, shape_type):
     list[str] : A list of full filepaths corresponding with the target file
         and file formats.
     """
-    # What's the benefit of enums here?
-    if not isinstance(shape_type, ShapeType):
-        shape_type = ShapeType(shape_type)
-
     # Get the requested combination of shapefile types
     file_extensions = {
         "shp": [".shp", None],
@@ -228,9 +224,12 @@ class EventPerimeter:
 
             # Return the min and max values as a convenience
             return {
-                'min_y': self.min_y, 'max_y': self.max_y,
-                'min_x': self.min_x, 'max_x': self.max_x,
-                'min_t': self.min_t, 'max_t': self.max_t
+                "min_y": self.min_y,
+                "min_x": self.min_x,
+                "min_t": self.min_t,
+                "max_y": self.max_y,
+                "max_x": self.max_x,
+                "max_t": self.max_t
             }
         else:
             raise ValueError("Array should be of shape (N, 3) where N is the "
@@ -692,13 +691,23 @@ class ModelBuilder(Base):
 
         return sgdf
 
+    def adjust_for_esri(self, gdf):
+        """Adjust a geodataframe for the ESRI Shapefile driver."""
+        sdf = gdf.copy()
+        if "date" in sdf.columns:
+            sdf["date"] = [str(d) for d in sdf["date"]]
+        sdf["ig_date"] = [str(d) for d in sdf["ig_date"]]
+        sdf["last_date"] = [str(d) for d in sdf["last_date"]]
+        sdf["mx_grw_dte"] = [str(d) for d in sdf["mx_grw_dte"]]
+        return sdf
+
     @staticmethod
     def _as_multi_polygon(polygon):
         if isinstance(polygon, Polygon):
             polygon = MultiPolygon([polygon])
         return polygon
 
-    def build_events(self, shape_file):
+    def build_events(self, shape_file, country=None):
         """Build the fire event geodataframe."""
         # Classify MODIS burn data into fire events
         event_perimeters = self.classify_events()
@@ -706,7 +715,8 @@ class ModelBuilder(Base):
         # Build the event geodataframe
         gdf = self.build_points(
             event_perimeters=event_perimeters,
-            shape_file=shape_file
+            shape_file=shape_file,
+            country=country
         )
 
         # Add fire event attributes
@@ -850,7 +860,7 @@ class ModelBuilder(Base):
         df["did"] = df["temp"].apply(
             lambda x: hashlib.md5(x.encode()).hexdigest()
         )
-        df.drop('temp', axis=1, inplace=True)  # Remove temporary column
+        df.drop('temp', axis=1, inplace=True)
         return df
 
     def _create_event_grid_array(self, events: List[EventPerimeter]):
@@ -915,14 +925,12 @@ class ModelBuilder(Base):
             return match_year, match_day
         return None
 
-    def get_output_paths(self, gdf, project_name, project_directory,
-                         start_year, end_year, daily, shape_type):
+    def get_output_paths(self, project_name, project_directory,
+                         start_year, end_year, shape_type):
         """Get dictionary of all output paths for a firedpy run.
 
         Parameters
         ----------
-        gdf : geopandas.geodataframe.GeoDataFrame
-            A geodataframe of fire events.
         project_name : str | NoneType
             A name used to identify the output files of this project.
         project_directory : str
@@ -931,10 +939,6 @@ class ModelBuilder(Base):
             The first year of fire events.
         end_year : int
             The last year of fire events.
-        daily : bool
-            Create the daily polygons or just the event-level perimeter for
-            your analysis area. If this flag is set, the daily and event
-            polygons will be created, otherwise only the event level.
         shape_type : str
             Build shapefiles from the event data frame. Specify either "shp",
             "gpkg", or both. Shapefiles of both daily progression and overall
@@ -949,45 +953,44 @@ class ModelBuilder(Base):
         -------
         dict : Dictionary of paths for final firedpy outputs.
         """
-        # Set output paths
+        # Set base name
         base_file_name = f"fired_{project_name}_{start_year}_to_{end_year}"
-        daily_base = f"{base_file_name}_daily"
+
+        # Set output directories
+        model_outputs_dir = Path(project_directory).joinpath("outputs")
+        shape_dir = model_outputs_dir.joinpath("shapefiles")
+        table_dir = model_outputs_dir.joinpath("tables")
+
+        # Make output directories
+        shape_dir.mkdir(parents=True, exist_ok=True)
+        table_dir.mkdir(exist_ok=True)
+
+        # Event-level output paths
         event_base = f"{base_file_name}_events"
+        event_csv_path = table_dir.joinpath(f"{event_base}.csv")
+        event_shape_path, event_gpkg_path = generate_path(
+            project_directory=project_directory,
+            base_filename=f"{base_file_name}_events",
+            shape_type=shape_type
+        )
+
+        # Daily-level output paths
+        daily_base = f"{base_file_name}_daily"
+        daily_csv_path = table_dir.joinpath(f"{daily_base}.csv")
         daily_shape_path, daily_gpkg_path = generate_path(
             project_directory=project_directory,
             base_filename=daily_base,
             shape_type=shape_type
         )
-        event_shape_path, event_gpkg_path = generate_path(
-            project_directory=project_directory,
-            base_filename=event_base,
-            shape_type=shape_type
-        )
 
-        model_outputs_dir = Path(project_directory).joinpath("outputs")
-        shape_dir = model_outputs_dir.joinpath("shapefiles")
-        table_dir = model_outputs_dir.joinpath("tables")
-        shape_dir.mkdir(parents=True, exist_ok=True)
-        table_dir.mkdir(exist_ok=True)
-        csv_path = table_dir.joinpath(f"{base_file_name}.csv"),
-
-        # Process event data
-        if daily:
-            output_csv_path = str(csv_path).replace(".csv", "_daily.csv")
-            gdf = self.process_daily_data(
-                gdf=gdf,
-                output_csv_path=output_csv_path,
-                daily_shape_path=daily_shape_path,
-                daily_gpkg_path=daily_gpkg_path
-            )
-        else:
-            gdf = self.process_event_data(gdf)
-
+        # Package output paths
         out_paths = dict(
-            csv_path=csv_path,
-            event_csv=output_csv_path[:-4] + "_events" + ".csv",
+            event_csv_path=event_csv_path,
             event_shape_path=event_shape_path,
             event_gpkg_path=event_gpkg_path,
+            daily_csv_path=daily_csv_path,
+            daily_shape_path=daily_shape_path,
+            daily_gpkg_path=daily_gpkg_path
         )
 
         return out_paths
@@ -1118,10 +1121,10 @@ class ModelBuilder(Base):
 
         print("Converting polygons to multipolygons...")
         gdfd["geometry"] = gdfd["geometry"].apply(self._as_multi_polygon)
-
         dropcols = ["did", "pixels", "event_day", "dy_ar_km2"]
         gdf = gdfd.drop(dropcols, axis=1)
         gdf = gdf.dissolve(by="id", as_index=False)
+
         print("Calculating perimeter lengths...")
         gdf["tot_perim"] = gdf["geometry"].to_crs(MODIS_CRS).length
         gdf["geometry"] = gdf["geometry"].apply(self._as_multi_polygon)
@@ -1221,53 +1224,71 @@ class ModelBuilder(Base):
             False and includes only a subset of attributes: "x", "y", "id",
             "ig_date", and "last_date".
         """
-        out_paths = self.get_output_paths(
-            gdf=gdf,
+        # Get all the output file paths
+        paths = self.get_output_paths(
             project_name=project_name,
             project_directory=project_directory,
             start_year=start_year,
             end_year=end_year,
-            daily=daily,
             shape_type=shape_type
         )
 
-        event_csv = out_paths["event_csv"]
-        csv_path = out_paths["csv_path"]
-        gpkg_path = out_paths["gpkg_path"]
-        shape_path = out_paths["shape_path"]
-
-        # Process event data
+        # Process and write daily-level events to file if requested
         if daily:
-            gdf = self.process_daily_data(gdf=gdf)
-        else:
-            gdf = self.process_event_data(gdf)
+            # Apply output processing for daily version
+            ddf = self.process_daily_data(gdf)
 
-        logger.info(f"Writing CSV file to {event_csv}")
+            # GeoDataFrames
+            if paths["daily_gpkg_path"]:
+                dst = paths["daily_gpkg_path"]
+                msg = f"Saving daily geodataframe to {dst}"
+                print(msg)
+                logger.info(msg)
+                ddf.to_file(dst, driver="GPKG")
+            if paths["daily_shape_path"]:
+                dst = paths["daily_shape_path"]
+                msg = f"Saving daily ESRI Shapefile to {dst}"
+                print(msg)
+                logger.info(msg)
+                sdf = self.adjust_for_esri(ddf)
+                sdf.to_file(dst, driver="GPKG")
+
+            # CSVs
+            dst = paths["daily_csv_path"]
+            if full_csv:
+                logger.info(f"Writing full daily CSV file to {dst}")
+                del ddf["geometry"]
+                ddf.to_csv(dst, index=False)
+            else:
+                logger.info(f"Writing daily CSV file to {dst}")
+                df = ddf[["x", "y", "id", "ig_date", "last_date"]]
+                df.to_csv(paths["event_csv"], index=False)
+
+        # Process and write event-level events to file
+        edf = self.process_event_data(gdf)
+
+        # GeoDataFrames
+        if paths["event_gpkg_path"]:
+            dst = paths["event_gpkg_path"]
+            msg = f"Saving event-level geo to {dst}"
+            print(msg)
+            logger.info(msg)
+            edf.to_file(dst, driver="GPKG")
+        if paths["event_shape_path"]:
+            dst = paths["event_shape_path"]
+            msg = f"Writing ESRI Shapefile to {dst}"
+            print(msg)
+            logger.info(msg)
+            sdf = self.adjust_for_esri(edf)
+            sdf.to_file(dst)
+
+        # CSV
+        dst = paths["event_csv_path"]
         if full_csv:
-            df = gdf.copy()
-            del df["geometry"]
-            df.to_csv(event_csv, index=False)
+            logger.info(f"Writing full daily CSV file to {dst}")
+            del edf["geometry"]
+            edf.to_csv(dst, index=False)
         else:
-            to_raw_csv = gdf[["x", "y", "id", "ig_date", "last_date"]]
-            to_raw_csv.to_csv(event_csv, index=False)
-
-        if csv_path:
-            gdf.to_csv(csv_path, index=False)
-
-        if gpkg_path:
-            logger.info(f"Writing geodataframe file to {gpkg_path}")
-            print(f"Saving file to {gpkg_path}")
-            gdf.to_file(gpkg_path, driver="GPKG")
-
-        if shape_path:
-            print(f"Writing geodataframe to {shape_path}")
-            logger.info(f"Writing geodataframe file to {shape_path}")
-            if "date" in gdf.columns:
-                gdf["date"] = [str(d) for d in gdf["date"]]
-            gdf["ig_date"] = [str(d) for d in gdf["ig_date"]]
-            gdf["last_date"] = [str(d) for d in gdf["last_date"]]
-            gdf["mx_grw_dte"] = [str(d) for d in gdf["mx_grw_dte"]]
-
-            gdf.to_file(shape_path)
-
-            print(f"Saving file to {shape_path}")
+            logger.info(f"Writing daily CSV file to {dst}")
+            df = edf[["x", "y", "id", "ig_date", "last_date"]]
+            df.to_csv(dst, index=False)

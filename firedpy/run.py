@@ -220,16 +220,17 @@ def fired(
                 eco_region_level=eco_region_level
             )
 
-        # # Save the events
-        # models.save_data(
-        #     gdf=gdf,
-        #     project_name=project_name,
-        #     project_directory=project_directory,
-        #     start_year=start_year,
-        #     end_year=end_year,
-        #     shape_type=shape_type,
-        #     full_csv=full_csv
-        # )
+        # Save the events
+        models.save_data(
+            gdf=gdf,
+            project_name=project_name,
+            project_directory=project_directory,
+            start_year=start_year,
+            end_year=end_year,
+            daily=daily,
+            shape_type=shape_type,
+            full_csv=full_csv
+        )
 
         # make_read_me(
         #     gdf=gdf,
@@ -287,4 +288,3 @@ if __name__ == "__main__":
     #     full_csv = True,
     #     n_cores = 1
     # )
-ShapeType
