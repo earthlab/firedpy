@@ -1120,13 +1120,6 @@ class ModelBuilder(Base):
 
         print("Converting polygons to multipolygons...")
         gdfd["geometry"] = gdfd["geometry"].apply(self._as_multi_polygon)
-        dropcols = ["did", "pixels", "event_day", "dy_ar_km2"]
-        gdf = gdfd.drop(dropcols, axis=1)
-        gdf = gdf.dissolve(by="id", as_index=False)
-
-        print("Calculating perimeter lengths...")
-        gdf["tot_perim"] = gdf["geometry"].to_crs(MODIS_CRS).length
-        gdf["geometry"] = gdf["geometry"].apply(self._as_multi_polygon)
 
         return gdf
 
@@ -1256,12 +1249,13 @@ class ModelBuilder(Base):
             dst = paths["daily_csv_path"]
             if full_csv:
                 logger.info(f"Writing full daily CSV file to {dst}")
-                del ddf["geometry"]
+                df = ddf.copy()
+                del df["geometry"]
                 ddf.to_csv(dst, index=False)
             else:
                 logger.info(f"Writing daily CSV file to {dst}")
                 df = ddf[["x", "y", "id", "ig_date", "last_date"]]
-                df.to_csv(paths["event_csv"], index=False)
+                df.to_csv(dst, index=False)
 
         # Process and write event-level events to file
         edf = self.process_event_data(gdf)

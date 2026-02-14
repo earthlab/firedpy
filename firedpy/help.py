@@ -34,7 +34,7 @@ CLI_HELP = {
         """
         Country. The name of a country to use as a study area. If not provided,
         either a `tiles` or `shape_file` parameter is required. Country
-        overrides `tiles` parameter. Defaults to 'Iceland'.
+        overrides `tiles` parameter.
         """
     ),
     "daily": (

@@ -29,7 +29,7 @@ def cleanup_intermediate_files(project_directory):
 def fired(
     project_directory,
     project_name=None,
-    country="Iceland",
+    country=None,
     tiles=None,
     shape_file=None,
     start_year=2000,
@@ -58,7 +58,8 @@ def fired(
         A name used to identify the output files of this project. Defaults to
         None, which will use the name of the parent run directory.
     country : str
-        The name of a country to use as a study area. Defaults to 'Iceland'.
+        The name of a country to use as a study area. If not provided, either
+        'tiles' or 'shape_file' parameter must be provided.
     tiles : str | list
         A string representing a single MODIS tile (e.g., 'h08v04'), a string
         representing multiple tiles separated by spaces (e.g., 'h08v04 h09v04')
@@ -149,6 +150,15 @@ def fired(
         f"Running firedpy for years {start_year} to {end_year} on MODIS "
         f"tiles: {tiles}."
     )
+
+    # Make sure they have a target location
+    if not country and not tiles and not shape_file:
+        msg = (
+            "Must provide one of `country`, `tiles`, or `shape_file` "
+            "parameters"
+        )
+        logger.error(msg)
+        raise KeyError(msg)
 
     # Format study area parameters
     if isinstance(tiles, str):
@@ -267,8 +277,6 @@ if __name__ == "__main__":
     eco_region_level = 3  # Level III - Most Detailed
     eco_region_type = 'na'  # North American Ecoregions (Omernick, 1987)
     land_cover_type = 3  # MODIS-derived Leaf Area Index (LAI/fPAR) scheme
-    eco_region_type = None
-    land_cover_type = None
     full_csv = True
     n_cores = 1
 
