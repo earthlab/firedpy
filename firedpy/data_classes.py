@@ -998,7 +998,7 @@ class LandCover(Base):
                     print(f"No land cover data for {tile} in year {year}")
                     continue
 
-                # I don't understand what's happening below
+                # I don't understand why were taking this step below  # <------ Address this
                 # lc_files = []
                 # lc_years = []
                 # for fname in os.listdir(mosaic_dir):
@@ -1029,8 +1029,12 @@ class LandCover(Base):
 
                 # lc_file = lc_files[year]
 
-                # Collect all files in the mosaic directory (only one ever?)
-                lc_file = list(mosaic_dir.glob("*tif"))[0]
+                # Collect all files in the mosaic directory (all? there's 1)
+                lc_file = list(mosaic_dir.glob("*tif"))
+                if not lc_file:
+                    continue
+                else:
+                    lc_file = lc_file[0]
 
                 # Create a sub data frame for this year
                 sgdf = gdf[gdf["ig_year"] == year].copy()
@@ -1088,7 +1092,7 @@ class LandCover(Base):
             granules = earthaccess.search_data(
                 short_name="MCD12Q1",
                 version="061",
-                temporal=("2020-01-01", "2020-12-31"),
+                temporal=("2020-01-01", "2020-12-31"),  # Why 2020?
                 count=500
             )
 
@@ -1136,7 +1140,7 @@ class LandCover(Base):
     def _generate_local_hdf_dir(self, tile: str, year: str) -> str:
         return os.path.join(self.land_cover_dir, tile, year)
 
-    def get_land_cover(self, gdf, tiles, land_cover_type=LandCoverType.IGBP):
+    def get_land_cover(self, gdf, tiles, land_cover_type=1):
         """Download and process land cover data with EarthAccess.
 
         Parameters
@@ -1144,8 +1148,8 @@ class LandCover(Base):
         gdf : geopandas.geodataframe.GeoDataFrame
             A geodata frame of fire events.
         tiles : list
-            List of MODIS tiles (e.g., ['h08v04', 'h09v04']). Required.
-        land_cover_type : int | firedpy.enums.LandCoverType
+            List of MODIS tiles (e.g., ['h08v04', 'h09v04']).
+        land_cover_type : int
             Include land cover as an attribute, provide a number corresponding
             with a MODIS/Terra+Aqua Land Cover (MCD12Q1) category followed with
             username:password of your NASA's Earthdata service account.
@@ -1154,6 +1158,8 @@ class LandCover(Base):
                 1: IGBP global vegetation classification scheme
                 2: University of Maryland (UMD) scheme
                 3: MODIS-derived LAI/fPAR scheme
+                4: Annual BIOME-Biogeochemical Cycles (BGC)
+                5: Annual Plant Functional Types (PFT)
 
             If you do not have an account register at
             https://urs.earthdata.nasa.gov/home. Defaults to 1.
@@ -1165,10 +1171,6 @@ class LandCover(Base):
         if tiles is None:
             print("No tiles specified for land cover")
             return
-
-        # Match possible land cover type arguments
-        if isinstance(land_cover_type, LandCoverType):
-            land_cover_type = land_cover_type.value
 
         # Find available tiles that can cover our region
         print(f"Getting land cover data using EarthAccess for region: {tiles}")
@@ -1183,7 +1185,7 @@ class LandCover(Base):
             # Get available years (this is fixed?)
             available_years = gdf["ig_year"].unique()
             for tile in available_tiles:
-                print(f"\n Processing land cover for tile: {tile}")
+                print(f"\nProcessing land cover for tile: {tile}")
 
                 for year in available_years:
                     print(f"   Processing year: {year}")
@@ -1255,7 +1257,7 @@ class LandCover(Base):
 
                     except Exception as e:
                         print(f"   Processing failed for {tile} {year}: {e}")
-                        continue  # <------------------------------------------ Should we raise for errors here?
+                        continue
 
             print("\nEarthAccess land cover processing completed!")
 
@@ -1291,12 +1293,6 @@ class LandCover(Base):
             If you do not have an account register at
             https://urs.earthdata.nasa.gov/home. Defaults to 1.
         """
-        # Match possible land cover type arguments
-        # is_int = isinstance(land_cover_type, int)
-        # is_lctype = isinstance(land_cover_type, LandCoverType)
-        # if is_int and is_lctype:
-        #     land_cover_type = LandCoverType.value
-
         # Use the target file's parent directory for the temporary files
         mosaic_dir = Path(os.path.dirname(mosaic_path))
         tmp_files = []
@@ -1314,7 +1310,8 @@ class LandCover(Base):
             shutil.rmtree(tmp_files)
             raise NotImplementedError(
                 "Merging multiple land use layers not implemented yet: "
-                f"{downloaded_files}")
+                f"{downloaded_files}"
+            )
 
         else:
             shutil.move(tmp_files[0], mosaic_path)

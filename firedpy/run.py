@@ -1,6 +1,8 @@
 """firedpy run methods."""
 import os
 import shutil
+import time
+import tracemalloc
 
 from logging import getLogger
 from pathlib import Path
@@ -143,6 +145,10 @@ def fired(
     geopandas.geodataframe.GeoDataFrame : A geodataframe of fire event
         perimeters and attributes.
     """
+    # Start the timer and memory tracer
+    start = time.perf_counter()
+    tracemalloc.start()
+
     # Setup logging for this output directory
     project_directory = Path(project_directory).expanduser().absolute()
     init_logger(project_directory=project_directory)
@@ -181,6 +187,8 @@ def fired(
         tiles=tiles,
         spatial_param=spatial_param,
         temporal_param=temporal_param,
+        start_year=start_year,
+        end_year=end_year,
         n_cores=n_cores
     )
 
@@ -188,7 +196,7 @@ def fired(
     logger.info("Building event perimeter geometries.")
     gdf = models.build_events(shape_file)
 
-    # Add initial fire characteristic
+    # Sometimes no fire events are captured
     if gdf.shape[0] == 0:
         msg = (
             f"No fire events found in tiles: {tiles} for years "
@@ -196,6 +204,8 @@ def fired(
         )
         print(msg)
         logger.info(msg)
+
+    # Add initial fire characteristic
     else:
 
         # Add land cover characteristic if requested
@@ -242,34 +252,47 @@ def fired(
             full_csv=full_csv
         )
 
-        # make_read_me(
-        #     gdf=gdf,
-        #     project_directory=project_directory,
-        #     tiles=tiles,Z
-        #     spatial_param=spatial_param,
-        #     temporal_param=temporal_param,
-        #     shapefile=shape_file,
-        #     runtime=runtime,
-        #     n_cores=n_cores,
-        #     peak_memory=peak_memory,
-        # )
+        # Done with processing, collect time and memory usage
+        _, peak_memory = tracemalloc.get_traced_memory()
+        peak_memory = round(peak_memory / 1024 ** 3, 2)
+        tracemalloc.stop()
+        end = time.perf_counter()
+        seconds = end - start
+        runtime = seconds / 60
+        logger.info(f"Job completed in {runtime:.2f} minutes")
+        logger.info(f"Peak memory usage: {peak_memory:.2f} GB")
+        print(f"Job completed in {runtime:.2f} minutes")
+        print(f"Peak memory usage: {peak_memory:.2f} GB")
 
-    # # Remove intermediate files if requested
-    # if cleanup:
-    #     cleanup_intermediate_files(project_directory)
+        # Create a summary readme
+        make_read_me(
+            gdf=gdf,
+            project_directory=project_directory,
+            tiles=tiles,
+            spatial_param=spatial_param,
+            temporal_param=temporal_param,
+            shapefile=shape_file,
+            runtime=runtime,
+            n_cores=n_cores,
+            peak_memory=peak_memory,
+        )
+
+    # Remove intermediate files if requested
+    if cleanup:
+        cleanup_intermediate_files(project_directory)
 
     return gdf
 
 
 if __name__ == "__main__":
-    project_directory = '/home/travis/scratch/firedpy/test2'
-    project_name = 'the_run_that_works'
+    project_directory = '/home/travis/scratch/firedpy/usa'
+    project_name = 'usa'
     interactive = True
-    country = None
-    tiles = ['h08v04', 'h09v04']
+    country = "United States of America"
+    tiles = None
     shape_file = None
-    start_year = 2000
-    end_year = 2002
+    start_year = 2020
+    end_year = 2025
     spatial_param = 8  # pixels (nominally ~3,704 m but varies by location)
     temporal_param = 3  # days
     daily = True

@@ -108,14 +108,12 @@ CLI_HELP = {
         will use any of the authentication options outlined here:
 
         https://earthaccess.readthedocs.io/en/latest/user_guide/authenticate/
-
-        Defaults to None.
         """
     ),
     "n_cores": (
         """
-        N Cores. Number of cores to use for parallel processing. Defaults to
-        0 or all cores.
+        N Cores. Number of cores to use for parallel processing. A value of 0
+        will use all available cores.
         """
     ),
     "project_directory": (

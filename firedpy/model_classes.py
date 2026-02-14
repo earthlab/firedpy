@@ -79,7 +79,7 @@ def generate_path(project_directory, base_filename, shape_type):
 
 
 def process_file_perimeter(nc_file_path, project_directory, spatial_param,
-                           temporal_param, i):
+                           start_year, end_year, temporal_param, i):
     """Process a perimeter for a given burn data file.
 
     Parameters
@@ -100,7 +100,9 @@ def process_file_perimeter(nc_file_path, project_directory, spatial_param,
         nc_file_path=nc_file_path,
         project_directory=project_directory,
         spatial_param=spatial_param,
-        temporal_param=temporal_param
+        temporal_param=temporal_param,
+        start_year=start_year,
+        end_year=end_year
     )
     fire_events = event_grid.get_event_perimeters(
         i,
@@ -292,6 +294,8 @@ class EventGrid(Base):
             project_directory,
             spatial_param=5,
             temporal_param=11,
+            start_year=2020,
+            end_year=2025,
             area_unit="Unknown",
             time_unit="days since 1970-01-01",
             nc_file_path=None,
@@ -313,6 +317,10 @@ class EventGrid(Base):
         temporal_param : int
             The number of days to search for neighboring burn detections.
             Defaults to 11.
+        start_year : int
+            The first year of fire events. Defaults to 2000.
+        end_year : int
+            The last year of fire events. Defaults to 2025.
         area_unit : str
             Area Unit. Currently unused and defaults to 'Unknown'.
         time_unit : str
@@ -329,17 +337,20 @@ class EventGrid(Base):
         self._area_unit = area_unit
         self._time_unit = time_unit
         self.current_event_id = 0
+        years = list(range(start_year, end_year + 1))
 
         if nc_file_path:
             with xr.open_dataset(nc_file_path) as burns:
+                burns = burns.sel(time=burns.time.dt.year.isin(years))
                 self._coordinates = {}
                 for dim in ["y", "x", "time"]:
-                    self._coordinates[dim] = np.array(burns.coords[dim].values)
+                    coords = np.array(burns.coords[dim].values)
+                    self._coordinates[dim] = coords
                 self._input_array = burns.value.values
 
         elif input_array is not None:
             if coordinates is None:
-                msg = "coordinates parameter also required with input array."
+                msg = "Coordinates parameter also required with input array."
                 raise ValueError(msg)
             self._coordinates = coordinates
             self._input_array = input_array
@@ -537,23 +548,20 @@ class ModelBuilder(Base):
             tiles: List[str],
             spatial_param: int = 5,
             temporal_param: int = 11,
+            start_year: int = 2020,
+            end_year: int = 2025,
             n_cores: int = os.cpu_count() - 1
     ):
+        """Methods for classifying fire events.`"""
         super().__init__(project_directory)
         self.tiles = tiles
         self.spatial_param = spatial_param
         self.temporal_param = temporal_param
-        self.files = sorted(
-            [self._generate_local_nc_path(t) for t in self.tiles]
-        )
+        self.start_year = start_year
+        self.end_year = end_year
         self._lc_mosaic_re = r'lc_mosaic_(?P<land_cover_type>\d{1})_\
             (?P<year>\d{4})\.tif$'
 
-        if not self.files:
-            raise FileNotFoundError(
-                f"Could not find any netcdf files in {self._nc_dir} for "
-                f"tiles: {self.tiles}"
-            )
 
         # Use the first file to get some geometry data for later
         with xr.open_dataset(self.files[0]) as data_set:
@@ -797,6 +805,8 @@ class ModelBuilder(Base):
                     project_directory=self.project_directory,
                     spatial_param=self.spatial_param,
                     temporal_param=self.temporal_param,
+                    start_year=self.start_year,
+                    end_year=self.end_year,
                     i=i
                 )
                 fire_events.extend(out)
@@ -814,6 +824,8 @@ class ModelBuilder(Base):
                         project_directory,
                         temp_param,
                         space_param,
+                        self.start_year,
+                        self.end_year,
                         i
                     )
                     jobs.append(job)
@@ -1285,3 +1297,15 @@ class ModelBuilder(Base):
             logger.info(f"Writing daily CSV file to {dst}")
             df = edf[["x", "y", "id", "ig_date", "last_date"]]
             df.to_csv(dst, index=False)
+
+    @property
+    def files(self):
+        """Return list of files for given tiles and years."""
+        files = [self._generate_local_nc_path(t) for t in self.tiles]
+        files = sorted(files)
+        if not files:
+            raise FileNotFoundError(
+                f"Could not find any netcdf files in {self._nc_dir} for "
+                f"tiles: {self.tiles}"
+            )
+        return files

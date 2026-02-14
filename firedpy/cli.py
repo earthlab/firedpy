@@ -9,8 +9,6 @@ https://gist.github.com/jzbruno/d167d256f6c426e2b6fdf2dbfc1ba3c9
 import click
 import os
 import re
-import time
-import tracemalloc
 
 from click.core import ParameterSource
 from pathlib import Path, PosixPath
@@ -306,22 +304,9 @@ def cli(**params):
     confirmed = confirm_parameters(params)
 
     if confirmed:
-        # Start the timer and memory tracer
-        start = time.perf_counter()
-        tracemalloc.start()
 
         # The interactive option isn't in the main function
         del params["interactive"]
 
         # Run with user parameters
         _ = fired(**params)
-
-        # Done.
-        _, peak_memory = tracemalloc.get_traced_memory()
-        peak_memory = round(peak_memory / 1024 ** 3, 2)
-        tracemalloc.stop()
-        end = time.perf_counter()
-        seconds = end - start
-        runtime = seconds / 60
-        click.echo(f"Job completed in {runtime:.2f} minutes")
-        click.echo(f"Peak memory usage: {peak_memory:.2f} GB")
