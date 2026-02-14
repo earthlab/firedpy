@@ -267,6 +267,8 @@ if __name__ == "__main__":
     eco_region_level = 3  # Level III - Most Detailed
     eco_region_type = 'na'  # North American Ecoregions (Omernick, 1987)
     land_cover_type = 3  # MODIS-derived Leaf Area Index (LAI/fPAR) scheme
+    eco_region_type = None
+    land_cover_type = None
     full_csv = True
     n_cores = 1
 

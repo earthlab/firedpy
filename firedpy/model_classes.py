@@ -24,7 +24,6 @@ from shapely import Point, Polygon, MultiPolygon
 from tqdm import tqdm
 
 from firedpy import DATA_DIR
-from firedpy.enums import ShapeType
 from firedpy.data_classes import Base
 from firedpy.utilities.spatial import MODIS_CRS, get_country_file
 
