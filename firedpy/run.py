@@ -1,15 +1,11 @@
 """firedpy run methods."""
 import os
-import resource
 import shutil
-import urllib.request
 
-from http.cookiejar import CookieJar
 from logging import getLogger
 from pathlib import Path
 
 from firedpy.data_classes import ATTR_DESCS, BurnData, EcoRegion, LandCover
-from firedpy.enums import ShapeType
 from firedpy.model_classes import ModelBuilder
 from firedpy.utilities.create_readme import make_read_me
 from firedpy.utilities.logging import init_logger
@@ -17,116 +13,22 @@ from firedpy.utilities.logging import init_logger
 logger = getLogger(__name__)
 
 
-EARTHDATA_TEST_URL = (
-    "https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.061/2019.01.01/"
-    "BROWSE.MCD12Q1.A2019001.h10v09.061.2022169160720.1.jpg"
-)
-
-
-def cleanup_intermediate_files(out_dir):
+def cleanup_intermediate_files(project_directory):
     """Remove temporary `burn_area` and `land_cover` raster files.
 
     Parameters
     ----------
-    out_dir : str | pathlib.PosixPath
+    project_directory : str | pathlib.PosixPath
         The output directory containing 'rasters/burn_area' and
         'rasters/land_cover'.
     """
-    shutil.rmtree(os.path.join(out_dir, "rasters", "burn_area"))
-    shutil.rmtree(os.path.join(out_dir, "rasters", "land_cover"))
-
-
-def generate_path(proj_dir, base_filename, shape_type):
-    """Return the full paths to a target files.
-
-    Parameters
-    ----------
-    proj_dir : str
-        A project directory selected containing target shapefiles. This
-        corresponds with the '-o' or '--output_directory` option in the
-        firedpy CLI.
-    base_filename : str
-        The file name of the target file.
-    shape_type : firedpy.enums.ShapeType
-        One of ShapeType.SHP, ShapeType.GPKG, or ShapeType.BOTH.
-
-    Returns
-    -------
-    list[str] : A list of full filepaths corresponding with the target file
-        and file formats.
-    """
-    # What's the benefit of enums here?
-    if not isinstance(shape_type, ShapeType):
-        shape_type = ShapeType(shape_type)
-
-    # Get the requested combination of shapefile types
-    file_extensions = {
-        ShapeType.SHP: [".shp", None],
-        ShapeType.GPKG: [None, ".gpkg"],
-        ShapeType.BOTH: [".shp", ".gpkg"]
-    }
-    file_ext = file_extensions.get(shape_type, [".gpkg"])
-
-    # Create the paths
-    paths = []
-    proj_dir = os.path.expanduser(proj_dir)
-    for ext in file_ext:
-        if ext:
-            fname = f"{base_filename}{ext}"
-            path = os.path.join(proj_dir, "outputs", "shapefiles", fname)
-        else:
-            path = None
-        paths.append(path)
-
-    return paths
-
-
-def get_peak_memory():
-    """Get maximum resident usage size of current process.
-
-    NOTE: This probably isn't doing what we want.
-    """
-    return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-
-
-def test_earthdata_credentials(username, password):
-    """Test access to `ers.earthdata.nasa.gov`
-
-    Parameters
-    ----------
-    username : str
-        Username for Earthdata account.
-    password : str
-        Password for Earthdata account.
-    """
-    # Earthdata Login
-    password_manager = urllib.request.HTTPPasswordMgrWithDefaultRealm()
-    password_manager.add_password(None, "https://urs.earthdata.nasa.gov",
-                                  username, password)
-
-    # Create a cookie jar for storing cookies. This is used to store and return
-    # the session cookie given to use by the data server (otherwise it will
-    # just keep sending us back to Earthdata Login to authenticate).  Ideally,
-    # we should use a file based cookie jar to preserve cookies between runs.
-    # This will make it much more efficient.
-    cookie_jar = CookieJar()
-
-    # Install all the handlers
-    opener = urllib.request.build_opener(
-        urllib.request.HTTPBasicAuthHandler(password_manager),
-        # urllib.request.HTTPHandler(debuglevel=1),  # Uncomment to see details
-        # urllib.request.HTTPSHandler(debuglevel=1),  # of requests/responses
-        urllib.request.HTTPCookieProcessor(cookie_jar))
-    urllib.request.install_opener(opener)
-
-    # Send a test URL
-    request = urllib.request.Request(EARTHDATA_TEST_URL)
-    urllib.request.urlopen(request)
+    shutil.rmtree(os.path.join(project_directory, "rasters", "burn_area"))
+    shutil.rmtree(os.path.join(project_directory, "rasters", "land_cover"))
 
 
 def fired(
     project_directory,
-    project_name=None,  # Changing this soon to like project name
+    project_name=None,
     country="Iceland",
     tiles=None,
     shape_file=None,
@@ -241,8 +143,8 @@ def fired(
         perimeters and attributes.
     """
     # Setup logging for this output directory
-    out_dir = Path(project_directory).expanduser().absolute()
-    init_logger(out_dir=out_dir)
+    project_directory = Path(project_directory).expanduser().absolute()
+    init_logger(project_directory=project_directory)
     logger.info(
         f"Running firedpy for years {start_year} to {end_year} on MODIS "
         f"tiles: {tiles}."
@@ -254,7 +156,7 @@ def fired(
 
     # Get the burn data
     logger.info("Collecting MODIS burn data.")
-    burn_data = BurnData(out_dir=out_dir, n_cores=n_cores)
+    burn_data = BurnData(project_directory=project_directory, n_cores=n_cores)
     tiles = burn_data.get_burns(
         tiles=tiles,
         country=country,
@@ -265,7 +167,7 @@ def fired(
 
     # Create a model builder object
     models = ModelBuilder(
-        out_dir=out_dir,
+        project_directory=project_directory,
         tiles=tiles,
         spatial_param=spatial_param,
         temporal_param=temporal_param,
@@ -274,116 +176,72 @@ def fired(
 
     # Build event perimeters
     logger.info("Building event perimeter geometries.")
-    event_perimeters = models.build_events()
-
-    # Build the event geodataframe
-    gdf = models.build_points(
-        event_perimeters=event_perimeters,
-        shape_file=shape_file
-    )
+    gdf = models.build_events(shape_file)
 
     # Add initial fire characteristic
-    gdf = models.add_fire_attributes(gdf=gdf)
-
-    # Add land cover characteristic if requested
-    if land_cover_type:
-        lc_desc = ATTR_DESCS["landcover"][str(land_cover_type)]
-        logger.info(f"Adding landcover attributes: {lc_desc}.")
-        land_cover = LandCover(
-            out_dir=out_dir,
-            n_cores=n_cores
+    if gdf.shape[0] == 0:
+        msg = (
+            f"No fire events found in tiles: {tiles} for years "
+            f"{start_year} - {end_year}."
         )
-        land_cover.get_land_cover(
-            tiles=tiles,
-            land_cover_type=land_cover_type
-        )
-        gdf = models.add_land_cover_attributes(
-            gdf=gdf,
-            tiles=tiles,
-            land_cover_type=land_cover_type
-        )
-
-    # What is this doing? (buffering with an envelope)
-    gdf = models.process_geometry(gdf)
-
-    # Add ecoregion attributes
-    if eco_region_type:
-        eco_desc = ATTR_DESCS["ecoregions"][eco_region_type]
-        msg = f"Adding ecoregion data: {eco_desc}, Level {eco_region_level}."
+        print(msg)
         logger.info(msg)
-        eco_region_data = EcoRegion(out_dir=out_dir)
-        eco_region_data.get_eco_region()
-        gdf = models.add_eco_region_attributes(
-            gdf=gdf,
-            eco_region_type=eco_region_type,
-            eco_region_level=eco_region_level
-        )
-
-    # Calculate fire spread speed and maximum travel vectors
-    gdf = models.add_kg_attributes(gdf)
-
-    # Set output paths
-    date_range = burn_data.get_date_range(
-        start_year=start_year,
-        end_year=end_year
-    )
-    date1 = date_range[0][0]
-    date2 = date_range[-1][0]
-    if not project_name:
-        project_name = Path(project_directory).name
-    base_file_name = f"fired_{project_name}_{date1}_to_{date2}"
-    daily_base = f"{base_file_name}_daily"
-    event_base = f"{base_file_name}_events"
-    daily_shape_path, daily_gpkg_path = generate_path(
-        proj_dir=out_dir,
-        base_filename=daily_base,
-        shape_type=shape_type
-    )
-    event_shape_path, event_gpkg_path = generate_path(
-        proj_dir=out_dir,
-        base_filename=event_base,
-        shape_type=shape_type
-    )
-
-    model_outputs_dir = Path(out_dir).joinpath("outputs")
-    shape_dir = model_outputs_dir.joinpath("shapefiles")
-    table_dir = model_outputs_dir.joinpath("tables")
-    csv_path = table_dir.joinpath(f"{base_file_name}.csv")
-    shape_dir.mkdir(parents=True, exist_ok=True)
-    table_dir.mkdir(exist_ok=True)
-
-    # Process event data
-    if daily:
-        output_csv_path = str(csv_path).replace(".csv", "_daily.csv")
-        gdf = models.process_daily_data(
-            gdf=gdf,
-            output_csv_path=output_csv_path,
-            daily_shape_path=daily_shape_path,
-            daily_gpkg_path=daily_gpkg_path
-        )
     else:
-        gdf = models.process_event_data(gdf)
 
-    # Save the events
-    models.save_event_data(
-        gdf=gdf,
-        output_csv_path=csv_path,
-        event_shape_path=event_shape_path,
-        event_gpkg_path=event_gpkg_path,
-        full_csv=full_csv
-    )
+        # Add land cover characteristic if requested
+        if land_cover_type and gdf.shape[0] > 0:
+            lc_desc = ATTR_DESCS["landcover"][str(land_cover_type)]
+            logger.info(f"Adding landcover attributes: {lc_desc}.")
+            land_cover = LandCover(
+                project_directory=project_directory,
+                n_cores=n_cores
+            )
+            land_cover.get_land_cover(
+                gdf=gdf,
+                tiles=tiles,
+                land_cover_type=land_cover_type
+            )
+            gdf = land_cover.add_land_cover_attributes(
+                gdf=gdf,
+                tiles=tiles,
+                land_cover_type=land_cover_type
+            )
 
-    # make_read_me(
-    #     gdf=gdf,
-    #     project_directory=project_directory,
-    #     tiles=tiles,
-    #     spatial_param=spatial_param,
-    #     temporal_param=temporal_param,
-    #     shapefile=shape_file,
-    #     runtime=runtime,
-    #     n_cores=n_cores,
-    #     peak_memory=peak_memory,
-    # )
+        # Add ecoregion attributes
+        if eco_region_type and gdf.shape[0] > 0:
+            eco_desc = ATTR_DESCS["ecoregions"][eco_region_type]
+            msg = f"Adding ecoregions: {eco_desc}, Level {eco_region_level}."
+            logger.info(msg)
+            eco_region_data = EcoRegion(project_directory=project_directory)
+            eco_region_data.get_eco_region()
+            gdf = eco_region_data.add_eco_region_attributes(
+                gdf=gdf,
+                eco_region_type=eco_region_type,
+                eco_region_level=eco_region_level
+            )
+
+        # # Save the events
+        # models.save_data(
+        #     gdf=gdf,
+        #     project_name=project_name,
+        #     project_directory=project_directory,
+        #     start_year=start_year,
+        #     end_year=end_year,
+        #     shape_type=shape_type,
+        #     full_csv=full_csv
+        # )
+
+        # make_read_me(
+        #     gdf=gdf,
+        #     project_directory=project_directory,
+        #     tiles=tiles,Z
+        #     spatial_param=spatial_param,
+        #     temporal_param=temporal_param,
+        #     shapefile=shape_file,
+        #     runtime=runtime,
+        #     n_cores=n_cores,
+        #     peak_memory=peak_memory,
+        # )
 
     # # Remove intermediate files if requested
     # if cleanup:
@@ -396,8 +254,8 @@ if __name__ == "__main__":
     project_directory = '/home/travis/scratch/firedpy/test2'
     project_name = 'the_run_that_works'
     interactive = True
-    country = 'Iceland'
-    tiles = None
+    country = None
+    tiles = ['h08v04', 'h09v04']
     shape_file = None
     start_year = 2000
     end_year = 2002
@@ -410,3 +268,23 @@ if __name__ == "__main__":
     land_cover_type = 3  # MODIS-derived Leaf Area Index (LAI/fPAR) scheme
     full_csv = True
     n_cores = 1
+
+    # fired(
+    #     project_directory = '/home/travis/scratch/firedpy/test2',
+    #     project_name = 'the_run_that_works',
+    #     country = None,
+    #     tiles = ['h08v04', 'h09v04'],
+    #     shape_file = None,
+    #     start_year = 2000,
+    #     end_year = 2002,
+    #     spatial_param = 8,  # pixels (nominally ~3,704 m but varies by location)
+    #     temporal_param = 3,  # days
+    #     daily = True,
+    #     shape_type = 'gpkg',  # GeoPackage
+    #     eco_region_level = 3,  # Level III - Most Detailed
+    #     eco_region_type = 'na',  # North American Ecoregions (Omernick, 1987)
+    #     land_cover_type = 3,  # MODIS-derived Leaf Area Index (LAI/fPAR) scheme
+    #     full_csv = True,
+    #     n_cores = 1
+    # )
+ShapeType

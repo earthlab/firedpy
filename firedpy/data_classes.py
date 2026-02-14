@@ -28,7 +28,7 @@ from rasterio.merge import merge
 from tqdm import tqdm
 
 from firedpy import DATA_DIR
-from firedpy.enums import LandCoverType
+from firedpy.enums import EcoRegionType, LandCoverType
 from firedpy.modis_earthaccess import setup_modis_earthaccess
 from firedpy.utilities.spatial import (
     country_to_tiles,
@@ -67,27 +67,27 @@ class Base:
                      "h13v04", "h08v05", "h09v05", "h10v05", "h11v05",
                      "h12v05", "h08v06", "h09v06", "h10v06", "h11v06"]
 
-    def __init__(self, out_dir):
+    def __init__(self, project_directory):
         """Initialize Base Firedpy object.
 
         Parameters
         ----------
-        out_dir : str | pathlib.PosixPath
+        project_directory : str | pathlib.PosixPath
             Target firedpy file output directory.
         """
         # Set up output directory paths
-        out_dir = os.path.expanduser(out_dir)
-        os.makedirs(out_dir, exist_ok=True)
-        out_dir = Path(out_dir).expanduser()
-        self.out_dir = out_dir
+        project_directory = os.path.expanduser(project_directory)
+        os.makedirs(project_directory, exist_ok=True)
+        project_directory = Path(project_directory).expanduser()
+        self.project_directory = project_directory
         self.date = datetime.today().strftime("%m-%d-%Y")
-        self.raster_dir = out_dir.joinpath("rasters")
-        self.shape_dir = out_dir.joinpath("shapefiles")
+        self.raster_dir = project_directory.joinpath("rasters")
+        self.shape_dir = project_directory.joinpath("shapefiles")
         self.burn_area_dir = self.raster_dir.joinpath("burn_area")
         self.land_cover_dir = self.raster_dir.joinpath("land_cover")
         self.eco_region_raster_dir = self.raster_dir.joinpath("eco_region")
         self.eco_region_shape_dir = self.shape_dir.joinpath("eco_region")
-        self.tables_dir = out_dir.joinpath("tables")
+        self.tables_dir = project_directory.joinpath("tables")
         self.nc_dir = self.burn_area_dir.joinpath("netcdfs")
         self.hdf_dir = self.burn_area_dir.joinpath("hdfs")
         self._modis_sinusoidal_grid_shape_path = self.shape_dir.joinpath(
@@ -103,7 +103,7 @@ class Base:
         # Can we shorten this or use another method?
         # This is used both to ensure the file format matches and to extract
         # The year and day from the file name
-        self._post_regex = (
+        post_regex = (
             r"\.A(?P<year>\d{4})"
             r"(?P<ordinal_day>\d{3})\.h"
             r"(?P<horizontal_tile>\d{2})"
@@ -113,16 +113,52 @@ class Base:
             r"(?P<prod_hourminute>\d{4})"
             r"(?P<prod_second>\d{2})\.hdf$"
         )
+        self._file_regex = self._file_regex = r"MCD64A1" + post_regex
 
         # Initialize output directory folders and files
         self._initialize_save_dirs()
         self._get_shape_files()
 
-    def _initialize_save_dirs(self):
-        """Make all required project directories."""
-        sdirs = [v for k, v in self.__dict__.items() if k.endswith("_dir")]
-        for sdir in sdirs:
-            os.makedirs(sdir, exist_ok=True)
+    def _copy_cec_file(self):
+        src = DATA_DIR.joinpath("ec_eco", "NA_CEC_Eco_Level3.gpkg")
+        return self._copy_file(src, self.eco_region_shape_path)
+
+    @staticmethod
+    def _copy_file(src_path, dest_path):
+        """Generic function to handle copying files."""
+        if not os.path.exists(dest_path):
+            os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+            shutil.copy(src_path, dest_path)
+        return dest_path
+
+    def _convert_dates(self, array, year):
+        """Convert every day in an array to days since Jan 1 1970."""
+        # Loop through each position with data and convert
+        ys, xs = np.where(array > 0)
+        for y, x in zip(ys, xs):
+            array[y, x] = self._convert_ordinal_to_unix_day(year, array[y, x])
+        return array
+
+    @staticmethod
+    def _convert_ordinal_to_unix_day(year, ordinal_day):
+        base = dt.datetime(1970, 1, 1)
+        date = dt.datetime(year, 1, 1) + dt.timedelta(int(ordinal_day - 1))
+        return (date - base).days
+
+    @staticmethod
+    def _convert_unix_day_to_calendar_date(unix_day):
+        base = dt.datetime(1970, 1, 1)
+        date = base + dt.timedelta(days=int(unix_day) - 1)
+        return date.strftime("%Y-%m-%d")
+
+    def _generate_land_cover_mosaic_dir(self, tile, year):
+        return self.land_cover_dir.joinpath(tile,  str(year), "mosaics")
+
+    def _generate_local_burn_hdf_dir(self, tile):
+        return self.hdf_dir.joinpath(tile)
+
+    def _generate_local_nc_path(self, tile):
+        return self.nc_dir.joinpath(f"{tile}.nc")
 
     def _get_shape_files(self):
         """Get basic shapefiles needed for calculating statistics."""
@@ -134,17 +170,15 @@ class Base:
             if not os.path.exists(dest_path):
                 shutil.copy(source_path, dest_path)
 
-    @staticmethod
-    def _convert_ordinal_to_unix_day(year: int, ordinal_day: int) -> int:
-        base = dt.datetime(1970, 1, 1)
-        date = dt.datetime(year, 1, 1) + dt.timedelta(int(ordinal_day - 1))
-        return (date - base).days
+    def _initialize_save_dirs(self):
+        """Make all required project directories."""
+        sdirs = [v for k, v in self.__dict__.items() if k.endswith("_dir")]
+        for sdir in sdirs:
+            os.makedirs(sdir, exist_ok=True)
 
     @staticmethod
-    def _convert_unix_day_to_calendar_date(unix_day: int) -> str:
-        base = dt.datetime(1970, 1, 1)
-        date = base + dt.timedelta(days=int(unix_day) - 1)
-        return date.strftime("%Y-%m-%d")
+    def _mode(vals) -> float:
+        return max(set(list(vals)), key=list(vals).count)
 
     @staticmethod
     def _rasterize_vector_data(src, dst, attribute, resolution, crs, extent,
@@ -189,47 +223,32 @@ class Base:
         del trgt
         del src_data
 
-    def _convert_dates(self, array, year):
-        """Convert every day in an array to days since Jan 1 1970"""
-        # Loop through each position with data and convert
-        ys, xs = np.where(array > 0)
-        for y, x in zip(ys, xs):
-            array[y, x] = self._convert_ordinal_to_unix_day(year, array[y, x])
-        return array
-
-    def _generate_local_burn_hdf_dir(self, tile):
-        return self.hdf_dir.joinpath(tile)
-
-    def _generate_local_nc_path(self, tile):
-        return self.nc_dir.joinpath(f"{tile}.nc")
-
-    def _generate_land_cover_mosaic_dir(self, tile, year):
-        return self.land_cover_dir.joinpath(tile,  str(year), "mosaics")
+    def _to_kms(self, p):
+        return (p * self._res ** 2) / 1_000_000
 
 
 class LPDAAC(Base):
     """Land Processes Distributed Active Archive Center access methods."""
 
-    def __init__(self, out_dir, username=None, password=None):
+    def __init__(self, project_directory, username=None, password=None):
         """Initiate an LPDAAC object.
 
         Parameters
         ----------
-        out_dir : str
+        project_directory : str
             Path to firedpy project directory.
         username : str
             Earth Access username. Defaults to user prompt, Optional.
         password : str
             Earth Access password. Defaults to user prompt, Optional.
         """
-        super().__init__(out_dir)
+        super().__init__(project_directory)
         self._lp_daac_url = None
         self._date_regex = r"(?P<year>\d{4})\.(?P<month>\d{2})\.\
             (?P<day>\d{2})\/"
         self._parallel_cores = None
         self._username = username
         self._password = password
-        self._file_regex = None
 
         # Setup EarthAccess for modern data access
         self._earthaccess = None
@@ -259,26 +278,26 @@ class LPDAAC(Base):
         msg = " ".join(msgs)
         return f"<{name} object at {address}> {msg}"
 
-    def _generate_local_hdf_path(self, year: str, remote_name: str) -> str:
-        pass
-
-    @staticmethod
-    def _verify_hdf_file(file_path) -> bool:
-        # Open the HDF file
-        hdf_ds = gdal.Open(file_path)
-
-        if hdf_ds is None:
-            print(f"Failed to open {file_path}.")
-            return False
-
-        # List available sub-datasets (specific to HDF)
-        sub_datasets = hdf_ds.GetSubDatasets()
-
-        if not sub_datasets:
-            print("No sub-datasets found.")
-            return False
-
-        return True
+    def _download_files(self, download_requests):
+        try:
+            with Pool(self._parallel_cores - 1) as pool:
+                mapper = pool.imap_unordered(
+                    self._download_task,
+                    download_requests
+                )
+                for _ in tqdm(mapper, total=len(download_requests)):
+                    pass
+        except Exception as pe:
+            # logger.error(f"Download failed: {pe}")
+            print(f"Download failed: {pe}")
+            try:
+                for q in tqdm(download_requests, position=0, file=sys.stdout):
+                    self._download_task(q)
+            except Exception as e:
+                template = "Download failed: error type {0}:\n{1!r}"
+                message = template.format(type(e).__name__, e.args)
+                # logger.error(message)
+                print(message)
 
     def _download_task(self, request: Tuple[str, str]):
         """Try request with EarthAccess, fallback to original method."""
@@ -328,6 +347,14 @@ class LPDAAC(Base):
         except Exception as e:
             print(f"Download failed for {os.path.basename(dest)}: {e}")
 
+    def _generate_local_hdf_path(self, year, remote_name):
+        pass
+
+    def _generate_tile(self, regex_group_dict: Dict[str, str]):
+        horizontal_tile = regex_group_dict["horizontal_tile"]
+        vertical_tile = regex_group_dict["vertical_tile"]
+        return f"h{horizontal_tile}v{vertical_tile}"
+
     @staticmethod
     def get_all_available_tiles():
         with paramiko.SSHClient() as ssh_client:
@@ -339,46 +366,6 @@ class LPDAAC(Base):
             with ssh_client.open_sftp() as sftp_client:
                 sftp_client.chdir("/data/MODIS/C61/MCD64A1/HDF")
                 return sftp_client.listdir()
-
-    def _download_files(self, download_requests):
-        try:
-            with Pool(self._parallel_cores - 1) as pool:
-                mapper = pool.imap_unordered(
-                    self._download_task,
-                    download_requests
-                )
-                for _ in tqdm(mapper, total=len(download_requests)):
-                    pass
-        except Exception as pe:
-            # logger.error(f"Download failed: {pe}")
-            print(f"Download failed: {pe}")
-            try:
-                for q in tqdm(download_requests, position=0, file=sys.stdout):
-                    self._download_task(q)
-            except Exception as e:
-                template = "Download failed: error type {0}:\n{1!r}"
-                message = template.format(type(e).__name__, e.args)
-                # logger.error(message)
-                print(message)
-
-    def _get_available_year_paths(self, start_year=None, end_year=None):
-        # Get available years
-        request = requests.get(self._lp_daac_url)
-        soup = BeautifulSoup(request.text, "html.parser")
-        year_paths = []
-        for link in [link["href"] for link in soup.find_all("a", href=True)]:
-            match = re.match(self._date_regex, link)
-            if match is not None:
-                file_year = int(match.groupdict().get("year"))
-                if (start_year is None or file_year >= start_year) and (
-                        end_year is None or file_year <= end_year):
-                    year_paths.append(link)
-        return year_paths
-
-    def _generate_tile(self, regex_group_dict: Dict[str, str]):
-        horizontal_tile = regex_group_dict["horizontal_tile"]
-        vertical_tile = regex_group_dict["vertical_tile"]
-        return f"h{horizontal_tile}v{vertical_tile}"
 
     def _get_available_files(self, year_path: str, tiles: List[str] = None):
         url = urllib.parse.urljoin(self._lp_daac_url, year_path)
@@ -396,39 +383,66 @@ class LPDAAC(Base):
                 files.append(link)
         return files
 
+    def _get_available_year_paths(self, start_year=None, end_year=None):
+        # Get available years
+        request = requests.get(self._lp_daac_url)
+        soup = BeautifulSoup(request.text, "html.parser")
+        year_paths = []
+        for link in [link["href"] for link in soup.find_all("a", href=True)]:
+            match = re.match(self._date_regex, link)
+            if match is not None:
+                file_year = int(match.groupdict().get("year"))
+                if (start_year is None or file_year >= start_year) and (
+                        end_year is None or file_year <= end_year):
+                    year_paths.append(link)
+        return year_paths
+
+    @staticmethod
+    def _verify_hdf_file(file_path):
+        # Open the HDF file
+        hdf_ds = gdal.Open(file_path)
+
+        if hdf_ds is None:
+            print(f"Failed to open {file_path}.")
+            return False
+
+        # List available sub-datasets (specific to HDF)
+        sub_datasets = hdf_ds.GetSubDatasets()
+
+        if not sub_datasets:
+            print("No sub-datasets found.")
+            return False
+
+        return True
+
 
 class BurnData(LPDAAC):
     """Methods for handling MODIS Burn data."""
 
-    def __init__(self, out_dir, username=None, password=None, n_cores=None):
+    def __init__(self, project_directory, n_cores=None):
         """Initialize BurnData object.
 
         Parameters
         ----------
-        out_dir : str | pathlib.PosixPath
+        project_directory : str | pathlib.PosixPath
             Target file output directory
-        username : str
-            Earth Access username. Defaults to user prompt, Optional.
-        password : str
-            Earth Access password. Defaults to user prompt, Optional.
         n_cores : int
             Number of CPU cores to use in multiprocessing. Defaults to None, or
             all cores.
         """
         # Set these here, the LPDAAC will prompt if these aren't set yet
-        super().__init__(out_dir=out_dir, username=username, password=password)
+        super().__init__(project_directory=project_directory)
 
         self._lp_daac_url = "https://e4ftl01.cr.usgs.gov/MOTA/MCD64A1.061/"
         self._base_sftp_folder = os.path.join(
             "data", "MODIS", "C61", "MCD64A1", "HDF"
         )
         self._modis_template_path = os.path.join(
-            out_dir, "rasters", "mosaic_template.tif"
+            project_directory, "rasters", "mosaic_template.tif"
         )
         self._record_start_year = 2000
         ncpus = os.cpu_count()
         self._parallel_cores = n_cores if n_cores is not None else ncpus - 1
-        self._file_regex = r"MCD64A1" + self._post_regex
 
     def __repr__(self):
         """Return representation string for BurnData object."""
@@ -443,37 +457,6 @@ class BurnData(LPDAAC):
         msgs = [f"\n   {k}='{v}'" for k, v in attrs.items()]
         msg = " ".join(msgs)
         return f"<{name} object at {address}> {msg}"
-
-    def _generate_local_hdf_dir(self, tile):
-        """Return local HDF directory path for given tile.
-
-        Paramaters
-        ----------
-        tile : str
-            Target MODIS tile (e.g., 'h12v04').
-
-        Returns
-        -------
-        str : Path of HDF5 file for target MODIS tile.
-        """
-        return str(self.hdf_dir.joinpath(tile))
-
-    def _generate_local_hdf_path(self, tile, hdf_name):
-        """Return local HDF file path for given tile and HDF5 name.
-
-        Paramaters
-        ----------
-        tile : str
-            Target MODIS tile (e.g., 'h12v04').
-        hdf_name : str
-           Target MODIS HDF file name (e.g.,
-           'MCD64A1.A2020245.h12v04.061.2021309112053.hdf').
-
-        Returns
-        -------
-        str : Path of HDF5 file for target MODIS tile.
-        """
-        return str(self.hdf_dir.joinpath(tile, hdf_name))
 
     def _create_requests(self, available_year_paths, tiles):
         """Create a list of requests for each target year.
@@ -514,6 +497,46 @@ class BurnData(LPDAAC):
                 download_requests.append(download_request)
 
         return download_requests
+
+    def _extract_date_parts(self, path):
+        fname = path.name
+        match = re.match(self._file_regex, fname)
+        if match:
+            match_year = int(match.groupdict()["year"])
+            match_day = int(match.groupdict()["ordinal_day"])
+            return match_year, match_day
+        return None
+
+    def _generate_local_hdf_dir(self, tile):
+        """Return local HDF directory path for given tile.
+
+        Paramaters
+        ----------
+        tile : str
+            Target MODIS tile (e.g., 'h12v04').
+
+        Returns
+        -------
+        str : Path of HDF5 file for target MODIS tile.
+        """
+        return str(self.hdf_dir.joinpath(tile))
+
+    def _generate_local_hdf_path(self, tile, hdf_name):
+        """Return local HDF file path for given tile and HDF5 name.
+
+        Paramaters
+        ----------
+        tile : str
+            Target MODIS tile (e.g., 'h12v04').
+        hdf_name : str
+           Target MODIS HDF file name (e.g.,
+           'MCD64A1.A2020245.h12v04.061.2021309112053.hdf').
+
+        Returns
+        -------
+        str : Path of HDF5 file for target MODIS tile.
+        """
+        return str(self.hdf_dir.joinpath(tile, hdf_name))
 
     def get_burns(self, tiles=None, country=None, shape_file=None,
                   start_year=2000, end_year=2025):
@@ -661,24 +684,23 @@ class BurnData(LPDAAC):
         with rasterio.open(self._modis_template_path, "w+", **crs) as dst:
             dst.write(mosaic)
 
-    def _extract_date_parts(self, path):
-        fname = path.name
-        match = re.match(self._file_regex, fname)
-        if match:
-            match_year = int(match.groupdict()["year"])
-            match_day = int(match.groupdict()["ordinal_day"])
-            return match_year, match_day
-        return None
+    @staticmethod
+    def _verify_hdf_file(file_path):
+        # Open the HDF file
+        hdf_ds = gdal.Open(file_path)
 
-    def get_date_range(self, start_year=None, end_year=None):
-        dates = []
-        for f in glob(str(self.hdf_dir.joinpath("**", "*")), recursive=True):
-            date = self._extract_date_parts(f)
-            if date:
-                if start_year is None or date[0] >= start_year:
-                    if end_year is None or date[0] <= end_year:
-                        dates.append(date)
-        return sorted(dates)
+        if hdf_ds is None:
+            print(f"Failed to open {file_path}.")
+            return False
+
+        # List available sub-datasets (specific to HDF)
+        sub_datasets = hdf_ds.GetSubDatasets()
+
+        if not sub_datasets:
+            print("No sub-datasets found.")
+            return False
+
+        return True
 
     def _write_ncs(self, tiles):
         """Convert a list of tiles associated with MODIS HDF4 to a NetCDF file.
@@ -816,7 +838,7 @@ class BurnData(LPDAAC):
                     regex_group_dict = match.groupdict()
 
                     try:
-                        ds = gdal.Open(f).GetSubDatasets()[0][0]  #  check this is the right subdataset (Burn Date)
+                        ds = gdal.Open(f).GetSubDatasets()[0][0]
                         hdf = gdal.Open(ds)
                     except Exception as e:
                         print(f"Could not open {f} for building ncdf: {e}")
@@ -855,24 +877,6 @@ class BurnData(LPDAAC):
                 # logger.error(f"Error processing tile {tile}: {str(e)}")
                 raise OSError(f"Error processing tile {tile}: {str(e)}")
 
-    @staticmethod
-    def _verify_hdf_file(file_path) -> bool:
-        # Open the HDF file
-        hdf_ds = gdal.Open(file_path)
-
-        if hdf_ds is None:
-            print(f"Failed to open {file_path}.")
-            return False
-
-        # List available sub-datasets (specific to HDF)
-        sub_datasets = hdf_ds.GetSubDatasets()
-
-        if not sub_datasets:
-            print("No sub-datasets found.")
-            return False
-
-        return True
-
 
 class LandCover(Base):
     """EarthAccess-based Land Cover data access for firedpy.
@@ -883,12 +887,12 @@ class LandCover(Base):
 
     def __init__(
             self,
-            out_dir,
+            project_directory,
             n_cores=None,
             username=None,
             password=None
     ):
-        super().__init__(out_dir)
+        super().__init__(project_directory)
         self._parallel_cores = n_cores if n_cores else os.cpu_count() - 1
         self._username = username
         self._password = password
@@ -919,30 +923,163 @@ class LandCover(Base):
         msg = " ".join(msgs)
         return f"<{name} object at {address}> {msg}"
 
-    def _setup_earthaccess(self):
-        """Setup EarthAccess authentication for land cover data."""
-        try:
-            if self._username and self._password:
-                os.environ["EARTHDATA_USERNAME"] = self._username
-                os.environ["EARTHDATA_PASSWORD"] = self._password
+    def add_land_cover_attributes(self, gdf, tiles, land_cover_type=0):
+        """Add landcover attributes to a firedpy GeoDataFrame.
 
-            auth = earthaccess.login()
-            if auth:
-                self._earthaccess_authenticated = True
-                print("EarthAccess authenticated for land cover")
-            else:
-                print("EarthAccess authentication failed for land cover")
-        except Exception as e:
-            print(f"EarthAccess setup failed for land cover: {e}")
+        Parameters
+        ----------
+        gdf : geopandas.geodataframe.GeoDataFrame
+            A geodata frame of fire events.
+        tiles : list[str]
+            A list of MODIS of grid tile IDs.
+        land_cover_type : int | LandCoverType
+            Include land cover as an attribute, provide a number corresponding
+            with a MODIS/Terra+Aqua Land Cover (MCD12Q1) category followed with
+            username:password of your NASA's Earthdata service account.
+            Available land cover categories:
 
-    def _generate_local_hdf_path(self, tile, year, remote_name):
-        return os.path.join(self.land_cover_dir, tile, year, remote_name)
+                1: IGBP global vegetation classification scheme
+                2: University of Maryland (UMD) scheme
+                3: MODIS-derived LAI/fPAR scheme
 
-    def _generate_local_hdf_dir(self, tile: str, year: str) -> str:
-        return os.path.join(self.land_cover_dir, tile, year)
+            If you do not have an account register at
+            https://urs.earthdata.nasa.gov/home. Defaults to 0 or
+            LandCoverType.NONE.
 
-    def _generate_land_cover_mosaic_dir(self, tile: str, year: str) -> str:
-        return os.path.join(self.land_cover_dir, tile, str(year), "mosaics")
+        Returns
+        -------
+        geopandas.geodataframe.GeoDataFrame : The geodataframe with landcover
+            attributes added.
+        """
+        if gdf.shape[0] == 0:
+            print("No fire events found, not adding land cover attributes")
+            return gdf
+
+        # Match possible land cover type argument types
+        print("Adding land cover attributes...")
+        if isinstance(land_cover_type, str):
+            land_cover_type = int(land_cover_type)
+        if isinstance(land_cover_type, LandCoverType):
+            land_cover_type = land_cover_type.value
+
+        # We'll need to specify which type of land_cover
+        lc_descriptions = {
+            1: "IGBP global vegetation classification scheme",
+            2: "University of Maryland (UMD) scheme",
+            3: "MODIS-derived LAI/fPAR scheme",
+            4: "MODIS-derived Net Primary Production (NPP) scheme",
+            5: "Plant Functional Type (PFT) scheme."
+        }
+
+        # Rasterio point querier (why define here?)
+        def point_query(row):
+            x = row["x"]
+            y = row["y"]
+            try:
+                val = [val for val in lc.sample([(x, y)])][0][0]
+            except Exception:
+                val = np.nan
+            return val
+
+        # Get the range of burn years
+        burn_years = list(gdf["ig_year"].unique())
+        burn_years.sort()
+
+        # This works faster when split by year and the pointer is outside
+        # This is also not the best way
+        sgdfs = []
+        for tile in tiles:
+            for year in tqdm(burn_years, position=0, file=sys.stdout):
+                # Get the land cover geotiff directory for this tile
+                mosaic_dir = self.land_cover_dir.joinpath(
+                    tile, str(year), "mosaics"
+                )
+                if not mosaic_dir.exists():
+                    print(f"No land cover data for {tile} in year {year}")
+                    continue
+
+                # I don't understand what's happening below
+                # lc_files = []
+                # lc_years = []
+                # for fname in os.listdir(mosaic_dir):
+                #     # How necessary is the re match?
+                #     # if re.match(self._lc_mosaic_re, fname):
+                #     fpath = os.path.join(mosaic_dir, fname)
+                #     lc_files.append(fpath)
+                # lc_files = sorted(lc_files)
+
+                # # Group by year?
+                # for fpath in lc_files:
+                #     fname = os.path.basename(fpath)
+                #     # Don't we know what year it is?
+                #     # year_match = re.match(self._lc_mosaic_re, fname)
+                #     # year_dict = year_match.groupdict()
+                #     year = int(year_dict["year"])
+                #     lc_years.append(year)
+                # lc_files = {lc_years[i]: f for i, f in enumerate(lc_files)}
+
+                # Now set year one back for land_cover
+                # year = year - 1
+
+                # Use previous year's land cover
+                # if year < min(lc_years):
+                #     year = min(lc_years)
+                # elif year > max(lc_years):
+                #     year = max(lc_years)
+
+                # lc_file = lc_files[year]
+
+                # Collect all files in the mosaic directory (only one ever?)
+                lc_file = list(mosaic_dir.glob("*tif"))[0]
+
+                # Create a sub data frame for this year
+                sgdf = gdf[gdf["ig_year"] == year].copy()
+
+                # Open the land cover raster and add attributes to sub df
+                lc = rasterio.open(lc_file)
+                sgdf.loc[:, "lc_code"] = sgdf.apply(point_query, axis=1)
+                sgdf = sgdf[sgdf["lc_code"] != 255]  # Out-of-tile points
+                idgrp = sgdf.groupby("id")
+                sgdf.loc[:, "lc_mode"] = idgrp["lc_code"].transform(self._mode)
+                sgdfs.append(sgdf)
+
+        gdf = pd.concat(sgdfs)
+        gdf = gdf.reset_index(drop=True)
+
+        # Add in the class description from land_cover tables
+        land_cover_path = self._copy_land_cover_ref(land_cover_type)
+        lc_table = pd.read_csv(land_cover_path)
+        gdf = pd.merge(
+            left=gdf,
+            right=lc_table,
+            how="left",
+            left_on="lc_mode",
+            right_on="Value"
+        )
+        gdf = gdf.drop("Value", axis=1)
+        gdf.loc[:, "lc_type"] = lc_descriptions[land_cover_type]
+        gdf.rename({"lc_description": "lc_desc"}, inplace=True, axis="columns")
+
+        return gdf
+
+    def _copy_land_cover_ref(self, land_cover_type: int) -> str:
+        lookup = DATA_DIR.joinpath(
+            "land_cover",
+            f"MCD12Q1_LegendDesc_Type{land_cover_type}.csv"
+        )
+        land_cover_out_dir_path = self.project_directory.joinpath(
+            "tables", "land_cover",
+            f"MCD12Q1_LegendDesc_Type{land_cover_type}.csv"
+        )
+        return self._copy_file(lookup, land_cover_out_dir_path)
+
+    def _copy_wwf_file(self) -> str:
+        lookup = DATA_DIR.joinpath('world_eco_regions', 'wwf_terr_ecos.gpkg')
+        wwf_out_dir_path = os.path.join(
+            self.project_directory, 'shapefiles', 'eco_region',
+            'wwf_terr_ecos.gpkg'
+        )
+        return self._copy_file(lookup, wwf_out_dir_path)
 
     def _find_available_tiles_for_region(self, requested_tiles):
         """Find available land cover tiles that cover the requested region."""
@@ -990,67 +1127,22 @@ class LandCover(Base):
             print(f"Error finding available tiles: {e}")
             return []
 
-    def mosaic_landuse(self, downloaded_files, mosaic_path, land_cover_type):
-        """Merge a list of MODIS HDF files into one GeoTiff.
+    def _generate_land_cover_mosaic_dir(self, tile: str, year: str) -> str:
+        return os.path.join(self.land_cover_dir, tile, str(year), "mosaics")
 
-        TODO: Will there ever be multiple downloaded files from
-            LandCover.get_land_cover? I was assuming there would be since
-            we are labeling the final output tiff "mosaic" but it looks like
-            the earthaccess method that downloads the originals takes in
-            one tile at a time.
+    def _generate_local_hdf_path(self, tile, year, remote_name):
+        return os.path.join(self.land_cover_dir, tile, year, remote_name)
 
-        Parameters
-        ----------
-        downloaded_files : list[str]
-            A list of paths to MODIS Land Cover HDF4 files.
-        mosaic_path : str | pathlib.PosixPath
-            Target file path for the GeoTiff.
-        land_cover_type : int | firedpy.enums.LandCoverType
-            Include land cover as an attribute, provide a number corresponding
-            with a MODIS/Terra+Aqua Land Cover (MCD12Q1) category followed with
-            username:password of your NASA's Earthdata service account.
-            Available land cover categories:
+    def _generate_local_hdf_dir(self, tile: str, year: str) -> str:
+        return os.path.join(self.land_cover_dir, tile, year)
 
-                1: IGBP global vegetation classification scheme
-                2: University of Maryland (UMD) scheme
-                3: MODIS-derived LAI/fPAR scheme
-
-            If you do not have an account register at
-            https://urs.earthdata.nasa.gov/home. Defaults to 1.
-        """
-        # Match possible land cover type arguments
-        # is_int = isinstance(land_cover_type, int)
-        # is_lctype = isinstance(land_cover_type, LandCoverType)
-        # if is_int and is_lctype:
-        #     land_cover_type = LandCoverType.value
-
-        # Use the target file's parent directory for the temporary files
-        mosaic_dir = Path(os.path.dirname(mosaic_path))
-        tmp_files = []
-        for i, file in enumerate(downloaded_files):
-            # Get a variable name pattern
-            pattern = f"LC_Type{land_cover_type}"
-
-            # Create temporary file
-            dst = mosaic_dir.joinpath(f"tile_{i}.tif")
-            hdf4_to_geotiff(file, dst, pattern=pattern)
-            tmp_files.append(dst)
-
-        # Mosaic these together and save to file
-        if len(tmp_files) > 1:
-            shutil.rmtree(tmp_files)
-            raise NotImplementedError(
-                "Merging multiple land use layers not implemented yet: "
-                f"{downloaded_files}")
-
-        else:
-            shutil.move(tmp_files[0], mosaic_path)
-
-    def get_land_cover(self, tiles, land_cover_type=LandCoverType.IGBP):
+    def get_land_cover(self, gdf, tiles, land_cover_type=LandCoverType.IGBP):
         """Download and process land cover data with EarthAccess.
 
         Parameters
         ----------
+        gdf : geopandas.geodataframe.GeoDataFrame
+            A geodata frame of fire events.
         tiles : list
             List of MODIS tiles (e.g., ['h08v04', 'h09v04']). Required.
         land_cover_type : int | firedpy.enums.LandCoverType
@@ -1084,17 +1176,18 @@ class LandCover(Base):
         available_tiles = self._find_available_tiles_for_region(tiles)
 
         if not available_tiles:
-            print("No land cover tiles available for this region")
+            print("No land cover tiles available for this region.")
             return
 
         try:
             # Get available years (this is fixed?)
-            available_years = ["2018", "2019", "2020", "2021", "2022"]
+            available_years = gdf["ig_year"].unique()
             for tile in available_tiles:
                 print(f"\n Processing land cover for tile: {tile}")
 
                 for year in available_years:
                     print(f"   Processing year: {year}")
+                    year = str(year)
 
                     # Check if mosaic already exists
                     lc_dir = self.land_cover_dir
@@ -1162,7 +1255,7 @@ class LandCover(Base):
 
                     except Exception as e:
                         print(f"   Processing failed for {tile} {year}: {e}")
-                        continue
+                        continue  # <------------------------------------------ Should we raise for errors here?
 
             print("\nEarthAccess land cover processing completed!")
 
@@ -1170,19 +1263,91 @@ class LandCover(Base):
             print(f"EarthAccess land cover failed: {e}")
             print("Continuing without land cover data...")
 
+    def mosaic_landuse(self, downloaded_files, mosaic_path, land_cover_type):
+        """Merge a list of MODIS HDF files into one GeoTiff.
+
+        TODO: Will there ever be multiple downloaded files from
+            LandCover.get_land_cover? I was assuming there would be since
+            we are labeling the final output tiff "mosaic" but it looks like
+            the earthaccess method that downloads the originals takes in
+            one tile at a time.
+
+        Parameters
+        ----------
+        downloaded_files : list[str]
+            A list of paths to MODIS Land Cover HDF4 files.
+        mosaic_path : str | pathlib.PosixPath
+            Target file path for the GeoTiff.
+        land_cover_type : int | firedpy.enums.LandCoverType
+            Include land cover as an attribute, provide a number corresponding
+            with a MODIS/Terra+Aqua Land Cover (MCD12Q1) category followed with
+            username:password of your NASA's Earthdata service account.
+            Available land cover categories:
+
+                1: IGBP global vegetation classification scheme
+                2: University of Maryland (UMD) scheme
+                3: MODIS-derived LAI/fPAR scheme
+
+            If you do not have an account register at
+            https://urs.earthdata.nasa.gov/home. Defaults to 1.
+        """
+        # Match possible land cover type arguments
+        # is_int = isinstance(land_cover_type, int)
+        # is_lctype = isinstance(land_cover_type, LandCoverType)
+        # if is_int and is_lctype:
+        #     land_cover_type = LandCoverType.value
+
+        # Use the target file's parent directory for the temporary files
+        mosaic_dir = Path(os.path.dirname(mosaic_path))
+        tmp_files = []
+        for i, file in enumerate(downloaded_files):
+            # Get a variable name pattern
+            pattern = f"LC_Type{land_cover_type}"
+
+            # Create temporary file
+            dst = mosaic_dir.joinpath(f"tile_{i}.tif")
+            hdf4_to_geotiff(file, dst, pattern=pattern)
+            tmp_files.append(dst)
+
+        # Mosaic these together and save to file
+        if len(tmp_files) > 1:
+            shutil.rmtree(tmp_files)
+            raise NotImplementedError(
+                "Merging multiple land use layers not implemented yet: "
+                f"{downloaded_files}")
+
+        else:
+            shutil.move(tmp_files[0], mosaic_path)
+
+    def _setup_earthaccess(self):
+        """Setup EarthAccess authentication for land cover data."""
+        try:
+            if self._username and self._password:
+                os.environ["EARTHDATA_USERNAME"] = self._username
+                os.environ["EARTHDATA_PASSWORD"] = self._password
+
+            auth = earthaccess.login()
+            if auth:
+                self._earthaccess_authenticated = True
+                print("EarthAccess authenticated for land cover")
+            else:
+                print("EarthAccess authentication failed for land cover")
+        except Exception as e:
+            print(f"EarthAccess setup failed for land cover: {e}")
+
 
 class EcoRegion(Base):
     """Methods for managing Ecoregion data."""
 
-    def __init__(self, out_dir):
+    def __init__(self, project_directory):
         """Iniitialize an EcoRegion object.
 
         Parameters
         ----------
-        out_dir : str | pathlib.PosixPath
+        project_directory : str | pathlib.PosixPath
             Path to firedpy output directory.
         """
-        super().__init__(out_dir)
+        super().__init__(project_directory)
         self._eco_region_ftp_url = (
             "https://dmap-prod-oms-edc.s3.us-east-1.amazonaws.com/ORD/"
             "Ecoregions/cec_na/NA_CEC_Eco_Level3.zip"
@@ -1196,7 +1361,6 @@ class EcoRegion(Base):
             "NA_L1NAME", "NA_L3KEY", "NA_L2KEY", "NA_L1KEY"
         ]
         self.eco_region_data_frame = None
-        self._file_regex = r"MCD64A1" + self._post_regex
 
     def __repr__(self):
         """Return representation string for an EcoRegion object."""
@@ -1213,76 +1377,125 @@ class EcoRegion(Base):
         msg = " ".join(msgs)
         return f"<{name} object at {address}> {msg}"
 
-    @staticmethod
-    def _normalize_string(string):
-        def capitalize_special(s):
-            """Handle capitalization for special characters within a string."""
-            if "/" in s:
-                segments = []
-                for segment in s.split("/"):
-                    if segment.upper() != "USA":
-                        segment = segment.capitalize()
-                    else:
-                        segment = segment.upper()
-                    segments.append(segment)
-                s = "/".join(segments)
-            if "-" in s:
-                segments = []
-                for segment in s.split("-"):
-                    if segment.upper() != "USA":
-                        segment = segment.title()
-                    else:
-                        segment = segment.upper()
-                    segments.append(segment)
-                s = "-".join(segments)
-            return s
+    def add_eco_region_attributes(
+            self,
+            gdf,
+            eco_region_type="na",
+            eco_region_level=None
+    ):
+        """Add eco region attributes to a fire event geodataframe.
 
-        # Split string into words
-        words = string.split()
+        Parameters
+        ----------
+        gdf : geopandas.geodataframe.GeoDataFrame
+        eco_region_type : str
+            Specify the ecoregion type as either 'world' or 'na':
 
-        # Create a new list with words formatted according to rules
-        formatted_words = []
-        for word in words:
-            # Special handling for "USA"
-            if word.upper() == "USA":
-                formatted_words.append("USA")
-            # Special handling for "and"
-            elif word.lower() == "and":
-                formatted_words.append("and")
-            # Capitalization with special character handling for other words
-            else:
-                formatted_words.append(capitalize_special(word.capitalize()))
+                'world' = World Terrestrial Ecoregions (World Wildlife Fund)
+                'na' = North American ecoregions (Omernick, 1987)
 
-        # Join and return the formatted words as a single string
-        return " ".join(formatted_words)
+            The most common (modal) ecoregion across the event is used.
 
-    def _read_eco_region_file(self):
-        """Read Ecoregion file from package data or EPA FTP site.
-
-        NOTE: Update 02/2021: EPA FTP site is glitchy, using local file in case
-        download fails.
+            Further, to associate each event with North American ecoregions
+            (Omernick, 1987) you may provide a number corresponding to an
+            ecoregion level. Ecoregions are retrieved from www.epa.gov and
+            levels I through IV are available. Levels I and II were developed
+            by the North American Commission for Environmental Cooperation.
+            Levels III and IV were developed by the United States Environmental
+            Protection Agency. For events with more than one ecoregion, the
+            most common value will be used. Defaults to None.
+        eco_region_level : int
+            The desired Ecoregions level from the North American Commission for
+            Environmental Cooperation (CEC). Levels 1 to 3 are available, with
+            level 1 representing the broadest scale and level III representing
+            the most detailed. Defaults to 1.
 
         Returns
         -------
-        gpd.
+        geopandas.geodataframe.GeoDataFrame: A copy of the geodataframe with
+            eco region attributes added.
         """
-        # Check if the file exists, try to use a new EPA file
-        if not os.path.exists(self.eco_region_shape_path):
-            try:
-                eco = gpd.read_file(self._eco_region_ftp_url)
-                eco = eco.to_crs("epsg:5070")
-                eco.to_file(self.eco_region_shape_path)
-            except Exception as e:
-                print(f"Download from EPA FTP site, using local file {e}")
-                shutil.copytree(
-                    self.project_eco_region_dir,
-                    self.eco_region_shape_dir
-                )
+        if gdf.shape[0] == 0:
+            print("No fire events found, not adding eco-region attributes.")
+            return gdf
 
-        # Read in the file downloaded or copied to the output directory
-        df = gpd.read_file(self.eco_region_shape_path)
+        print("Adding eco-region attributes ...")
+        eco_region_type = EcoRegionType(eco_region_type)
+        if eco_region_level or (eco_region_type == EcoRegionType.NA):
+            gdf = self.add_attributes_from_na_cec(gdf, eco_region_level)
+        else:
+            gdf = self.add_attributes_from_wwf(gdf)
+        return gdf
 
-        return df
+    def add_attributes_from_na_cec(self, gdf, eco_region_level):
+        # Different levels have different sources
+        institution = "(NA-Commission for Environmental Cooperation)"
+        eco_types = {
+            "NA_L1CODE": f"Level I Ecoregions {institution}",
+            "NA_L2CODE": f"Level II Ecoregions {institution}",
+            "NA_L3CODE": f"Level III Ecoregions {institution}"
+        }
+
+        # Read in the Level File (contains every level) and reference table
+        shp_path = self._copy_cec_file()
+        eco = gpd.read_file(shp_path)
+        eco.to_crs(gdf.crs, inplace=True)
+
+        # Filter for selected level (level III defaults to US-EPA version)
+        if not eco_region_level:
+            eco_region_level = 3
+        eco_code = [c for c in eco if str(eco_region_level) in
+                    c and "CODE" in c]
+
+        if len(eco_code) > 1:
+            eco_code = [c for c in eco_code if "NA" in c][0]
+        else:
+            eco_code = eco_code[0]
+
+        print("Selected ecoregion code: " + str(eco_code))
+
+        # Find modal eco-region for each event id
+        eco = eco[[eco_code, "geometry"]]
+        gdf = gpd.sjoin(gdf, eco, how="left", predicate="within")
+        gdf = gdf.reset_index(drop=True)
+        gdf["eco_mode"] = gdf.groupby("id")[eco_code].transform(self._mode)
+
+        # Add in the type of eco-region
+        gdf["eco_type"] = eco_types[eco_code]
+
+        # Add in the name of the modal ecoregion
+        eco_ref = pd.read_csv(self.eco_region_csv_path)
+        eco_name = eco_code.replace("CODE", "NAME")
+        eco_df = eco_ref[[eco_code, eco_name]].drop_duplicates()
+        eco_map = dict(zip(eco_df[eco_code], eco_df[eco_name]))
+        gdf["eco_name"] = gdf[eco_code].map(eco_map)
+
+        # Clean up column names
+        gdf = gdf.drop("index_right", axis=1)
+        gdf = gdf.drop(eco_code, axis=1)
+
+        return gdf
+
+    def add_attributes_from_wwf(self, gdf):
+        # Read in the world ecoregions from WWF
+        eco_path = self._copy_wwf_file()
+        eco = gpd.read_file(eco_path)
+        eco.to_crs(gdf.crs, inplace=True)
+
+        # Find modal eco region for each event id
+        eco = eco[["ECO_NUM", "ECO_NAME", "geometry"]]
+        gdf = gpd.sjoin(gdf, eco, how="left", predicate="within")
+        gdf = gdf.reset_index(drop=True)
+
+        gdf["eco_mode"] = gdf.groupby("id")["ECO_NUM"].transform(self._mode)
+        gdf["eco_name"] = gdf["ECO_NAME"]
+        gdf["eco_type"] = "WWF Terrestrial Ecoregions of the World"
+
+        gdf = gdf.drop("index_right", axis=1)
+        gdf = gdf.drop("ECO_NAME", axis=1)
+        gdf = gdf.drop("ECO_NUM", axis=1)
+
+        return gdf
 
     def create_eco_region_raster(self, tiles: List[str]):
         """Create an EcoRegion raster.
@@ -1375,3 +1588,74 @@ class EcoRegion(Base):
         eco_ref = eco_ref.map(self._normalize_string)
         eco_ref.to_csv(self.eco_region_csv_path, index=False)
         self.eco_region_data_frame = eco_ref
+
+    @staticmethod
+    def _normalize_string(string):
+        def capitalize_special(s):
+            """Handle capitalization for special characters within a string."""
+            if "/" in s:
+                segments = []
+                for segment in s.split("/"):
+                    if segment.upper() != "USA":
+                        segment = segment.capitalize()
+                    else:
+                        segment = segment.upper()
+                    segments.append(segment)
+                s = "/".join(segments)
+            if "-" in s:
+                segments = []
+                for segment in s.split("-"):
+                    if segment.upper() != "USA":
+                        segment = segment.title()
+                    else:
+                        segment = segment.upper()
+                    segments.append(segment)
+                s = "-".join(segments)
+            return s
+
+        # Split string into words
+        words = string.split()
+
+        # Create a new list with words formatted according to rules
+        formatted_words = []
+        for word in words:
+            # Special handling for "USA"
+            if word.upper() == "USA":
+                formatted_words.append("USA")
+            # Special handling for "and"
+            elif word.lower() == "and":
+                formatted_words.append("and")
+            # Capitalization with special character handling for other words
+            else:
+                formatted_words.append(capitalize_special(word.capitalize()))
+
+        # Join and return the formatted words as a single string
+        return " ".join(formatted_words)
+
+    def _read_eco_region_file(self):
+        """Read Ecoregion file from package data or EPA FTP site.
+
+        NOTE: Update 02/2021: EPA FTP site is glitchy, using local file in case
+        download fails.
+
+        Returns
+        -------
+        gpd.
+        """
+        # Check if the file exists, try to use a new EPA file
+        if not os.path.exists(self.eco_region_shape_path):
+            try:
+                eco = gpd.read_file(self._eco_region_ftp_url)
+                eco = eco.to_crs("epsg:5070")
+                eco.to_file(self.eco_region_shape_path)
+            except Exception as e:
+                print(f"Download from EPA FTP site, using local file {e}")
+                shutil.copytree(
+                    self.project_eco_region_dir,
+                    self.eco_region_shape_dir
+                )
+
+        # Read in the file downloaded or copied to the output directory
+        df = gpd.read_file(self.eco_region_shape_path)
+
+        return df

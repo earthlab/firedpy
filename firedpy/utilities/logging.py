@@ -18,17 +18,17 @@ LOG_LEVELS = {
 }
 
 
-def init_logger(out_dir, log_level="INFO"):
+def init_logger(project_directory, log_level="INFO"):
     """Initiate logging to a file for a given firedpy project directory.
 
     Parameters
     ----------
-    out_dir : str | pathlib.PosixPath
+    project_directory : str | pathlib.PosixPath
         The output directory for the firedpy run.
     log_level : str
         Level of logging detail to write to the log file.
     """
-    filename = Path(out_dir).joinpath("logs/firedpy.log").absolute()
+    filename = Path(project_directory).joinpath("logs/firedpy.log").absolute()
     filename = filename.expanduser()
     filename.parent.mkdir(exist_ok=True, parents=True)
     log_level = log_level.upper()

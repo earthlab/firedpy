@@ -45,9 +45,6 @@ def country_to_tiles(country):
     list[str] : A list of strings representing MODIS tiles that intersect with
         with the the target cotunry or countries.
     """
-    # These files are stored as Geopackages in the data directory
-    ddir = DATA_DIR.joinpath("individual_countries/")
-
     # Is one or multiple countries?
     if isinstance(country, str):
         country = [country]
@@ -55,99 +52,43 @@ def country_to_tiles(country):
     # Collect all MODIS tiles
     tiles = []
     for cntry in country:
-        # Match user provided name to available list of countries
-        files = {file.stem: file for file in list(ddir.glob("*gpkg"))}
-        key = cntry.lower().replace(" ", "_")
-
-        # Give candidate files if name not found
-        try:
-            file = files[key]
-        except KeyError:
-            similars = similar_strings(key, list(files))
-            msg = (f"{country} not recognized in given format, similar "
-                   f"options include: {similars}")
-            print(msg)
-            raise
-
-        # Run shape to tiles
+        file = get_country_file(cntry)
         tiles += shape_to_tiles(file)
 
     return tiles
 
 
-def shape_to_tiles(shape_path):
-    """Set or reset the tile list using a shapefile.
-
-    NOTE: Where shapes intersect with the modis sinusoidal grid determines
-    which tiles to use.
-
-    Paramters
-    ---------
-    shape_path : str
-        File path to the target shapefile.
-
-    Returns
-    -------
-    list[str] : A list of strings representing MODIS tiles that intersect with
-        with the the target shapefile.
-    """
-    # Read in the MODIS grid
-    grid_path = DATA_DIR.joinpath("modis_grid.gpkg")
-    modis_grid = gpd.read_file(grid_path)
-    modis_grid.set_crs(MODIS_CRS, inplace=True, allow_override=True)
-
-    # Read in the input shapefile and reproject to MODIS sinusoidal
-    source = gpd.read_file(shape_path)
-    source.to_crs(MODIS_CRS, inplace=True)
-
-    # Left join shapefiles with source shape as the left
-    shared = gpd.sjoin(source, modis_grid, how="left").dropna()
-    shared["h"] = shared["h"].apply(lambda x: "h{:02d}".format(int(x)))
-    shared["v"] = shared["v"].apply(lambda x: "v{:02d}".format(int(x)))
-    shared["tile"] = shared["h"] + shared["v"]
-    tiles = list(pd.unique(shared["tile"].values))
-
-    return tiles
-
-
-def tiles_to_points(tiles):
-    """Convert a list of tiles to a list of points."""
-    modis = DATA_DIR.joinpath("modis", "modis_land.gpkg")
-    mdf = gpd.read_file(modis)
-    mdf = mdf.to_crs("epsg:4326")
-    tdf = mdf[mdf["name"].isin(tiles)]
-    with warnings.catch_warnings(category=UserWarning):
-        warnings.simplefilter("ignore")
-        tdf.loc[:, "geometry"] = tdf.centroid
-    points = {}
-    for _, row in tdf.iterrows():
-        points[row["name"]] = row["geometry"].x, row["geometry"].y
-    return points
-
-
-def similar_strings(string, strings, threshold_ratio=0.7):
-    """Return a similar strings from a list to a target string.
+def get_country_file(country):
+    """Get a path to a Geopackage in package data for a given country.
 
     Parameters
     ----------
-    string : str
-        A target string to find similar matches to.
-    strings : list[str]
-        A list of strings to match with the target string.
-    threshold_ratio : float
-        A threshold ratio of similarity used to find matching strings.
+    country : str
+        A string representing a single country. Not case sensitive, but avoid
+        using accents.
 
     Returns
     -------
-    list[str] : A list of similar strings over a given threshold similarity
-        ratio.
+    str : Path to the Geopackage associated with the requested country.
     """
-    matches = []
-    for strng in strings:
-        ratio = SequenceMatcher(isjunk=None, a=string, b=strng).ratio()
-        if ratio >= threshold_ratio:
-            matches.append(strng)
-    return matches
+    # These files are stored as Geopackages in the data directory
+    ddir = DATA_DIR.joinpath("individual_countries/")
+
+    # Match user provided name to available list of countries
+    files = {file.stem: file for file in list(ddir.glob("*gpkg"))}
+    key = country.lower().replace(" ", "_")
+
+    # Give candidate files if name not found
+    try:
+        file = files[key]
+    except KeyError:
+        similars = similar_strings(key, list(files))
+        msg = (f"{country} not recognized in given format, similar "
+               f"options include: {similars}")
+        print(msg)
+        raise
+
+    return file
 
 
 def get_hdf_datasets(fpath, pattern=None):
@@ -241,3 +182,78 @@ def hdf4_to_geotiff(fpath, dst, dataset=None, pattern=None):
     dst = os.path.expanduser(dst)
     gdal.Warp(dst, layer)
     del ds
+
+
+def shape_to_tiles(shape_path):
+    """Set or reset the tile list using a shapefile.
+
+    NOTE: Where shapes intersect with the modis sinusoidal grid determines
+    which tiles to use.
+
+    Paramters
+    ---------
+    shape_path : str
+        File path to the target shapefile.
+
+    Returns
+    -------
+    list[str] : A list of strings representing MODIS tiles that intersect with
+        with the the target shapefile.
+    """
+    # Read in the MODIS grid
+    grid_path = DATA_DIR.joinpath("modis_grid.gpkg")
+    modis_grid = gpd.read_file(grid_path)
+    modis_grid.set_crs(MODIS_CRS, inplace=True, allow_override=True)
+
+    # Read in the input shapefile and reproject to MODIS sinusoidal
+    source = gpd.read_file(shape_path)
+    source.to_crs(MODIS_CRS, inplace=True)
+
+    # Left join shapefiles with source shape as the left
+    shared = gpd.sjoin(source, modis_grid, how="left").dropna()
+    shared["h"] = shared["h"].apply(lambda x: "h{:02d}".format(int(x)))
+    shared["v"] = shared["v"].apply(lambda x: "v{:02d}".format(int(x)))
+    shared["tile"] = shared["h"] + shared["v"]
+    tiles = list(pd.unique(shared["tile"].values))
+
+    return tiles
+
+
+def similar_strings(string, strings, threshold_ratio=0.7):
+    """Return a similar strings from a list to a target string.
+
+    Parameters
+    ----------
+    string : str
+        A target string to find similar matches to.
+    strings : list[str]
+        A list of strings to match with the target string.
+    threshold_ratio : float
+        A threshold ratio of similarity used to find matching strings.
+
+    Returns
+    -------
+    list[str] : A list of similar strings over a given threshold similarity
+        ratio.
+    """
+    matches = []
+    for strng in strings:
+        ratio = SequenceMatcher(isjunk=None, a=string, b=strng).ratio()
+        if ratio >= threshold_ratio:
+            matches.append(strng)
+    return matches
+
+
+def tiles_to_points(tiles):
+    """Convert a list of tiles to a list of points."""
+    modis = DATA_DIR.joinpath("modis", "modis_land.gpkg")
+    mdf = gpd.read_file(modis)
+    mdf = mdf.to_crs("epsg:4326")
+    tdf = mdf[mdf["name"].isin(tiles)]
+    with warnings.catch_warnings(category=UserWarning):
+        warnings.simplefilter("ignore")
+        tdf.loc[:, "geometry"] = tdf.centroid
+    points = {}
+    for _, row in tdf.iterrows():
+        points[row["name"]] = row["geometry"].x, row["geometry"].y
+    return points

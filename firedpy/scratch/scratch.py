@@ -1,6 +1,56 @@
+# -*- coding: utf-8 -*-
+"""Deprecated methods we're not willing to get rid of entirely yet.
+
+Author: travis
+Date: Fri Feb 13 06:08:46 PM MST 2026
+"""
 import os
 import tarfile
+import urllib.request
+
 from glob import glob
+from http.cookiejar import CookieJar
+
+
+EARTHDATA_TEST_URL = (
+    "https://e4ftl01.cr.usgs.gov/MOTA/MCD12Q1.061/2019.01.01/"
+    "BROWSE.MCD12Q1.A2019001.h10v09.061.2022169160720.1.jpg"
+)
+
+
+def test_earthdata_credentials(username, password):
+    """Test access to `ers.earthdata.nasa.gov`
+
+    Parameters
+    ----------
+    username : str
+        Username for Earthdata account.
+    password : str
+        Password for Earthdata account.
+    """
+    # Earthdata Login
+    password_manager = urllib.request.HTTPPasswordMgrWithDefaultRealm()
+    password_manager.add_password(None, "https://urs.earthdata.nasa.gov",
+                                  username, password)
+
+    # Create a cookie jar for storing cookies. This is used to store and return
+    # the session cookie given to use by the data server (otherwise it will
+    # just keep sending us back to Earthdata Login to authenticate).  Ideally,
+    # we should use a file based cookie jar to preserve cookies between runs.
+    # This will make it much more efficient.
+    cookie_jar = CookieJar()
+
+    # Install all the handlers
+    opener = urllib.request.build_opener(
+        urllib.request.HTTPBasicAuthHandler(password_manager),
+        # urllib.request.HTTPHandler(debuglevel=1),  # Uncomment to see details
+        # urllib.request.HTTPSHandler(debuglevel=1),  # of requests/responses
+        urllib.request.HTTPCookieProcessor(cookie_jar))
+    urllib.request.install_opener(opener)
+
+    # Send a test URL
+    request = urllib.request.Request(EARTHDATA_TEST_URL)
+    urllib.request.urlopen(request)
 
 
 def package_individual_country_outputs():

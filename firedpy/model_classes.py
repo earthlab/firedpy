@@ -1,15 +1,15 @@
-import gc
 import hashlib
 import math
 import os
 import random
-import shutil
+import re
 import sys
 
 from argparse import Namespace
 from concurrent.futures import as_completed, ProcessPoolExecutor
 from datetime import datetime
 from logging import getLogger
+from pathlib import Path
 from typing import List, Set, Tuple
 
 import geopandas as gpd
@@ -24,14 +24,66 @@ from shapely import Point, Polygon, MultiPolygon
 from tqdm import tqdm
 
 from firedpy import DATA_DIR
-from firedpy.enums import LandCoverType, EcoRegionType
+from firedpy.enums import ShapeType
 from firedpy.data_classes import Base
-from firedpy.utilities.spatial import MODIS_CRS
+from firedpy.utilities.spatial import MODIS_CRS, get_country_file
 
 logger = getLogger(__name__)
 
 
-def process_file_perimeter(nc_file_path, out_dir, spatial_param,
+def generate_path(project_directory, base_filename, shape_type):
+    """Return the full paths to a target files.
+
+    Parameters
+    ----------
+    project_directory : str
+        A project directory path containing target shapefiles. This
+        corresponds with the '-o' or '--output_directory` option in the
+        firedpy CLI.
+    base_filename : str
+        The file name of the target file.
+    shape_type : str
+        Build shapefiles from the event data frame. Specify either "shp",
+        "gpkg", or both. Shapefiles of both daily progression and overall
+        event perimeters will be written to the 'outputs/shapefiles' folder of
+        the chosen project directory. These will be saved in the specified
+        geopackage format (.gpkg), ERSI Shapefile format (.shp), or save them
+        in both formats using the file basename of the fire event data frame
+        (e.g. 'modis_events_daily.gpkg' and 'modis_events.gpkg').
+
+    Returns
+    -------
+    list[str] : A list of full filepaths corresponding with the target file
+        and file formats.
+    """
+    # What's the benefit of enums here?
+    if not isinstance(shape_type, ShapeType):
+        shape_type = ShapeType(shape_type)
+
+    # Get the requested combination of shapefile types
+    file_extensions = {
+        "shp": [".shp", None],
+        "gpkg": [None, ".gpkg"],
+        "both": [".shp", ".gpkg"]
+    }
+    file_ext = file_extensions.get(shape_type, [".gpkg"])
+
+    # Create the paths
+    paths = []
+    proj_dir = Path(project_directory)
+    proj_dir = proj_dir.expanduser().absolute()
+    for ext in file_ext:
+        if ext:
+            fname = f"{base_filename}{ext}"
+            path = proj_dir.joinpath("outputs", "shapefiles", fname)
+        else:
+            path = None
+        paths.append(path)
+
+    return paths
+
+
+def process_file_perimeter(nc_file_path, project_directory, spatial_param,
                            temporal_param, i):
     """Process a perimeter for a given burn data file.
 
@@ -39,7 +91,7 @@ def process_file_perimeter(nc_file_path, out_dir, spatial_param,
     ----------
     nc_file_path : str
         Path to NetCDF file containing burn data for a MODIS tile.
-    out_dir : str
+    project_directory : str
         Project output directory path. Required.
     spatial_param : int
         The number of cells (~463 m resolution) to search for neighboring burn
@@ -51,7 +103,7 @@ def process_file_perimeter(nc_file_path, out_dir, spatial_param,
     """
     event_grid = EventGrid(
         nc_file_path=nc_file_path,
-        out_dir=out_dir,
+        project_directory=project_directory,
         spatial_param=spatial_param,
         temporal_param=temporal_param
     )
@@ -70,21 +122,30 @@ def _merge_events_spatially_task(namespace: Namespace):
     if len(events) == 1:
         return events
 
-    ckd_trees = [cKDTree(np.array([(c[1], c[0]) for c in event.spacetime_coordinates])) for event in events]
+    ckd_trees = []
+    for event in events:
+        coords = np.array([(c[1], c[0]) for c in event.spacetime_coordinates])
+        ckd_trees.append(cKDTree(coords))
 
     i, j = 0, 1
     merged_event_indices = set()
     merged_events = []
-    pbar = tqdm(total=len(ckd_trees), desc=f"Merging edges for temporal group {pos}", position=pos)
+    pbar = tqdm(
+        total=len(ckd_trees),
+        desc=f"Merging edges for temporal group {pos}",
+        position=pos
+    )
     found_overlapping = False
     while i < len(ckd_trees):
         if j not in merged_event_indices and j < len(ckd_trees):
             indices = ckd_trees[i].query_ball_tree(ckd_trees[j], r=sp_buf, p=2)
             if any(index_list for index_list in indices):
                 found_overlapping = True
-                events[i].add_spacetime_coordinates(events[j].spacetime_coordinates)
+                coords = events[j].spacetime_coordinates
+                events[i].add_spacetime_coordinates(coords)
                 events[i].is_edge = events[i].is_edge or events[j].is_edge
-                ckd_trees[i] = cKDTree(np.array([(c[1], c[0]) for c in events[i].spacetime_coordinates]))
+                crds = [(c[1], c[0]) for c in events[i].spacetime_coordinates]
+                ckd_trees[i] = cKDTree(np.array(crds))
                 merged_event_indices.add(j)
 
         j += 1
@@ -108,7 +169,7 @@ class SpacetimeCoordinate:
     __slots__ = ('x', 'y', 't')  # Helps to save memory
 
     def __init__(self, x: float, y: float, t: int):
-        # Ensure t is within 16-bit unsigned integer range, this is ~180 years worth of days so will be OK
+        # Ensure t within 16-bit unsigned integer range
         if not (0 <= t <= 65535):
             raise ValueError("t must be a 16-bit unsigned integer (0-65535)")
 
@@ -123,7 +184,7 @@ class SpacetimeCoordinate:
         return self.x == other.x and self.y == other.y and self.t == other.t
 
     def __hash__(self):
-        # To make the object hashable, return a hash based on the values of x, y, and t
+        # To make object hashable, return hash based on values of x, y, and t
         return hash((self.x, self.y, self.t))
 
     # The following methods are added for pickling support
@@ -135,15 +196,24 @@ class SpacetimeCoordinate:
 
 
 class EventPerimeter:
-    def __init__(self, event_id: int, spacetime_coordinates: Set[Tuple[float, float, np.int16]], is_edge: bool = False):
+    def __init__(
+            self,
+            event_id: int,
+            spacetime_coordinates: Set[Tuple[float, float, np.int16]],
+            is_edge: bool = False
+    ):
         self.event_id = event_id
         self.spacetime_coordinates = spacetime_coordinates
         self.is_edge = is_edge
-        self.min_y = self.max_y = self.min_x = self.max_x = self.min_t = self.max_t = None
+        self.min_y = self.max_y = self.min_x = self.max_x = None
+        self.min_t = self.max_t = None
         self.min_geom_x = None
         self.max_geom_y = None
 
-    def add_spacetime_coordinates(self, new_coordinates: Set[Tuple[float, float, np.int16]]):
+    def add_spacetime_coordinates(
+            self,
+            new_coordinates: Set[Tuple[float, float, np.int16]]
+    ):
         self.spacetime_coordinates.update(new_coordinates)
 
     def compute_min_max(self):
@@ -163,7 +233,8 @@ class EventPerimeter:
                 'min_t': self.min_t, 'max_t': self.max_t
             }
         else:
-            raise ValueError("Array should be of shape (N, 3) where N is the number of 3-tuples.")
+            raise ValueError("Array should be of shape (N, 3) where N is the "
+                             "number of 3-tuples.")
 
     def __add__(self, other):
         if not isinstance(other, EventPerimeter):
@@ -220,7 +291,7 @@ class EventGrid(Base):
 
     def __init__(
             self,
-            out_dir,
+            project_directory,
             spatial_param=5,
             temporal_param=11,
             area_unit="Unknown",
@@ -235,7 +306,7 @@ class EventGrid(Base):
 
         Parameter
         ---------
-        out_dir : str | pathlib.PosixPath
+        project_directory : str | pathlib.PosixPath
             Path to firedpy project directory.
         spatial_param : int
             The number of cells (~463 m resolution) to search for neighboring
@@ -254,7 +325,7 @@ class EventGrid(Base):
         input_array : np.ndarray
         coordinates : dict[str, np.ndarray]
         """
-        super().__init__(out_dir)
+        super().__init__(project_directory)
         self.spatial_param = spatial_param
         self.temporal_param = temporal_param
         self._area_unit = area_unit
@@ -368,14 +439,14 @@ class EventGrid(Base):
 
                 # In each time slice we have a possible range of 30 days
                 if all_t:
-                    l = 0
-                    r = nz
+                    left = 0
+                    right = nz
                 else:
                     n = int(valid_center_burn_indices[i] - time_index_buffer)
-                    l = max(0, n)
-                    r = min(nz, n + 1)
+                    left = max(0, n)
+                    right = min(nz, n + 1)
 
-                burn_window = window[l:r, :, :]
+                burn_window = window[left:right, :, :]
                 val_locs = np.where(
                     abs(burn_value - burn_window) <= self.temporal_param
                 )
@@ -403,36 +474,56 @@ class EventGrid(Base):
                 )
 
                 if overlapping_event_ids.list:
-
-                    to_keep_id = sorted([e for e in overlapping_event_ids.list], key=lambda l: len(perimeters.get(EventPerimeter(l, set())).spacetime_coordinates))[-1]
+                    event_ids = [e for e in overlapping_event_ids.list]
+                    to_keep_ids = sorted(
+                        event_ids,
+                        key=lambda event: len(
+                            perimeters.get(
+                                EventPerimeter(event, set())
+                            ).spacetime_coordinates
+                        )
+                    )
+                    to_keep_id = to_keep_ids[-1]
                     to_keep = perimeters.get(EventPerimeter(to_keep_id, set()))
                     for event_id in overlapping_event_ids.set:
                         if event_id != to_keep_id:
-                            to_merge = perimeters.get(EventPerimeter(event_id, set()))
-                            to_keep.add_spacetime_coordinates(to_merge.spacetime_coordinates)
-
-                            to_keep.is_edge = to_keep.is_edge or to_merge.is_edge
-
-                            identified_points.update((p, to_keep_id) for p in to_merge.spacetime_coordinates)
+                            to_merge = perimeters.get(
+                                EventPerimeter(event_id, set())
+                            )
+                            to_keep.add_spacetime_coordinates(
+                                to_merge.spacetime_coordinates
+                            )
+                            is_edge = to_keep.is_edge or to_merge.is_edge
+                            to_keep.is_edge = is_edge
+                            coords = to_merge.spacetime_coordinates
+                            identified_points.update(
+                                (p, to_keep_id) for p in coords
+                            )
                             events_to_remove.add(to_merge)
 
-                    to_keep.add_spacetime_coordinates(event.spacetime_coordinates)
+                    to_keep.add_spacetime_coordinates(
+                        event.spacetime_coordinates
+                    )
                     to_keep.is_edge = to_keep.is_edge or event.is_edge
-                    identified_points.update((p, to_keep_id) for p in new_spacetime_coords)
+                    identified_points.update(
+                        (p, to_keep_id) for p in new_spacetime_coords
+                    )
 
                     if to_keep.is_edge:
                         if to_keep.min_geom_x is None:
-                            to_keep.min_geom_x = self._coordinates['x'][0]
+                            to_keep.min_geom_x = self._coordinates["x"][0]
                         if to_keep.max_geom_y is None:
-                            to_keep.max_geom_y = self._coordinates['y'][0]
+                            to_keep.max_geom_y = self._coordinates["y"][0]
 
                 elif event.spacetime_coordinates:
                     if event.is_edge:
-                        event.min_geom_x = self._coordinates['x'][0]
-                        event.max_geom_y = self._coordinates['y'][0]
+                        event.min_geom_x = self._coordinates["x"][0]
+                        event.max_geom_y = self._coordinates["y"][0]
 
-                    perimeters.add(event)  # O(1) time
-                    identified_points.update((p, event.event_id) for p in new_spacetime_coords)
+                    perimeters.add(event)
+                    identified_points.update(
+                        (p, event.event_id) for p in new_spacetime_coords
+                    )
                     self.current_event_id += 1
 
                 for event in events_to_remove:
@@ -444,13 +535,13 @@ class EventGrid(Base):
 class ModelBuilder(Base):
     def __init__(
             self,
-            out_dir: str,
+            project_directory: str,
             tiles: List[str],
             spatial_param: int = 5,
             temporal_param: int = 11,
             n_cores: int = os.cpu_count() - 1
     ):
-        super().__init__(out_dir)
+        super().__init__(project_directory)
         self.tiles = tiles
         self.spatial_param = spatial_param
         self.temporal_param = temporal_param
@@ -481,314 +572,23 @@ class ModelBuilder(Base):
             n_cores = os.cpu_count() - 1
         self._n_cores = n_cores
 
-    @staticmethod
-    def _max_growth_date(x: gpd.GeoDataFrame):
-        dates = x["date"].to_numpy()
-        pixels = x["pixels"].to_numpy()
-        loc = np.where(pixels == np.max(pixels))[0]
-        d = np.unique(dates[loc])[0]
-        return d
-
-    @staticmethod
-    def _mode(vals) -> float:
-        return max(set(list(vals)), key=list(vals).count)
-
-    @staticmethod
-    def _as_multi_polygon(polygon):
-        if isinstance(polygon, Polygon):
-            polygon = MultiPolygon([polygon])
-        return polygon
-
-    @staticmethod
-    def _copy_file(src_path: str, dest_path: str) -> str:
-        """Generic function to handle copying files."""
-        if not os.path.exists(dest_path):
-            os.makedirs(os.path.dirname(dest_path), exist_ok=True)
-            shutil.copy(src_path, dest_path)
-        return dest_path
-
-    def _copy_land_cover_ref(self, land_cover_type: int) -> str:
-        lookup = DATA_DIR.joinpath(
-            "land_cover",
-            f"MCD12Q1_LegendDesc_Type{land_cover_type}.csv"
-        )
-        land_cover_out_dir_path = self.out_dir.joinpath(
-            "tables", "land_cover",
-            f"MCD12Q1_LegendDesc_Type{land_cover_type}.csv"
-        )
-        return self._copy_file(lookup, land_cover_out_dir_path)
-
-    def _copy_wwf_file(self) -> str:
-        lookup = DATA_DIR.joinpath('world_eco_regions', 'wwf_terr_ecos.gpkg')
-        wwf_out_dir_path = os.path.join(
-            self.out_dir, 'shapefiles', 'eco_region', 'wwf_terr_ecos.gpkg'
-        )
-        return self._copy_file(lookup, wwf_out_dir_path)
-
-    def _copy_cec_file(self) -> str:
-        src = DATA_DIR.joinpath('ec_eco', 'NA_CEC_Eco_Level3.gpkg')
-        return self._copy_file(src, self.eco_region_shape_path)
-
-    def _to_kms(self, p: float):
-        return (p * self._res ** 2) / 1000000
-
-    def group_by_x(self, events) -> List[List[EventPerimeter]]:
-        events_sorted_by_x = sorted(events, key=lambda event: event.min_x)
-
-        x_groups = [[events_sorted_by_x[0]]]
-        last_group_max_x = x_groups[-1][-1].max_x
-
-        for event in events_sorted_by_x[1:]:
-            if event.min_x <= last_group_max_x + self.sp_buf:  # Overlaps in x with the last group
-                x_groups[-1].append(event)
-                last_group_max_x = max(last_group_max_x, event.max_x)
-            else:
-                x_groups.append([event])
-                last_group_max_x = event.max_x
-
-        return x_groups
-
-    def group_by_y(self, x_groups) -> List[List[EventPerimeter]]:
-        y_groups = []
-        for group in x_groups:
-            group_sorted_by_y = sorted(group, key=lambda event: event.max_y)
-            y_group = [[group_sorted_by_y[0]]]
-            last_group_min_y = y_group[-1][-1].min_y
-
-            for event in group_sorted_by_y[1:]:
-                if event.max_y >= last_group_min_y - self.sp_buf:  # Overlaps in y with the last group
-                    y_group[-1].append(event)
-                    last_group_min_y = min(last_group_min_y, event.min_y)
-                else:
-                    y_group.append([event])
-                    last_group_min_y = event.min_y
-
-            y_groups.extend(y_group)
-
-        return y_groups
-
-    def group_by_t(self, events) -> List[List[EventPerimeter]]:
-        t_groups = []
-        for event_group in events:
-            events_sorted_by_t = sorted(event_group, key=lambda e: e.min_t)
-            t_group = [[events_sorted_by_t[0]]]
-            last_group_max_t = t_group[-1][-1].max_t
-
-            for event in events_sorted_by_t[1:]:
-                if event.min_t <= last_group_max_t + self.temporal_param:  # Overlaps in x with the last group
-                    t_group[-1].append(event)
-                    last_group_max_t = max(last_group_max_t, event.max_t)
-                else:
-                    t_group.append([event])
-                    last_group_max_t = event.max_t
-            t_groups.extend(t_group)
-
-        return t_groups
-
-    def _create_event_grid_array(self, events: List[EventPerimeter]):
-        # Assuming `instances` is your list of class instances and each instance
-        # has a `.spacetime_coordinates` attribute that is a list of (y, x, t) tuples.
-
-        # Step 1: Determine the min and max coordinates to define the array size.
-        min_x = min_y = float('inf')
-        max_x = max_y = float('-inf')
-
-        for instance in events:
-            for y, x, t in instance.spacetime_coordinates:
-                min_x = min(min_x, x)
-                max_x = max(max_x, x)
-                min_y = min(min_y, y)
-                max_y = max(max_y, y)
-
-        min_x_event = [e for e in events if e.min_x == min_x][0]
-        max_y_event = [e for e in events if e.max_y == max_y][0]
-
-        max_y_geom = max_y_event.max_geom_y + self._res
-
-        width = min_x_event.min_geom_x
-        width_index = 0
-        while width < max_x:
-            width += self._res
-            width_index += 1
-
-        height = max_y_geom
-        height_index = 0
-        while height > min_y:
-            height -= self._res
-            height_index += 1
-
-        array_shape = (len(events), height_index+1, width_index+1)
-        three_d_array = np.zeros(array_shape, dtype=np.uint16)
-
-        coordinates = {
-            'x': np.array([math.ceil(min_x_event.min_geom_x + self._res * i) for i in range(width_index + 1)]),
-            'y': np.array([math.ceil(max_y_event.max_geom_y - self._res * i) for i in range(height_index + 1)])
-        }
-
-        for instance_num, instance in enumerate(events):
-            for y, x, t in instance.spacetime_coordinates:
-                x_idx = int((x - min_x_event.min_geom_x + 1) / self._res)
-                y_idx = int((max_y_geom - y - 1) / self._res)
-                three_d_array[instance_num, y_idx, x_idx] = t
-
-        return three_d_array, coordinates
-
-    def merge_fire_edge_events(self, edge_events: List[EventPerimeter]) -> List[EventPerimeter]:
-        # Group by close in x and y
-        if not edge_events:
-            return []
-
-        groups = self.group_by_t(self.group_by_y(self.group_by_x(edge_events)))
-
-        merged_events = []
-        for i, group in enumerate(groups):
-            group_array, coordinates = self._create_event_grid_array(group)
-            event_grid = EventGrid(
-                out_dir=self.out_dir,
-                input_array=group_array,
-                coordinates=coordinates
-            )
-            desc = f'Merging edge tiles for group {i} of {len(groups)}'
-            perimeters = event_grid.get_event_perimeters(
-                progress_position=i,
-                progress_description=desc,
-                all_t=True
-            )
-            del event_grid, group_array, coordinates, group
-            merged_events.extend(perimeters)
-
-        return merged_events
-
-    def build_events(self):
-        """Build wildfire events tile by tile and merge together."""
-        # Initialize the event container
-        print("Building fire event perimeters.")
-        fire_events = []
-        if self._n_cores == 1:
-            # Run serially
-            for i, nc_file_path in enumerate(self.files):
-                out = process_file_perimeter(
-                    nc_file_path=nc_file_path,
-                    out_dir=self.out_dir,
-                    spatial_param=self.spatial_param,
-                    temporal_param=self.temporal_param,
-                    i=i
-                )
-                fire_events.extend(out)
-        else:
-            # Run in parallel
-            with ProcessPoolExecutor(self._n_cores) as pool:
-                jobs = []
-                for i, nc_file_path in enumerate(self.files):
-                    out_dir = self.out_dir
-                    temp_param = self.temporal_param
-                    space_param = self.spatial_param
-                    job = pool.submit(
-                        process_file_perimeter,
-                        nc_file_path,
-                        out_dir,
-                        temp_param,
-                        space_param,
-                        i
-                    )
-                    jobs.append(job)
-                for job in tqdm(as_completed(jobs), total=len(jobs)):
-                    fire_events.extend(job.result())
-
-        # Assign event IDs
-        for i in range(len(fire_events)):
-            fire_events[i].event_id = i
-
-        # Find and merge the edge cases
-        non_edge = [e for e in fire_events if not e.is_edge]
-        edge_events = [e for e in fire_events if e.is_edge]
-        for edge_event in edge_events:
-            edge_event.compute_min_max()
-        merged_edges = self.merge_fire_edge_events(edge_events)
-        del edge_events
-        last_non_edge_id = non_edge[-1].event_id + 1
-        for edge in merged_edges:
-            edge.event_id = last_non_edge_id
-            last_non_edge_id += 1
-
-        # Combine edge and non edge cases
-        fire_events = non_edge + merged_edges
-        gc.collect()
-
-        return fire_events
-
-    def _clip_to_shape_file(self, gdf: gpd.GeoDataFrame, shape_file_path: str) -> gpd.GeoDataFrame:
-        shp = gpd.read_file(shape_file_path)
-        shp.to_crs(gdf.crs, inplace=True)
-        shp['geometry'] = shp.geometry.buffer(100000)  # Wide buffer to start
-        clipped_gdf = gdf.clip(shp)
-        return clipped_gdf
-
-    def build_points(
-            self,
-            event_perimeters,
-            shape_file=None
-    ):
-        """Build point geometries of fire events.
+    def add_fire_attributes(self, gdf):
+        """Add fired attributes to an event geodataframe.
 
         Parameters
         ----------
-        event_perimeters : List[firedpy.model_classes.EventPerimeter]
-            List of EventPerimeter objects.
-        shape_file : str | pathlib.PosixPath
-            Path to the shapefile representing the target study area. Defaults
-            to None, full MODIS tile extents will be used.
+        gdf : geopandas.geodataframe.GeoDataFrame
+            A geodataframe of fire events.
 
         Returns
         -------
-        geopandas.geodataframe.GeoDataFrame : A geodataframe of points
-            representing MODIS tiles with burn signals.
+        geopandas.geodataframe.GeoDataFrame : The geodataframe with fire
+            attribute fields appended.
         """
-        # Build a datetime coordinate dataframe from the events
-        data = []
-        for event in event_perimeters:
-            for coord in event.spacetime_coordinates:
-                eid = event.event_id
-                coord0 = coord[0]
-                coord1 = coord[1]
-                coord3 = self._convert_unix_day_to_calendar_date(coord[2])
-                entry = [eid, coord1, coord0, coord3]
-                data.append(entry)
-        df = pd.DataFrame(data, columns=["id", "x", "y", "date"])
+        if gdf.shape[0] == 0:
+            print("No fire events found")
+            return gdf
 
-        # Center pixel coordinates
-        df.loc[:, "x"] = df["x"] + (self.geom[1] / 2)
-        df.loc[:, "y"] = df["y"] + (self.geom[-1] / 2)
-
-        # Each entry gets a point object from the x and y coordinates.
-        print("Converting data frame to spatial object...")
-        df.loc[:, "geometry"] = df[["x", "y"]].apply(
-            lambda x: Point(tuple(x)),
-            axis=1
-        )
-        gdf = gpd.GeoDataFrame(df, crs=self.crs.proj4, geometry="geometry")
-
-        # Clip to study area if requested
-        if shape_file is not None:
-            gdf = self._clip_to_shape_file(gdf, shape_file)
-
-        return gdf
-
-    def _modis_to_lat_lon(self, x_sinu, y_sinu):
-        # Define the MODIS sinusoidal projection (SR-ORG:6974)
-        modis_sinu_proj = Proj(
-            "+proj=sinu +R=6371007.181 +nadgrids=@null +wktext"
-        )
-
-        # Define the WGS84 projection (EPSG:4326)
-        wgs84_proj = Proj(proj="latlong", datum="WGS84")
-
-        # Convert from MODIS sinusoidal to WGS84
-        lon, lat = transform(modis_sinu_proj, wgs84_proj, x_sinu, y_sinu)
-
-        print(f"Longitude: {lon}, Latitude: {lat}")
-
-    def add_fire_attributes(self, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         print("Adding fire attributes ...")
         gdf['pixels'] = gdf.groupby(['id', 'date'])['id'].transform('count')
         gdf['ig_utm_x'] = gdf.groupby(['id', 'date'])['x'].nth(0)
@@ -838,317 +638,474 @@ class ModelBuilder(Base):
         gdf = gdf[['id', 'date', 'ig_date', 'ig_day', 'ig_month',
                    'ig_year', 'last_date', 'event_day', 'event_dur',
                    'pixels', 'tot_pix', 'dy_ar_km2', 'tot_ar_km2',
-                   'fsr_px_dy', 'fsr_km2_dy',
-                   'mx_grw_px', 'mn_grw_px', 'mu_grw_px',
-                   'mx_grw_km2', 'mn_grw_km2', 'mu_grw_km2', 'mx_grw_dte',
-                   'x', 'y', 'geometry', 'ig_utm_x', 'ig_utm_y']]
+                   'fsr_px_dy', 'fsr_km2_dy', 'mx_grw_px', 'mn_grw_px',
+                   'mu_grw_px', 'mx_grw_km2', 'mn_grw_km2', 'mu_grw_km2',
+                   'mx_grw_dte', 'x', 'y', 'geometry', 'ig_utm_x',
+                   'ig_utm_y']]
 
         gdf = gdf.reset_index(drop=True)
 
         return gdf
 
-    def add_land_cover_attributes(self, gdf, tiles, land_cover_type=0):
-        """Add landcover attributes to a firedpy GeoDataFrame.
+    def add_kg_attributes(self, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+        """Assign Köppen-Geiger climate zones to events with a raster file.
 
-        Parameters
-        ----------
-        gdf : geopandas.geodataframe.GeoDataFrame
-            A geodata frame of fire events.
-        tiles : list[str]
-            A list of MODIS of grid tile IDs.
-        land_cover_type : int | LandCoverType
-            Include land cover as an attribute, provide a number corresponding
-            with a MODIS/Terra+Aqua Land Cover (MCD12Q1) category followed with
-            username:password of your NASA's Earthdata service account.
-            Available land cover categories:
+        Args:
+            gdf: GeoDataFrame containing 'x', 'y', and 'id'.
+            tif_path: File path to a Köppen-Geiger .tif raster.
 
-                1: IGBP global vegetation classification scheme
-                2: University of Maryland (UMD) scheme
-                3: MODIS-derived LAI/fPAR scheme
-
-            If you do not have an account register at
-            https://urs.earthdata.nasa.gov/home. Defaults to 0 or
-            LandCoverType.NONE.
-
-        Returns
-        -------
-        geopandas.geodataframe.GeoDataFrame : The geodataframe with landcover
-            attributes added.
+        Returns:
+            GeoDataFrame with kg_zone, kg_mode, and kg_desc columns added.
         """
-        # Match possible land cover type argument types
-        print("Adding land cover attributes...")
-        if isinstance(land_cover_type, str):
-            land_cover_type = int(land_cover_type)
-        if isinstance(land_cover_type, LandCoverType):
-            land_cover_type = land_cover_type.value
-
-        # We'll need to specify which type of land_cover
-        lc_descriptions = {
-            1: "IGBP global vegetation classification scheme",
-            2: "University of Maryland (UMD) scheme",
-            3: "MODIS-derived LAI/fPAR scheme",
-            4: "MODIS-derived Net Primary Production (NPP) scheme",
-            5: "Plant Functional Type (PFT) scheme."
-        }
-
-        # Rasterio point querier (why define here?)
-        def point_query(row):
-            x = row["x"]
-            y = row["y"]
-            try:
-                val = [val for val in lc.sample([(x, y)])][0][0]
-            except Exception:
-                val = np.nan
-            return val
-
-        # Get the range of burn years
-        burn_years = list(gdf["ig_year"].unique())
-        burn_years.sort()
-
-        # This works faster when split by year and the pointer is outside
-        # This is also not the best way
-        sgdfs = []
-        for tile in tiles:
-            for year in tqdm(burn_years, position=0, file=sys.stdout):
-                # Get the land cover geotiff directory for this tile
-                mosaic_dir = self.land_cover_dir.joinpath(
-                    tile, str(year), "mosaics"
-                )
-                if not mosaic_dir.exists():
-                    print(f"No land cover data for {tile} in year {year}")
-                    continue
-
-                # I don't understand what's happening below
-                # lc_files = []
-                # lc_years = []
-                # for fname in os.listdir(mosaic_dir):
-                #     # How necessary is the re match?
-                #     # if re.match(self._lc_mosaic_re, fname):
-                #     fpath = os.path.join(mosaic_dir, fname)
-                #     lc_files.append(fpath)
-                # lc_files = sorted(lc_files)
-
-                # # Group by year?
-                # for fpath in lc_files:
-                #     fname = os.path.basename(fpath)
-                #     # Don't we know what year it is?
-                #     # year_match = re.match(self._lc_mosaic_re, fname)
-                #     # year_dict = year_match.groupdict()
-                #     year = int(year_dict["year"])
-                #     lc_years.append(year)
-                # lc_files = {lc_years[i]: f for i, f in enumerate(lc_files)}
-
-                # Now set year one back for land_cover
-                # year = year - 1
-
-                # Use previous year's land cover
-                # if year < min(lc_years):
-                #     year = min(lc_years)
-                # elif year > max(lc_years):
-                #     year = max(lc_years)
-
-                # lc_file = lc_files[year]
-
-                # Collect all files in the mosaic directory (only one ever?)
-                lc_file = list(mosaic_dir.glob("*tif"))[0]
-
-                # Create a sub data frame for this year
-                sgdf = gdf[gdf["ig_year"] == year].copy()
-
-                # Open the land cover raster and add attributes to sub df
-                lc = rasterio.open(lc_file)
-                sgdf.loc[:, "lc_code"] = sgdf.apply(point_query, axis=1)
-                sgdf = sgdf[sgdf["lc_code"] != 255]  # Out-of-tile points
-                idgrp = sgdf.groupby("id")
-                sgdf.loc[:, "lc_mode"] = idgrp["lc_code"].transform(self._mode)
-                sgdfs.append(sgdf)
-
-        gdf = pd.concat(sgdfs)
-        gdf = gdf.reset_index(drop=True)
-
-        # Add in the class description from land_cover tables
-        land_cover_path = self._copy_land_cover_ref(land_cover_type)
-        lc_table = pd.read_csv(land_cover_path)
-        gdf = pd.merge(
-            left=gdf,
-            right=lc_table,
-            how="left",
-            left_on="lc_mode",
-            right_on="Value"
+        tif_path = DATA_DIR.joinpath(
+            'koppen_geiger_tif', '1991_2020', 'koppen_geiger_0p00833333.tif'
         )
-        gdf = gdf.drop("Value", axis=1)
-        gdf.loc[:, "lc_type"] = lc_descriptions[land_cover_type]
-        gdf.rename({"lc_description": "lc_desc"}, inplace=True, axis="columns")
 
-        return gdf
-
-    def _add_attributes_from_na_cec(self, gdf, eco_region_level):
-        # Different levels have different sources
-        institution = "(NA-Commission for Environmental Cooperation)"
-        eco_types = {
-            "NA_L1CODE": f"Level I Ecoregions {institution}",
-            "NA_L2CODE": f"Level II Ecoregions {institution}",
-            "NA_L3CODE": f"Level III Ecoregions {institution}"
+        KG_LEGEND = {
+            1: "Af", 2: "Am", 3: "Aw", 4: "BWh", 5: "BWk", 6: "BSh", 7: "BSk",
+            8: "Csa", 9: "Csb", 10: "Csc", 11: "Cwa", 12: "Cwb", 13: "Cwc",
+            14: "Cfa", 15: "Cfb", 16: "Cfc", 17: "Dsa", 18: "Dsb", 19: "Dsc",
+            20: "Dsd", 21: "Dwa", 22: "Dwb", 23: "Dwc", 24: "Dwd", 25: "Dfa",
+            26: "Dfb", 27: "Dfc", 28: "Dfd", 29: "ET", 30: "EF",
         }
 
-        # Read in the Level File (contains every level) and reference table
-        shp_path = self._copy_cec_file()
-        eco = gpd.read_file(shp_path)
-        eco.to_crs(gdf.crs, inplace=True)
+        sgdf = gdf.copy()
 
-        # Filter for selected level (level III defaults to US-EPA version)
-        if not eco_region_level:
-            eco_region_level = 3
-        eco_code = [c for c in eco if str(eco_region_level) in
-                    c and "CODE" in c]
+        with rasterio.open(tif_path) as src:
+            # Project GeoDataFrame to match raster CRS
+            if sgdf.crs != src.crs:
+                sgdf = sgdf.to_crs(src.crs)
 
-        if len(eco_code) > 1:
-            eco_code = [c for c in eco_code if "NA" in c][0]
-        else:
-            eco_code = eco_code[0]
+            # Extract centroid coordinates from geometry (handles points,
+            # polygons, multipolygons)
+            coords = [
+                (geom.centroid.x, geom.centroid.y) for geom in sgdf.geometry
+            ]
 
-        print("Selected ecoregion code: " + str(eco_code))
+            sampled_vals = list(src.sample(coords))
+            sgdf['kg_zone'] = [
+                v[0] if v[0] != src.nodata else np.nan for v in sampled_vals
+            ]
 
-        # Find modal eco-region for each event id
-        eco = eco[[eco_code, "geometry"]]
-        gdf = gpd.sjoin(gdf, eco, how="left", predicate="within")
-        gdf = gdf.reset_index(drop=True)
-        gdf["eco_mode"] = gdf.groupby("id")[eco_code].transform(self._mode)
+        sgdf['kg_mode'] = sgdf.groupby('id')['kg_zone'].transform(self._mode)
+        sgdf['kg_desc'] = sgdf['kg_mode'].map(KG_LEGEND)
 
-        # Add in the type of eco-region
-        gdf["eco_type"] = eco_types[eco_code]
+        return sgdf
 
-        # Add in the name of the modal ecoregion
-        eco_ref = pd.read_csv(self.eco_region_csv_path)
-        eco_name = eco_code.replace("CODE", "NAME")
-        eco_df = eco_ref[[eco_code, eco_name]].drop_duplicates()
-        eco_map = dict(zip(eco_df[eco_code], eco_df[eco_name]))
-        gdf["eco_name"] = gdf[eco_code].map(eco_map)
+    @staticmethod
+    def _as_multi_polygon(polygon):
+        if isinstance(polygon, Polygon):
+            polygon = MultiPolygon([polygon])
+        return polygon
 
-        # Clean up column names
-        gdf = gdf.drop("index_right", axis=1)
-        gdf = gdf.drop(eco_code, axis=1)
+    def build_events(self, shape_file):
+        """Build the fire event geodataframe."""
+        # Classify MODIS burn data into fire events
+        event_perimeters = self.classify_events()
 
-        return gdf
+        # Build the event geodataframe
+        gdf = self.build_points(
+            event_perimeters=event_perimeters,
+            shape_file=shape_file
+        )
 
-    def _add_attributes_from_wwf(self, gdf):
-        # Read in the world ecoregions from WWF
-        eco_path = self._copy_wwf_file()
-        eco = gpd.read_file(eco_path)
-        eco.to_crs(gdf.crs, inplace=True)
+        # Add fire event attributes
+        gdf = self.add_fire_attributes(gdf)
 
-        # Find modal eco region for each event id
-        eco = eco[["ECO_NUM", "ECO_NAME", "geometry"]]
-        gdf = gpd.sjoin(gdf, eco, how="left", predicate="within")
-        gdf = gdf.reset_index(drop=True)
+        # What is this doing? (buffering with an envelope)
+        gdf = self.process_geometry(gdf)
 
-        gdf["eco_mode"] = gdf.groupby('id')['ECO_NUM'].transform(self._mode)
-        gdf["eco_name"] = gdf["ECO_NAME"]
-        gdf["eco_type"] = "WWF Terrestrial Ecoregions of the World"
-
-        gdf = gdf.drop('index_right', axis=1)
-        gdf = gdf.drop('ECO_NAME', axis=1)
-        gdf = gdf.drop('ECO_NUM', axis=1)
+        # Calculate fire spread speed and maximum travel vectors
+        gdf = self.add_kg_attributes(gdf)
 
         return gdf
 
-    def add_eco_region_attributes(
+    def build_points(
             self,
-            gdf,
-            eco_region_type="na",
-            eco_region_level=None
+            event_perimeters,
+            shape_file=None,
+            country=None
     ):
-        """Add eco region attributes to a fire event geodataframe.
+        """Build point geometries of fire events.
 
         Parameters
         ----------
-        gdf : geopandas.geodataframe.GeoDataFrame
-        eco_region_type : str
-            Specify the ecoregion type as either 'world' or 'na':
-
-                'world' = World Terrestrial Ecoregions (World Wildlife Fund)
-                'na' = North American ecoregions (Omernick, 1987)
-
-            The most common (modal) ecoregion across the event is used.
-
-            Further, to associate each event with North American ecoregions
-            (Omernick, 1987) you may provide a number corresponding to an
-            ecoregion level. Ecoregions are retrieved from www.epa.gov and
-            levels I through IV are available. Levels I and II were developed
-            by the North American Commission for Environmental Cooperation.
-            Levels III and IV were developed by the United States Environmental
-            Protection Agency. For events with more than one ecoregion, the
-            most common value will be used. Defaults to None.
-        eco_region_level : int
-            The desired Ecoregions level from the North American Commission for
-            Environmental Cooperation (CEC). Levels 1 to 3 are available, with
-            level 1 representing the broadest scale and level III representing
-            the most detailed. Defaults to 1.
+        event_perimeters : List[firedpy.model_classes.EventPerimeter]
+            List of EventPerimeter objects.
+        shape_file : str | pathlib.PosixPath
+            Path to the shapefile representing the target study area. Defaults
+            to None, full MODIS tile extents will be used.
+        country : str
+            The name of a country to use as a study area.
 
         Returns
         -------
-        geopandas.geodataframe.GeoDataFrame: A copy of the geodataframe with
-            eco region attributes added.
+        geopandas.geodataframe.GeoDataFrame : A geodataframe of points
+            representing MODIS tiles with burn signals.
         """
-        print("Adding eco-region attributes ...")
-        eco_region_type = EcoRegionType(eco_region_type)
-        if eco_region_level or (eco_region_type == EcoRegionType.NA):
-            gdf = self._add_attributes_from_na_cec(gdf, eco_region_level)
+        # Build a datetime coordinate dataframe from the events
+        data = []
+        for event in event_perimeters:
+            for coord in event.spacetime_coordinates:
+                eid = event.event_id
+                coord0 = coord[0]
+                coord1 = coord[1]
+                coord3 = self._convert_unix_day_to_calendar_date(coord[2])
+                entry = [eid, coord1, coord0, coord3]
+                data.append(entry)
+        df = pd.DataFrame(data, columns=["id", "x", "y", "date"])
+
+        # Center pixel coordinates
+        df.loc[:, "x"] = df["x"] + (self.geom[1] / 2)
+        df.loc[:, "y"] = df["y"] + (self.geom[-1] / 2)
+
+        # Each entry gets a point object from the x and y coordinates.
+        print("Converting data frame to spatial object...")
+        df.loc[:, "geometry"] = df[["x", "y"]].apply(
+            lambda x: Point(tuple(x)),
+            axis=1
+        )
+        gdf = gpd.GeoDataFrame(df, crs=self.crs.proj4, geometry="geometry")
+
+        # Clip to study area if requested
+        if country:
+            shape_file = get_country_file(country)
+        if shape_file is not None:
+            gdf = self._clip_to_shape_file(gdf, shape_file)
+
+        return gdf
+
+    def classify_events(self):
+        """Classify wildfire events perimeters by tile and merge together."""
+        # Initialize the event container
+        print("Building fire event perimeters.")
+        fire_events = []
+        if self._n_cores == 1:
+            # Run serially
+            for i, nc_file_path in enumerate(self.files):
+                out = process_file_perimeter(
+                    nc_file_path=nc_file_path,
+                    project_directory=self.project_directory,
+                    spatial_param=self.spatial_param,
+                    temporal_param=self.temporal_param,
+                    i=i
+                )
+                fire_events.extend(out)
         else:
-            gdf = self._add_attributes_from_wwf(gdf)
-        return gdf
+            # Run in parallel
+            with ProcessPoolExecutor(self._n_cores) as pool:
+                jobs = []
+                for i, nc_file_path in enumerate(self.files):
+                    project_directory = self.project_directory
+                    temp_param = self.temporal_param
+                    space_param = self.spatial_param
+                    job = pool.submit(
+                        process_file_perimeter,
+                        nc_file_path,
+                        project_directory,
+                        temp_param,
+                        space_param,
+                        i
+                    )
+                    jobs.append(job)
+                for job in tqdm(as_completed(jobs), total=len(jobs)):
+                    fire_events.extend(job.result())
 
-    def process_geometry(self, gdf):
-        """Process event geometries.
+        # Assign event IDs
+        for i in range(len(fire_events)):
+            fire_events[i].event_id = i
 
-        Parameters
-        ----------
-        gdf : geopandas.geodataframe.GeoDataFrame
-            A firedpy geodataframe of burn events.
+        # Find and merge the edge cases
+        if fire_events:
+            non_edge = [e for e in fire_events if not e.is_edge]
+            edge_events = [e for e in fire_events if e.is_edge]
+            for edge_event in edge_events:
+                edge_event.compute_min_max()
+            merged_edges = self.merge_fire_edge_events(edge_events)
+            del edge_events
+            last_non_edge_id = non_edge[-1].event_id + 1
+            for edge in merged_edges:
+                edge.event_id = last_non_edge_id
+                last_non_edge_id += 1
 
-        Returns
-        -------
-        geopandas.geodataframe.GeoDataFrame : The geodataframe with processed
-            geometries.
-        """
-        print("Creating buffer...")
-        geometry = gdf.buffer(1 + (self._res / 2))
-        gdf["geometry"] = geometry
-        gdf["geometry"] = gdf.envelope
-        return gdf
+            # Combine edge and non edge cases
+            fire_events = non_edge + merged_edges
+
+        return fire_events
+
+    def _clip_to_shape_file(self, gdf, shape_file_path):
+        shp = gpd.read_file(shape_file_path)
+        shp.to_crs(gdf.crs, inplace=True)
+        shp["geometry"] = shp.geometry.buffer(100_000)  # Wide buffer to start
+        clipped_gdf = gdf.clip(shp)
+        return clipped_gdf
 
     @staticmethod
     def _create_did_column(df, columns):
         """Hashes multiple columns in a DataFrame"""
-        df['temp'] = df[columns].apply(
+        df["temp"] = df[columns].apply(
             lambda row: '_'.join(row.values.astype(str)),
             axis=1
         )
-        df['did'] = df['temp'].apply(
+        df["did"] = df["temp"].apply(
             lambda x: hashlib.md5(x.encode()).hexdigest()
         )
         df.drop('temp', axis=1, inplace=True)  # Remove temporary column
         return df
 
-    def process_daily_data(
+    def _create_event_grid_array(self, events: List[EventPerimeter]):
+        # Assuming `instances` is your list of class instances and each
+        # instance has a `.spacetime_coordinates` attribute that is a list of
+        # (y, x, t) tuples.
+
+        # Step 1: Determine min and max coordinates to define the array size.
+        min_x = min_y = float('inf')
+        max_x = max_y = float('-inf')
+
+        for instance in events:
+            for y, x, t in instance.spacetime_coordinates:
+                min_x = min(min_x, x)
+                max_x = max(max_x, x)
+                min_y = min(min_y, y)
+                max_y = max(max_y, y)
+
+        min_x_event = [e for e in events if e.min_x == min_x][0]
+        max_y_event = [e for e in events if e.max_y == max_y][0]
+
+        max_y_geom = max_y_event.max_geom_y + self._res
+
+        width = min_x_event.min_geom_x
+        width_index = 0
+        while width < max_x:
+            width += self._res
+            width_index += 1
+
+        height = max_y_geom
+        height_index = 0
+        while height > min_y:
+            height -= self._res
+            height_index += 1
+
+        array_shape = (len(events), height_index+1, width_index+1)
+        three_d_array = np.zeros(array_shape, dtype=np.uint16)
+
+        minx = min_x_event.min_geom_x
+        miny = max_y_event.max_geom_y
+        xs = [math.ceil(minx + self._res * i) for i in range(width_index + 1)]
+        ys = [math.ceil(miny - self._res * i) for i in range(height_index + 1)]
+        coordinates = {
+            'x': np.array(xs),
+            'y': np.array(ys)
+        }
+
+        for instance_num, instance in enumerate(events):
+            for y, x, t in instance.spacetime_coordinates:
+                x_idx = int((x - min_x_event.min_geom_x + 1) / self._res)
+                y_idx = int((max_y_geom - y - 1) / self._res)
+                three_d_array[instance_num, y_idx, x_idx] = t
+
+        return three_d_array, coordinates
+
+    def _extract_date_parts(self, path):
+        fname = path.name
+        match = re.match(self._file_regex, fname)
+        if match:
+            match_year = int(match.groupdict()["year"])
+            match_day = int(match.groupdict()["ordinal_day"])
+            return match_year, match_day
+        return None
+
+    def get_output_paths(self, gdf, project_name, project_directory,
+                         start_year, end_year, daily, shape_type):
+        """Get dictionary of all output paths for a firedpy run.
+
+        Parameters
+        ----------
+        gdf : geopandas.geodataframe.GeoDataFrame
+            A geodataframe of fire events.
+        project_name : str | NoneType
+            A name used to identify the output files of this project.
+        project_directory : str
+            Project output directory path.
+        start_year : int
+            The first year of fire events.
+        end_year : int
+            The last year of fire events.
+        daily : bool
+            Create the daily polygons or just the event-level perimeter for
+            your analysis area. If this flag is set, the daily and event
+            polygons will be created, otherwise only the event level.
+        shape_type : str
+            Build shapefiles from the event data frame. Specify either "shp",
+            "gpkg", or both. Shapefiles of both daily progression and overall
+            event perimeters will be written to the 'outputs/shapefiles'
+            folder of the chosen project directory. These will be saved in the
+            specified geopackage format (.gpkg), ERSI Shapefile format (.shp),
+            or save them in both formats using the file basename of the fire
+            event data frame (e.g. 'modis_events_daily.gpkg' and
+            'modis_events.gpkg').
+
+        Returns
+        -------
+        dict : Dictionary of paths for final firedpy outputs.
+        """
+        # Set output paths
+        base_file_name = f"fired_{project_name}_{start_year}_to_{end_year}"
+        daily_base = f"{base_file_name}_daily"
+        event_base = f"{base_file_name}_events"
+        daily_shape_path, daily_gpkg_path = generate_path(
+            project_directory=project_directory,
+            base_filename=daily_base,
+            shape_type=shape_type
+        )
+        event_shape_path, event_gpkg_path = generate_path(
+            project_directory=project_directory,
+            base_filename=event_base,
+            shape_type=shape_type
+        )
+
+        model_outputs_dir = Path(project_directory).joinpath("outputs")
+        shape_dir = model_outputs_dir.joinpath("shapefiles")
+        table_dir = model_outputs_dir.joinpath("tables")
+        shape_dir.mkdir(parents=True, exist_ok=True)
+        table_dir.mkdir(exist_ok=True)
+        csv_path = table_dir.joinpath(f"{base_file_name}.csv"),
+
+        # Process event data
+        if daily:
+            output_csv_path = str(csv_path).replace(".csv", "_daily.csv")
+            gdf = self.process_daily_data(
+                gdf=gdf,
+                output_csv_path=output_csv_path,
+                daily_shape_path=daily_shape_path,
+                daily_gpkg_path=daily_gpkg_path
+            )
+        else:
+            gdf = self.process_event_data(gdf)
+
+        out_paths = dict(
+            csv_path=csv_path,
+            event_csv=output_csv_path[:-4] + "_events" + ".csv",
+            event_shape_path=event_shape_path,
+            event_gpkg_path=event_gpkg_path,
+        )
+
+        return out_paths
+
+    def group_by_t(self, events) -> List[List[EventPerimeter]]:
+        t_groups = []
+        for event_group in events:
+            events_sorted_by_t = sorted(event_group, key=lambda e: e.min_t)
+            t_group = [[events_sorted_by_t[0]]]
+            last_group_max_t = t_group[-1][-1].max_t
+
+            for event in events_sorted_by_t[1:]:
+                # Handle overlaps in t with the last group
+                if event.min_t <= last_group_max_t + self.temporal_param:
+                    t_group[-1].append(event)
+                    last_group_max_t = max(last_group_max_t, event.max_t)
+                else:
+                    t_group.append([event])
+                    last_group_max_t = event.max_t
+            t_groups.extend(t_group)
+
+        return t_groups
+
+    def group_by_x(self, events) -> List[List[EventPerimeter]]:
+        events_sorted_by_x = sorted(events, key=lambda event: event.min_x)
+
+        x_groups = [[events_sorted_by_x[0]]]
+        last_group_max_x = x_groups[-1][-1].max_x
+
+        for event in events_sorted_by_x[1:]:
+            # Overlaps in x with the last group
+            if event.min_x <= last_group_max_x + self.sp_buf:
+                x_groups[-1].append(event)
+                last_group_max_x = max(last_group_max_x, event.max_x)
+            else:
+                x_groups.append([event])
+                last_group_max_x = event.max_x
+
+        return x_groups
+
+    def group_by_y(self, x_groups) -> List[List[EventPerimeter]]:
+        y_groups = []
+        for group in x_groups:
+            group_sorted_by_y = sorted(group, key=lambda event: event.max_y)
+            y_group = [[group_sorted_by_y[0]]]
+            last_group_min_y = y_group[-1][-1].min_y
+
+            for event in group_sorted_by_y[1:]:
+                # Overlaps in y with the last group
+                if event.max_y >= last_group_min_y - self.sp_buf:
+                    y_group[-1].append(event)
+                    last_group_min_y = min(last_group_min_y, event.min_y)
+                else:
+                    y_group.append([event])
+                    last_group_min_y = event.min_y
+
+            y_groups.extend(y_group)
+
+        return y_groups
+
+    @staticmethod
+    def _max_growth_date(x: gpd.GeoDataFrame):
+        dates = x["date"].to_numpy()
+        pixels = x["pixels"].to_numpy()
+        loc = np.where(pixels == np.max(pixels))[0]
+        d = np.unique(dates[loc])[0]
+        return d
+
+    def merge_fire_edge_events(
             self,
-            gdf,
-            output_csv_path,
-            daily_shape_path,
-            daily_gpkg_path
-    ):
+            edge_events: List[EventPerimeter]
+    ) -> List[EventPerimeter]:
+        # Group by close in x and y
+        if not edge_events:
+            return []
+
+        groups = self.group_by_t(self.group_by_y(self.group_by_x(edge_events)))
+
+        merged_events = []
+        for i, group in enumerate(groups):
+            group_array, coordinates = self._create_event_grid_array(group)
+            event_grid = EventGrid(
+                project_directory=self.project_directory,
+                input_array=group_array,
+                coordinates=coordinates
+            )
+            desc = f'Merging edge tiles for group {i} of {len(groups)}'
+            perimeters = event_grid.get_event_perimeters(
+                progress_position=i,
+                progress_description=desc,
+                all_t=True
+            )
+            del event_grid, group_array, coordinates, group
+            merged_events.extend(perimeters)
+
+        return merged_events
+
+    def _modis_to_lat_lon(self, x_sinu, y_sinu):
+        # Define the MODIS sinusoidal projection (SR-ORG:6974)
+        modis_sinu_proj = Proj(
+            "+proj=sinu +R=6371007.181 +nadgrids=@null +wktext"
+        )
+
+        # Define the WGS84 projection (EPSG:4326)
+        wgs84_proj = Proj(proj="latlong", datum="WGS84")
+
+        # Convert from MODIS sinusoidal to WGS84
+        lon, lat = transform(modis_sinu_proj, wgs84_proj, x_sinu, y_sinu)
+
+        print(f"Longitude: {lon}, Latitude: {lat}")
+
+    def process_daily_data(self, gdf):
         """Process daily data geometries.
 
         Parameters
         ----------
         gdf : geopandas.geodataframe.GeoDataFrame
             A firedpy geodataframe of burn events.
-        output_csv_path : str
-            The output CSV path.
-        daily_shape_path : str
-            The output Shapefile path.
-        daily_gpkg_path : str
-            The output GeoPackage path.
 
         Returns
         -------
@@ -1161,14 +1118,6 @@ class ModelBuilder(Base):
 
         print("Converting polygons to multipolygons...")
         gdfd["geometry"] = gdfd["geometry"].apply(self._as_multi_polygon)
-
-        # make sure the output directory exists
-        self.save_data(
-            gdfd,
-            daily_shape_path,
-            daily_gpkg_path,
-            output_csv_path
-        )
 
         dropcols = ["did", "pixels", "event_day", "dy_ar_km2"]
         gdf = gdfd.drop(dropcols, axis=1)
@@ -1210,13 +1159,35 @@ class ModelBuilder(Base):
 
         return edf
 
-    def save_event_data(
-            self,
-            gdf,
-            output_csv_path,
-            event_shape_path,
-            event_gpkg_path,
-            full_csv
+    def process_geometry(self, gdf):
+        """Process event geometries.
+
+        Parameters
+        ----------
+        gdf : geopandas.geodataframe.GeoDataFrame
+            A firedpy geodataframe of burn events.
+
+        Returns
+        -------
+        geopandas.geodataframe.GeoDataFrame : The geodataframe with processed
+            geometries.
+        """
+        print("Creating buffer...")
+        geometry = gdf.buffer(1 + (self._res / 2))
+        gdf["geometry"] = geometry
+        gdf["geometry"] = gdf.envelope
+        return gdf
+
+    def save_data(
+        self,
+        gdf,
+        project_name,
+        project_directory,
+        start_year,
+        end_year,
+        daily,
+        shape_type,
+        full_csv
     ):
         """Save event data to various output formats.
 
@@ -1224,26 +1195,53 @@ class ModelBuilder(Base):
         ----------
         gdf : geopandas.geodataframe.GeoDataFrame
             A fully processed firedpy event data frame.
-        output_csv_path : str | pathlib.PosixPath
-            Target file path for the output CSV table.
-        event_shape_path : str | pathlib.PosixPath
-            Target file path for the output ESRI Shapefile. Defaults to None.
-            One of `event_shape_path` or `event_gpkg_path` must be written.
-        event_gpkg_path : str | pathlib.PosixPath
-            Target file path for the output Geopackage. If None
-            no file will be written. Defaults to None. One of
-            `event_shape_path` or `event_gpkg_path` must be written.
+        project_name : str | NoneType
+            A name used to identify the output files of this project.
+        project_directory : str
+            Project output directory path.
+        start_year : int
+            The first year of fire events.
+        end_year : int
+            The last year of fire events.
+        daily : boolean
+            Create the daily polygons or just the event-level perimeter for
+            the analysis area. If this flag is set, the daily and event
+            polygons will be created, otherwise only the event level.
+        shape_type : str
+            Build shapefiles from the event data frame. Specify either "shp",
+            "gpkg", or both. Shapefiles of both daily progression and overall
+            event perimeters will be written to the 'outputs/shapefiles'
+            folder of the chosen project directory. These will be saved in the
+            specified geopackage format (.gpkg), ERSI Shapefile format (.shp),
+            or save them in both formats using the file basename of the fire
+            event data frame (e.g. 'modis_events_daily.gpkg' and
+            'modis_events.gpkg').
         full_csv : bool
             Write all attributes from input geodataframe to a CSV. Defaults to
             False and includes only a subset of attributes: "x", "y", "id",
             "ig_date", and "last_date".
         """
-        output_csv_path = str(output_csv_path)
-        if event_shape_path:
-            event_shape_path = str(event_shape_path)
-        if event_gpkg_path:
-            event_gpkg_path = str(event_gpkg_path)
-        event_csv = output_csv_path[:-4] + "_events" + ".csv"
+        out_paths = self.get_output_paths(
+            gdf=gdf,
+            project_name=project_name,
+            project_directory=project_directory,
+            start_year=start_year,
+            end_year=end_year,
+            daily=daily,
+            shape_type=shape_type
+        )
+
+        event_csv = out_paths["event_csv"]
+        csv_path = out_paths["csv_path"]
+        gpkg_path = out_paths["gpkg_path"]
+        shape_path = out_paths["shape_path"]
+
+        # Process event data
+        if daily:
+            gdf = self.process_daily_data(gdf=gdf)
+        else:
+            gdf = self.process_event_data(gdf)
+
         logger.info(f"Writing CSV file to {event_csv}")
         if full_csv:
             df = gdf.copy()
@@ -1253,15 +1251,6 @@ class ModelBuilder(Base):
             to_raw_csv = gdf[["x", "y", "id", "ig_date", "last_date"]]
             to_raw_csv.to_csv(event_csv, index=False)
 
-        self.save_data(gdf, event_shape_path, event_gpkg_path, csv_path=None)
-
-    @staticmethod
-    def save_data(
-        gdf: gpd.GeoDataFrame,
-        shape_path: str = None,
-        gpkg_path: str = None,
-        csv_path: str = None
-    ):
         if csv_path:
             gdf.to_csv(csv_path, index=False)
 
@@ -1273,57 +1262,12 @@ class ModelBuilder(Base):
         if shape_path:
             print(f"Writing geodataframe to {shape_path}")
             logger.info(f"Writing geodataframe file to {shape_path}")
-            if 'date' in gdf.columns:
-                gdf['date'] = [str(d) for d in gdf['date']]
-            gdf['ig_date'] = [str(d) for d in gdf['ig_date']]
-            gdf['last_date'] = [str(d) for d in gdf['last_date']]
-            gdf['mx_grw_dte'] = [str(d) for d in gdf['mx_grw_dte']]
+            if "date" in gdf.columns:
+                gdf["date"] = [str(d) for d in gdf["date"]]
+            gdf["ig_date"] = [str(d) for d in gdf["ig_date"]]
+            gdf["last_date"] = [str(d) for d in gdf["last_date"]]
+            gdf["mx_grw_dte"] = [str(d) for d in gdf["mx_grw_dte"]]
 
             gdf.to_file(shape_path)
+
             print(f"Saving file to {shape_path}")
-
-    def add_kg_attributes(self, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-        """Assign Köppen-Geiger climate zones to events with a raster file.
-
-        Args:
-            gdf: GeoDataFrame containing 'x', 'y', and 'id'.
-            tif_path: File path to a Köppen-Geiger .tif raster.
-
-        Returns:
-            GeoDataFrame with kg_zone, kg_mode, and kg_desc columns added.
-        """
-        tif_path = DATA_DIR.joinpath(
-            'koppen_geiger_tif', '1991_2020', 'koppen_geiger_0p00833333.tif'
-        )
-
-        KG_LEGEND = {
-            1: "Af", 2: "Am", 3: "Aw", 4: "BWh", 5: "BWk", 6: "BSh", 7: "BSk",
-            8: "Csa", 9: "Csb", 10: "Csc", 11: "Cwa", 12: "Cwb", 13: "Cwc",
-            14: "Cfa", 15: "Cfb", 16: "Cfc", 17: "Dsa", 18: "Dsb", 19: "Dsc",
-            20: "Dsd", 21: "Dwa", 22: "Dwb", 23: "Dwc", 24: "Dwd", 25: "Dfa",
-            26: "Dfb", 27: "Dfc", 28: "Dfd", 29: "ET", 30: "EF",
-        }
-
-        sgdf = gdf.copy()
-
-        with rasterio.open(tif_path) as src:
-            # Project GeoDataFrame to match raster CRS
-            if sgdf.crs != src.crs:
-                print(f"Reprojecting from {sgdf.crs} to {src.crs}")
-                sgdf = sgdf.to_crs(src.crs)
-
-            # Extract centroid coordinates from geometry (handles points,
-            # polygons, multipolygons)
-            coords = [
-                (geom.centroid.x, geom.centroid.y) for geom in sgdf.geometry
-            ]
-
-            sampled_vals = list(src.sample(coords))
-            sgdf['kg_zone'] = [
-                v[0] if v[0] != src.nodata else np.nan for v in sampled_vals
-            ]
-
-        sgdf['kg_mode'] = sgdf.groupby('id')['kg_zone'].transform(self._mode)
-        sgdf['kg_desc'] = sgdf['kg_mode'].map(KG_LEGEND)
-
-        return sgdf
