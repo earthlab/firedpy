@@ -2,7 +2,7 @@ import os
 import subprocess as sp
 import sys
 
-from bin.firedpy import cleanup_intermediate_files
+from firedpy.run import fired, cleanup_intermediate_files
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(__file__))
 

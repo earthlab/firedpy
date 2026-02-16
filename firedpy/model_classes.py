@@ -926,6 +926,18 @@ class ModelBuilder(Base):
             return match_year, match_day
         return None
 
+    @property
+    def files(self):
+        """Return list of files for given tiles and years."""
+        files = [self._generate_local_nc_path(t) for t in self.tiles]
+        files = sorted(files)
+        if not files:
+            raise FileNotFoundError(
+                f"Could not find any netcdf files in {self._nc_dir} for "
+                f"tiles: {self.tiles}"
+            )
+        return files
+
     def get_output_paths(self, project_name, project_directory,
                          start_year, end_year, shape_type):
         """Get dictionary of all output paths for a firedpy run.
@@ -1287,15 +1299,3 @@ class ModelBuilder(Base):
             logger.info(f"Writing daily CSV file to {dst}")
             df = edf[["x", "y", "id", "ig_date", "last_date"]]
             df.to_csv(dst, index=False)
-
-    @property
-    def files(self):
-        """Return list of files for given tiles and years."""
-        files = [self._generate_local_nc_path(t) for t in self.tiles]
-        files = sorted(files)
-        if not files:
-            raise FileNotFoundError(
-                f"Could not find any netcdf files in {self._nc_dir} for "
-                f"tiles: {self.tiles}"
-            )
-        return files

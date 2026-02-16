@@ -148,13 +148,13 @@ CLI_HELP = {
     "spatial_param": (
         """
         Spatial Parameter. The number of cells (~463 m resolution) to search
-        for neighboring burn detections. Defaults to 8 cells in all directions.
+        for neighboring burn detections.
         """
     ),
     "temporal_param": (
         """
         Temporal Parameter. The number of days to search for neighboring burn
-        detections. Defaults to 3 days between events.
+        detections.
         """
     ),
     "tile_name": (  #<--------------------------------------------------------- This doesn't make sense

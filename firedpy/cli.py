@@ -7,7 +7,6 @@ https://gist.github.com/jzbruno/d167d256f6c426e2b6fdf2dbfc1ba3c9
 
 """
 import click
-import os
 import re
 
 from click.core import ParameterSource

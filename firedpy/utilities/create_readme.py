@@ -153,7 +153,7 @@ def make_read_me(gdf, project_directory, tiles, spatial_param,
         formatted_lines.append(formatted_line)
 
     # Write to a README in the outputs directory
-    fname = f"{run_name.upper()}_README.txt"
+    fname = f"{run_name.lower()}_readme.txt"
     fpath = output_directory.joinpath(fname)
     with open(fpath, "w") as summary:
         for line in formatted_lines:

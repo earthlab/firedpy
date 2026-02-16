@@ -79,7 +79,7 @@ def fired(
         The last year of fire events. Defaults to 2025.
     spatial_param : int
         The number of cells (~463 m resolution) to search for neighboring burn
-        detections. Defaults to 5 cells in all directions.
+        detections.
     temporal_param : int
         The number of days to search for neighboring burn detections.
     daily : boolean
@@ -306,22 +306,3 @@ if __name__ == "__main__":
     land_cover_type = 1  # International Geosphere-Biosphere Programme (IGBP) scheme
     cleanup = False
     interactive = False
-
-    # fired(
-    #     project_directory = '/home/travis/scratch/firedpy/test2',
-    #     project_name = 'the_run_that_works',
-    #     country = None,
-    #     tiles = ['h08v04', 'h09v04'],
-    #     shape_file = None,
-    #     start_year = 2000,
-    #     end_year = 2002,
-    #     spatial_param = 8,  # pixels (nominally ~3,704 m but varies by location)
-    #     temporal_param = 3,  # days
-    #     daily = True,
-    #     shape_type = 'gpkg',  # GeoPackage
-    #     eco_region_level = 3,  # Level III - Most Detailed
-    #     eco_region_type = 'na',  # North American Ecoregions (Omernick, 1987)
-    #     land_cover_type = 3,  # MODIS-derived Leaf Area Index (LAI/fPAR) scheme
-    #     full_csv = True,
-    #     n_cores = 1
-    # )
