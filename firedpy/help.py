@@ -113,7 +113,7 @@ CLI_HELP = {
     "n_cores": (
         """
         N Cores. Number of cores to use for parallel processing. A value of 0
-        will use all available cores.
+        or None will use all available cores.
         """
     ),
     "project_directory": (

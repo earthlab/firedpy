@@ -429,8 +429,7 @@ class EventGrid(Base):
 
         time_index_buffer = max(1, self.temporal_param // 30)
 
-        for pair in tqdm(available_pairs, position=progress_position,
-                         file=sys.stdout, desc=progress_description):
+        for pair in available_pairs:
             y, x = pair
 
             top, bottom, left, right, center, origin, is_edge = \
@@ -550,10 +549,10 @@ class ModelBuilder(Base):
             temporal_param: int = 11,
             start_year: int = 2020,
             end_year: int = 2025,
-            n_cores: int = os.cpu_count() - 1
+            n_cores: int = 0
     ):
         """Methods for classifying fire events.`"""
-        super().__init__(project_directory)
+        super().__init__(project_directory, n_cores)
         self.tiles = tiles
         self.spatial_param = spatial_param
         self.temporal_param = temporal_param
@@ -561,7 +560,6 @@ class ModelBuilder(Base):
         self.end_year = end_year
         self._lc_mosaic_re = r'lc_mosaic_(?P<land_cover_type>\d{1})_\
             (?P<year>\d{4})\.tif$'
-
 
         # Use the first file to get some geometry data for later
         with xr.open_dataset(self.files[0]) as data_set:
@@ -573,10 +571,6 @@ class ModelBuilder(Base):
             self._coordinates = {
                 dim: np.array(data_set.coords[dim].values) for dim in dims
             }
-
-        if n_cores == 0:
-            n_cores = os.cpu_count() - 1
-        self._n_cores = n_cores
 
     def add_fire_attributes(self, gdf):
         """Add fired attributes to an event geodataframe.
@@ -794,41 +788,37 @@ class ModelBuilder(Base):
 
     def classify_events(self):
         """Classify wildfire events perimeters by tile and merge together."""
-        # Initialize the event container
+
         print("Building fire event perimeters.")
+
+        # Collect perimeter processing arguments
+        perim_kwargs = []
+        for i, nc_file_path in enumerate(self.files):
+            kwargs = dict(
+                nc_file_path=nc_file_path,
+                project_directory=self.project_directory,
+                spatial_param=self.spatial_param,
+                temporal_param=self.temporal_param,
+                start_year=self.start_year,
+                end_year=self.end_year,
+                i=i
+            )
+            perim_kwargs.append(kwargs)
+
+        # Build & Collect fire event perimeters
         fire_events = []
-        if self._n_cores == 1:
+        if self.n_cores == 1:
+
             # Run serially
-            for i, nc_file_path in enumerate(self.files):
-                out = process_file_perimeter(
-                    nc_file_path=nc_file_path,
-                    project_directory=self.project_directory,
-                    spatial_param=self.spatial_param,
-                    temporal_param=self.temporal_param,
-                    start_year=self.start_year,
-                    end_year=self.end_year,
-                    i=i
-                )
+            for kwargs in tqdm(perim_kwargs):
+                out = process_file_perimeter(**kwargs)
                 fire_events.extend(out)
         else:
             # Run in parallel
-            with ProcessPoolExecutor(self._n_cores) as pool:
+            with ProcessPoolExecutor(self.n_cores) as pool:
                 jobs = []
-                for i, nc_file_path in enumerate(self.files):
-                    project_directory = self.project_directory
-                    temp_param = self.temporal_param
-                    space_param = self.spatial_param
-                    job = pool.submit(
-                        process_file_perimeter,
-                        nc_file_path,
-                        project_directory,
-                        temp_param,
-                        space_param,
-                        self.start_year,
-                        self.end_year,
-                        i
-                    )
-                    jobs.append(job)
+                for kwargs in perim_kwargs:
+                    jobs.append(pool.submit(process_file_perimeter, **kwargs))
                 for job in tqdm(as_completed(jobs), total=len(jobs)):
                     fire_events.extend(job.result())
 
@@ -1255,7 +1245,7 @@ class ModelBuilder(Base):
                 print(msg)
                 logger.info(msg)
                 sdf = self.adjust_for_esri(ddf)
-                sdf.to_file(dst, driver="GPKG")
+                sdf.to_file(dst)
 
             # CSVs
             dst = paths["daily_csv_path"]

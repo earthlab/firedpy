@@ -28,6 +28,7 @@ def init_logger(project_directory, log_level="INFO"):
     log_level : str
         Level of logging detail to write to the log file.
     """
+    # Setup firedpy logging
     filename = Path(project_directory).joinpath("logs/firedpy.log").absolute()
     filename = filename.expanduser()
     filename.parent.mkdir(exist_ok=True, parents=True)
@@ -38,3 +39,6 @@ def init_logger(project_directory, log_level="INFO"):
         level=LOG_LEVELS[log_level],
         encoding="utf-8"
     )
+
+    # Control third party logging
+    logging.getLogger("earthaccess").setLevel(logging.WARNING)

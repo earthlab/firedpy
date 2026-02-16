@@ -46,7 +46,7 @@ METHODOLOGICAL INFORMATION
 See Balch et al 2020 for complete methods. DOI: https://doi.org/10.3390/rs12213498
 
 --------------------------------------------------------------------
-DATA-SPECIFIC INFORMATION FOR: {event_table}
+DATA INFORMATION:
 --------------------------------------------------------------------
 
 1. Number of variables: 24

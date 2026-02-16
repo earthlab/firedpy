@@ -46,7 +46,7 @@ def clean_params(params):
     """
     clean_params = {}
     for key, value in params.items():
-        # We had to use "None" instead of None for default value acceptance
+        # We have to use "None" instead of None for default value acceptance
         if value == "None":
             value = None
 
@@ -59,10 +59,6 @@ def clean_params(params):
         if key == "project_name" and value is None:
             proj_dir = Path(params["project_directory"])
             value = proj_dir.absolute().expanduser().name
-
-        # Translate core count
-        if key == "n_cores" and value == 0:
-            params["n_cores"] = os.cpu_count()
 
         clean_params[key] = value
 
@@ -172,10 +168,10 @@ def _prompts(ctx, _, interactive):
                 value = click.prompt(prompt, default=default)
                 if key == "project_directory" and value == ".":
                     value = Path(value).absolute().expanduser()
-                if key == "n_cores" and value == 0:
-                    value = os.cpu_count()
+
                 click.echo(f"    {key}={value}")
                 ctx.params[key] = value
+
         click.echo("")
 
     return interactive
@@ -197,7 +193,7 @@ def _prompts(ctx, _, interactive):
     help=CLI_HELP["interactive"]
 )
 @click.option(
-    "-pn", "--project_name",
+    "-n", "--project_name",
     default="None",
     is_eager=True,
     help=CLI_HELP["project_name"]
@@ -281,7 +277,7 @@ def _prompts(ctx, _, interactive):
     help=CLI_HELP["full_csv"]
 )
 @click.option(
-    "-n", "--n_cores",
+    "-nc", "--n_cores",
     default=0,
     is_eager=True,
     help=CLI_HELP["n_cores"]

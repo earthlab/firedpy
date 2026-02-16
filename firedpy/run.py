@@ -14,6 +14,9 @@ from firedpy.utilities.logging import init_logger
 
 logger = getLogger(__name__)
 
+# People want this check mark, saving it here to move into place later
+# CHECKMARK = ✅
+
 
 def cleanup_intermediate_files(project_directory):
     """Remove temporary `burn_area` and `land_cover` raster files.
@@ -133,8 +136,8 @@ def fired(
         event date, and event id will be exported to a CSV. Defaults to
         True.
     n_cores : int
-        Number of cores to use for parallel processing. Defaults to 0
-        or all available cores.
+        Number of cores to use for parallel processing. A value of 0 or None
+        will use all available cores. Defaults to 0.
     cleanup : bool
         Cleanup. If set then the burn area and landcover files will be removed
         after each run to save disk space in between multiple runs. Defaults
@@ -285,23 +288,24 @@ def fired(
 
 
 if __name__ == "__main__":
-    project_directory = '/home/travis/scratch/firedpy/usa'
-    project_name = 'usa'
-    interactive = True
-    country = "United States of America"
-    tiles = None
+    tiles = 'h08v04 h09v04'
+    daily = True
+    full_csv = True
+    project_directory = '/home/travis/scratch/firedpy/par_events'
+    project_name = 'par_events'
+    n_cores = 1
+    start_year = 2023
+    country = None
     shape_file = None
-    start_year = 2020
     end_year = 2025
     spatial_param = 8  # pixels (nominally ~3,704 m but varies by location)
     temporal_param = 3  # days
-    daily = True
     shape_type = 'gpkg'  # GeoPackage
-    eco_region_level = 3  # Level III - Most Detailed
+    eco_region_level = 1  # Level I - Least Detailed
     eco_region_type = 'na'  # North American Ecoregions (Omernick, 1987)
-    land_cover_type = 3  # MODIS-derived Leaf Area Index (LAI/fPAR) scheme
-    full_csv = True
-    n_cores = 1
+    land_cover_type = 1  # International Geosphere-Biosphere Programme (IGBP) scheme
+    cleanup = False
+    interactive = False
 
     # fired(
     #     project_directory = '/home/travis/scratch/firedpy/test2',

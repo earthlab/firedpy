@@ -126,17 +126,17 @@ def make_read_me(gdf, project_directory, tiles, spatial_param,
 
     # Define replacement parameters
     parameters = {
-        "{tile_string}": tile_string,
-        "{modis_date1}": modis_date1,
-        "{modis_date2}": modis_date2,
-        "{spatial_param}": spatial_param,
-        "{temporal_param}": temporal_param,
-        "{run_name}": run_name,
         "{event_date1}": event_date1,
         "{event_date2}": event_date2,
-        "{runtime}": f"{runtime:.2f}",
+        "{modis_date1}": modis_date1,
+        "{modis_date2}": modis_date2,
+        "{n_cores}": n_cores,
         "{peak_memory}": peak_memory,
-        "{n_cores}": n_cores
+        "{run_name}": run_name,
+        "{runtime}": f"{runtime:.2f}",
+        "{spatial_param}": spatial_param,
+        "{temporal_param}": temporal_param,
+        "{tile_string}": tile_string,
     }
 
     # Read in the template

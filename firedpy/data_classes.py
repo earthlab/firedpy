@@ -6,11 +6,12 @@ import shutil
 import sys
 import urllib
 
+from concurrent.futures import as_completed, ThreadPoolExecutor
 from datetime import datetime
 from glob import glob
 from http.cookiejar import CookieJar
 from multiprocessing import Pool
-from pathlib import Path
+from pathlib import Path, PosixPath
 from typing import List, Tuple, Dict
 
 import earthaccess
@@ -29,7 +30,7 @@ from tqdm import tqdm
 
 from firedpy import DATA_DIR
 from firedpy.enums import EcoRegionType, LandCoverType
-from firedpy.modis_earthaccess import setup_modis_earthaccess
+from firedpy.modis_earthaccess import MODISEarthAccess
 from firedpy.utilities.spatial import (
     country_to_tiles,
     hdf4_to_geotiff,
@@ -56,7 +57,7 @@ ATTR_DESCS = {
 }
 
 
-class Base:
+class Base(MODISEarthAccess):
     """Base firedpy methods."""
 
     MODIS_CRS = ("+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a=6371007.181 "
@@ -67,7 +68,7 @@ class Base:
                      "h13v04", "h08v05", "h09v05", "h10v05", "h11v05",
                      "h12v05", "h08v06", "h09v06", "h10v06", "h11v06"]
 
-    def __init__(self, project_directory):
+    def __init__(self, project_directory, n_cores=0):
         """Initialize Base Firedpy object.
 
         Parameters
@@ -75,6 +76,15 @@ class Base:
         project_directory : str | pathlib.PosixPath
             Target firedpy file output directory.
         """
+        super().__init__()
+
+        # Set number of cpu cores
+        n_cores = int(n_cores)
+        if n_cores is not None and n_cores != 0:
+            self.n_cores = n_cores
+        else:
+            self.n_cores = os.cpu_count()
+
         # Set up output directory paths
         project_directory = os.path.expanduser(project_directory)
         os.makedirs(project_directory, exist_ok=True)
@@ -118,6 +128,13 @@ class Base:
         # Initialize output directory folders and files
         self._initialize_save_dirs()
         self._get_shape_files()
+
+    def _authenticate(self):
+        # This will use a config file or a prompt if one isn't available
+        auth = earthaccess.login(strategy="all")
+        if not auth:
+            raise RuntimeError("EarthAccess authentication failed")
+        return auth
 
     def _copy_cec_file(self):
         src = DATA_DIR.joinpath("ec_eco", "NA_CEC_Eco_Level3.gpkg")
@@ -230,39 +247,18 @@ class Base:
 class LPDAAC(Base):
     """Land Processes Distributed Active Archive Center access methods."""
 
-    def __init__(self, project_directory, username=None, password=None):
+    def __init__(self, project_directory, n_cores=0):
         """Initiate an LPDAAC object.
 
         Parameters
         ----------
         project_directory : str
             Path to firedpy project directory.
-        username : str
-            Earth Access username. Defaults to user prompt, Optional.
-        password : str
-            Earth Access password. Defaults to user prompt, Optional.
         """
-        super().__init__(project_directory)
+        super().__init__(project_directory, n_cores)
         self._lp_daac_url = None
         self._date_regex = r"(?P<year>\d{4})\.(?P<month>\d{2})\.\
             (?P<day>\d{2})\/"
-        self._parallel_cores = None
-        self._username = username
-        self._password = password
-
-        # Setup EarthAccess for modern data access
-        self._earthaccess = None
-        if hasattr(self, "_username") and hasattr(self, "_password"):
-            try:
-                self._earthaccess = setup_modis_earthaccess(
-                    username=self._username,
-                    password=self._password
-                )
-            except Exception as e:
-                print(
-                    "EarthAccess setup failed, falling back to legacy "
-                    f"access: {e}"
-                )
 
     def __repr__(self):
         """Return representation string for LPDAAC object."""
@@ -280,7 +276,7 @@ class LPDAAC(Base):
 
     def _download_files(self, download_requests):
         try:
-            with Pool(self._parallel_cores - 1) as pool:
+            with Pool(self.n_cores - 1) as pool:
                 mapper = pool.imap_unordered(
                     self._download_task,
                     download_requests
@@ -307,9 +303,9 @@ class LPDAAC(Base):
             return
 
         # Try EarthAccess first if available
-        if hasattr(self, "_earthaccess") and self._earthaccess is not None:
+        if self._earthaccess.authenticated:
             try:
-                success = self._earthaccess.download_file(link, dest)
+                success = self.download_file(link, dest)
                 if success:
                     return
                 else:
@@ -419,7 +415,7 @@ class LPDAAC(Base):
 class BurnData(LPDAAC):
     """Methods for handling MODIS Burn data."""
 
-    def __init__(self, project_directory, n_cores=None):
+    def __init__(self, project_directory, n_cores=0):
         """Initialize BurnData object.
 
         Parameters
@@ -427,11 +423,11 @@ class BurnData(LPDAAC):
         project_directory : str | pathlib.PosixPath
             Target file output directory
         n_cores : int
-            Number of CPU cores to use in multiprocessing. Defaults to None, or
-            all cores.
+            Number of CPU cores to use in multiprocessing. A value of 0 or
+            None will use all available cores. Defaults to 0.
         """
         # Set these here, the LPDAAC will prompt if these aren't set yet
-        super().__init__(project_directory=project_directory)
+        super().__init__(project_directory=project_directory, n_cores=n_cores)
 
         self._lp_daac_url = "https://e4ftl01.cr.usgs.gov/MOTA/MCD64A1.061/"
         self._base_sftp_folder = os.path.join(
@@ -441,8 +437,6 @@ class BurnData(LPDAAC):
             project_directory, "rasters", "mosaic_template.tif"
         )
         self._record_start_year = 2000
-        ncpus = os.cpu_count()
-        self._parallel_cores = n_cores if n_cores is not None else ncpus - 1
 
     def __repr__(self):
         """Return representation string for BurnData object."""
@@ -454,9 +448,28 @@ class BurnData(LPDAAC):
             if not key.startswith("_"):  # Avoid secrets/private attributes
                 attrs[key] = attr
         address = hex(id(self))
-        msgs = [f"\n   {k}='{v}'" for k, v in attrs.items()]
+        msgs = []
+        for key, value in attrs.items():
+            if isinstance(value, (str, PosixPath)):
+                msgs.append(f"\n   {key}='{value}'")
+            else:
+                msgs.append(f"\n   {key}={value}")
         msg = " ".join(msgs)
         return f"<{name} object at {address}> {msg}"
+
+    def download_burn_data(self, tile, granules, download_dir):
+        """Download a single tile's granules to a download diretory."""
+        os.makedirs(download_dir, exist_ok=True)
+        print(f"Downloading to {tile} data to {download_dir}")
+        try:
+            downloaded_files = earthaccess.download(
+                granules,
+                download_dir
+            )
+            print(f"Downloaded {tile} data ({len(downloaded_files)} files)")
+
+        except Exception as e:
+            print(f"Download failed for tile {tile}: {e}")
 
     def _create_requests(self, available_year_paths, tiles):
         """Create a list of requests for each target year.
@@ -561,48 +574,62 @@ class BurnData(LPDAAC):
         end_year : int
             The last year of fire events. Defaults to 2025.
         """
-        start_date = f'{start_year}-01-01'
-        end_date = f'{end_year}-12-31'
+        start_date = f"{start_year}-01-01"
+        end_date = f"{end_year}-12-31"
         print(f"Getting burn data using EarthAccess for tiles: {tiles}")
         print(f"📅 Date range: {start_date} to {end_date}")
-
-        auth = earthaccess.login(strategy="all")
-        if not auth:
-            raise RuntimeError("EarthAccess authentication failed")
-        else:
-            print("EarthAccess authentication successful.")
 
         try:
             # Search for granules
             print(f"Searching for MCD64A1 granules: {start_date} - {end_date}")
             granule_dict = self._get_granules(tiles, country, shape_file,
                                               start_date, end_date)
+            tiles = list(granule_dict)
 
-            # Filter for our specific tiles and download by tile
+            # Collect each tile granules and download directory
+            tile_granules = {}
+            download_dirs = {}
             for tile, granules in granule_dict.items():
                 print(f"Processing tile: {tile}")
 
                 # Check if any granules were found
                 n_granules = len(granules)
-                print(f"   Found {n_granules} granules for tile {tile}")
+                print(f"Found {n_granules} granules for tile {tile}")
                 if not granules:
-                    print(f"   No data found for tile {tile}")
+                    print(f"No data found for tile {tile}")
                     continue
 
-                # Download granules for this tile
-                tile_download_dir = self.hdf_dir.joinpath(tile)
-                os.makedirs(tile_download_dir, exist_ok=True)
-                print(f"   Downloading to: {tile_download_dir}")
-                try:
-                    downloaded_files = earthaccess.download(
+                # Collect results
+                download_dir = self.hdf_dir.joinpath(tile)
+                download_dirs[tile] = download_dir
+                tile_granules[tile] = granules
+
+            # Download granules (3 Core limit with Earthdata)
+            n_cores = min(3, self.n_cores)
+            if n_cores > 1:
+                with ThreadPoolExecutor(n_cores) as pool:
+                    jobs = []
+                    for tile in tiles:
+                        download_dir = download_dirs[tile]
+                        granules = tile_granules[tile]
+                        job = pool.submit(
+                            self.download_burn_data,
+                            tile,
+                            granules,
+                            download_dir
+                        )
+                        jobs.append(job)
+                    for job in as_completed(jobs):
+                        job.result()
+            else:
+                for tile in tiles:
+                    download_dir = download_dirs[tile]
+                    granules = tile_granules[tile]
+                    self.download_burn_data(
+                        tile,
                         granules,
-                        tile_download_dir
+                        download_dir
                     )
-                    print(f"   Downloaded {len(downloaded_files)} files")
-
-                except Exception as e:
-                    print(f"   Download failed for tile {tile}: {e}")
-                    continue
 
             print("EarthAccess burn data download completed!")
 
@@ -615,9 +642,8 @@ class BurnData(LPDAAC):
             )
 
         # Convert to NetCDF
-        tiles = list(granule_dict)
         self._write_ncs(tiles)
-        print(f"   Created NetCDF for tile {tiles}")
+        print(f"Created NetCDF for tile(s) {tiles}")
 
         return tiles
 
@@ -638,16 +664,33 @@ class BurnData(LPDAAC):
         # Let's see if using points is quicker
         points = tiles_to_points(tiles)
 
-        # Method two
+        # We can use up to three cores as per Earthdata rules
+        n_cores = min(3, self.n_cores)
         granules = {}
-        for tile, point in tqdm(points.items(), total=len(tiles)):
-            granule = earthaccess.search_data(
-                short_name="MCD64A1",
-                version="061",
-                temporal=(start_date, end_date),
-                point=point
-            )
-            granules[tile] = granule
+        if n_cores > 1:
+            with ThreadPoolExecutor(n_cores) as pool:
+                jobs = {}
+                for tile, point in points.items():
+                    job = pool.submit(
+                        earthaccess.search_data,
+                        short_name="MCD64A1",
+                        version="061",
+                        temporal=(start_date, end_date),
+                        point=point
+                    )
+                    jobs[tile] = job
+                for tile, job in tqdm(jobs.items(), total=len(jobs)):
+                    granule = job.result()
+                    granules[tile] = granule
+        else:
+            for tile, point in tqdm(points.items(), total=len(points)):
+                granule = earthaccess.search_data(
+                    short_name="MCD64A1",
+                    version="061",
+                    temporal=(start_date, end_date),
+                    point=point
+                )
+                granules[tile] = granule
 
         return granules
 
@@ -712,13 +755,13 @@ class BurnData(LPDAAC):
         """
         # Build the netcdfs here
         fill_value = -9999  # Default fill value in original file is -1
-        for tile in tiles:
+        print(f"Building netcdf files for tiles {tiles}")
+        for tile in tqdm(tiles):
 
             # Build/find file paths needed for this operation
             nc_file_path = self._generate_local_nc_path(tile)
             hdf_dir = self.hdf_dir.joinpath(tile)
             if nc_file_path.exists():
-                print(f"{tile} netCDF file exists, skipping...")
                 continue
             paths = []
             for path in list(hdf_dir.glob("*.hdf")):
@@ -727,11 +770,12 @@ class BurnData(LPDAAC):
             files = sorted(paths, key=self._extract_date_parts)
 
             if not files:
-                raise OSError(f"No HDF4 files for tile {tile} in {hdf_dir}")
+                msg = f"No HDF4 files for tile {tile} in {hdf_dir}"
+                logger.error(msg)
+                raise OSError(msg)
 
             try:
                 # Use a sample to get geography information and geometries
-                print(f"Building netcdf for tile {tile}")
                 sample = files[0]
                 ds = gdal.Open(sample).GetSubDatasets()[0][0]
                 hdf = gdal.Open(ds)
@@ -829,8 +873,7 @@ class BurnData(LPDAAC):
                 times[:] = days
 
                 # One file a time, write the arrays
-                for tile_index, f in tqdm(enumerate(files), total=len(files),
-                                          position=0):
+                for tile_index, f in enumerate(files):
                     match = re.match(self._file_regex, os.path.basename(f))
                     if match is None:
                         continue
@@ -841,7 +884,9 @@ class BurnData(LPDAAC):
                         ds = gdal.Open(f).GetSubDatasets()[0][0]
                         hdf = gdal.Open(ds)
                     except Exception as e:
-                        print(f"Could not open {f} for building ncdf: {e}")
+                        logger.error(
+                            f"Could not open {f} for building ncdf: {e}"
+                        )
                         variable[tile_index, :, :] = np.full(
                             (ny, nx),
                             fill_value
@@ -854,13 +899,12 @@ class BurnData(LPDAAC):
 
                     year = int(regex_group_dict["year"])
                     array = self._convert_dates(array, year)
-
                     array[nulls] = fill_value
 
                     if array.shape == (ny, nx):
                         variable[tile_index, :, :] = array
                     else:
-                        print(
+                        logger.warning(
                             f"{f}: failed, had wrong dimensions, "
                             "inserting a blank array in its place."
                         )
@@ -874,7 +918,7 @@ class BurnData(LPDAAC):
 
             except Exception as e:
                 # Log the error and move on to the next tile
-                # logger.error(f"Error processing tile {tile}: {str(e)}")
+                logger.error(f"Error processing tile {tile}: {str(e)}")
                 raise OSError(f"Error processing tile {tile}: {str(e)}")
 
 
@@ -888,18 +932,9 @@ class LandCover(Base):
     def __init__(
             self,
             project_directory,
-            n_cores=None,
-            username=None,
-            password=None
+            n_cores=0
     ):
-        super().__init__(project_directory)
-        self._parallel_cores = n_cores if n_cores else os.cpu_count() - 1
-        self._username = username
-        self._password = password
-
-        # Setup EarthAccess authentication
-        self._earthaccess_authenticated = False
-        self._setup_earthaccess()
+        super().__init__(project_directory, n_cores)
 
         # Smart mapping in cases when land cover tiles differ from burn tiles
         self._tile_mapping = {
@@ -954,6 +989,13 @@ class LandCover(Base):
         if gdf.shape[0] == 0:
             print("No fire events found, not adding land cover attributes")
             return gdf
+
+        # This will use a config file or a prompt if one isn't available
+        auth = earthaccess.login(strategy="all")
+        if not auth:
+            raise RuntimeError("EarthAccess authentication failed")
+        else:
+            print("EarthAccess authentication successful.")
 
         # Match possible land cover type argument types
         print("Adding land cover attributes...")
@@ -1164,7 +1206,7 @@ class LandCover(Base):
             If you do not have an account register at
             https://urs.earthdata.nasa.gov/home. Defaults to 1.
         """
-        if not self._earthaccess_authenticated:
+        if not self._earthaccess.authenticated:
             print("EarthAccess not authenticated for land cover")
             return
 
@@ -1315,22 +1357,6 @@ class LandCover(Base):
 
         else:
             shutil.move(tmp_files[0], mosaic_path)
-
-    def _setup_earthaccess(self):
-        """Setup EarthAccess authentication for land cover data."""
-        try:
-            if self._username and self._password:
-                os.environ["EARTHDATA_USERNAME"] = self._username
-                os.environ["EARTHDATA_PASSWORD"] = self._password
-
-            auth = earthaccess.login()
-            if auth:
-                self._earthaccess_authenticated = True
-                print("EarthAccess authenticated for land cover")
-            else:
-                print("EarthAccess authentication failed for land cover")
-        except Exception as e:
-            print(f"EarthAccess setup failed for land cover: {e}")
 
 
 class EcoRegion(Base):
