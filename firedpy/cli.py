@@ -199,7 +199,7 @@ def _prompts(ctx, _, interactive):
 )
 @click.option(
     "-c", "--country",
-    default=None,
+    default="None",
     is_eager=True,
     help=CLI_HELP["country"]
 )
