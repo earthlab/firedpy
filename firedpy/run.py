@@ -300,9 +300,9 @@ if __name__ == "__main__":
     spatial_param = 8  # pixels (nominally ~3,704 m but varies by location)
     temporal_param = 3  # days
     shape_type = 'gpkg'  # GeoPackage
-    eco_region_level = 1  # Level I - Least Detailed
+    eco_region_level = None  # Level I - Least Detailed
     eco_region_type = 'na'  # North American Ecoregions (Omernick, 1987)
-    land_cover_type = 1  # International Geosphere-Biosphere Programme (IGBP) scheme
+    land_cover_type = None  # International Geosphere-Biosphere Programme (IGBP) scheme
     cleanup = False
 
     fired(

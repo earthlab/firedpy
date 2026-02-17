@@ -358,7 +358,18 @@ class EventGrid(Base):
         return f"<{name} object at {address}> {msg}"
 
     def build_array(self, nc_fpath):
-        """Build the array to be converted to fire events values."""
+        """Read and subset the array to be converted to fire events values.
+
+        Parameters
+        ---------
+        nc_fpath : str | pathlib.PosixPath
+            A path to a NetCDF file of MODIS burn dates with "value" as the
+            date dataset.
+
+        Returns
+        -------
+        numpy.ndarray : A numpy array.
+        """
         # Read in the netcdf data array
         with xr.open_dataset(nc_fpath) as burns:
             burns = burns.sel(time=burns.time.dt.year.isin(self.years))
@@ -479,7 +490,8 @@ class EventGrid(Base):
 
         Returns
         -------
-
+        list[firedpy.model_classes.EventPerimeter] : A list of fire event
+            perimeter objects.
         """
         available_pairs = self._get_available_cells()
         nz, ny, nx = self.input_array.shape
@@ -931,7 +943,6 @@ class ModelBuilder(Base):
     def _clip_to_shape_file(self, gdf, shape_file_path):
         shp = gpd.read_file(shape_file_path)
         shp.to_crs(gdf.crs, inplace=True)
-        shp["geometry"] = shp.geometry.buffer(100_000)  # Wide buffer to start
         clipped_gdf = gdf.clip(shp)
         return clipped_gdf
 
@@ -1258,7 +1269,8 @@ class ModelBuilder(Base):
 
         Returns
         -------
-
+        list[firedpy.model_classes.EventPerimeter] : A list of fire event
+            perimeter objects.
         """
         event_grid = EventGrid(
             nc_fpath=nc_fpath,
