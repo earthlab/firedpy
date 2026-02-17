@@ -403,7 +403,7 @@ class EventGrid(Base):
 
         # Buffer mask to ensure fires immediately outside border are captured
         # Dissolve?
-        mask["geometry"] = mask["geometry"].buffer(100_00)
+        mask["geometry"] = mask["geometry"].buffer(100_000)
 
         # Get the geometries used to burn values to the array
         shapes = ((geom, 1) for geom in mask["geometry"])
