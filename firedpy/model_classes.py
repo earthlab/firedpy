@@ -1,15 +1,13 @@
 import hashlib
 import math
-import os
 import random
 import re
-import sys
 
 from argparse import Namespace
 from concurrent.futures import as_completed, ProcessPoolExecutor
 from datetime import datetime
 from logging import getLogger
-from pathlib import Path
+from pathlib import Path, PosixPath
 from typing import List, Set, Tuple
 
 import geopandas as gpd
@@ -18,7 +16,9 @@ import rasterio
 import numpy as np
 import xarray as xr
 
-from pyproj import Proj, transform
+from pyproj import CRS, Proj, transform
+from rasterio.features import rasterize
+from rasterio.transform import from_bounds
 from scipy.spatial import cKDTree
 from shapely import Point, Polygon, MultiPolygon
 from tqdm import tqdm
@@ -76,39 +76,6 @@ def generate_path(project_directory, base_filename, shape_type):
         paths.append(path)
 
     return paths
-
-
-def process_file_perimeter(nc_file_path, project_directory, spatial_param,
-                           start_year, end_year, temporal_param, i):
-    """Process a perimeter for a given burn data file.
-
-    Parameters
-    ----------
-    nc_file_path : str
-        Path to NetCDF file containing burn data for a MODIS tile.
-    project_directory : str
-        Project output directory path. Required.
-    spatial_param : int
-        The number of cells (~463 m resolution) to search for neighboring burn
-        detections. Defaults to 5 cells in all directions.
-    temporal_param : int
-        The number of days to search for neighboring burn detections.
-    i : int
-        Progress position.
-    """
-    event_grid = EventGrid(
-        nc_file_path=nc_file_path,
-        project_directory=project_directory,
-        spatial_param=spatial_param,
-        temporal_param=temporal_param,
-        start_year=start_year,
-        end_year=end_year
-    )
-    fire_events = event_grid.get_event_perimeters(
-        i,
-        progress_description=os.path.basename(nc_file_path)
-    )
-    return fire_events
 
 
 def _merge_events_spatially_task(namespace: Namespace):
@@ -296,9 +263,11 @@ class EventGrid(Base):
             temporal_param=11,
             start_year=2020,
             end_year=2025,
+            country=None,
+            shape_file=None,
             area_unit="Unknown",
             time_unit="days since 1970-01-01",
-            nc_file_path=None,
+            nc_fpath=None,
             input_array=None,
             coordinates=None
     ):
@@ -321,12 +290,17 @@ class EventGrid(Base):
             The first year of fire events. Defaults to 2000.
         end_year : int
             The last year of fire events. Defaults to 2025.
+        country : str
+            The name of a country to use as a study area.
+        shape_file : str
+            Path to a shapefile to use for the fire study area. Defaults to
+            None.
         area_unit : str
             Area Unit. Currently unused and defaults to 'Unknown'.
         time_unit : str
             The time unit to use when parsing dates. Defaults to days since
             1970-01-01.
-        nc_file_path : str | pathlib.PosixPath
+        nc_fpath : str | pathlib.PosixPath
             Path to the input NetCDF4 file containing the original burn data.
         input_array : np.ndarray
         coordinates : dict[str, np.ndarray]
@@ -334,30 +308,114 @@ class EventGrid(Base):
         super().__init__(project_directory)
         self.spatial_param = spatial_param
         self.temporal_param = temporal_param
+        self.shape_file = shape_file
+        self.current_event_id = 0
+        self.years = list(range(start_year, end_year + 1))
+        if country:
+            self.shape_file = get_country_file(country)
+        elif shape_file:
+            self.shape_file = shape_file
+
         self._area_unit = area_unit
         self._time_unit = time_unit
-        self.current_event_id = 0
-        years = list(range(start_year, end_year + 1))
 
-        if nc_file_path:
-            with xr.open_dataset(nc_file_path) as burns:
-                burns = burns.sel(time=burns.time.dt.year.isin(years))
-                self._coordinates = {}
-                for dim in ["y", "x", "time"]:
-                    coords = np.array(burns.coords[dim].values)
-                    self._coordinates[dim] = coords
-                self._input_array = burns.value.values
+        # If a country was provided, convert to a shapefile
+        if nc_fpath:
+            self.input_array = self.build_array(nc_fpath)
 
         elif input_array is not None:
             if coordinates is None:
                 msg = "Coordinates parameter also required with input array."
                 raise ValueError(msg)
             self._coordinates = coordinates
-            self._input_array = input_array
+            self.input_array = input_array
 
         else:
             msg = "Must input either nc_file_path or input_array parameter"
             raise ValueError(msg)
+
+        del self.n_cores
+
+    def __repr__(self):
+        """Return representation string for BurnData object."""
+        name = self.__class__.__name__
+        address = hex(id(self))
+        attrs = {}
+        msgs = []
+        for key, attr in self.__dict__.items():
+            if "data_frame" in key:
+                attr = f"{type(attr)} {attr.shape}"  # Too big for preview
+            if not key.startswith("_"):  # Avoid secrets/private attributes
+                attrs[key] = attr
+            if key == "input_array":
+                attrs[key] = f"{type(attr)}: {attr.shape}"
+        for key, value in attrs.items():
+            if isinstance(value, (str, PosixPath)):
+                msgs.append(f"\n   {key}='{value}'")
+            else:
+                msgs.append(f"\n   {key}={value}")
+        msg = " ".join(msgs)
+        return f"<{name} object at {address}> {msg}"
+
+    def build_array(self, nc_fpath):
+        """Build the array to be converted to fire events values."""
+        # Read in the netcdf data array
+        with xr.open_dataset(nc_fpath) as burns:
+            burns = burns.sel(time=burns.time.dt.year.isin(self.years))
+            self._coordinates = {}
+            if self.shape_file:
+                burns = self.mask_array(burns, self.shape_file)
+            for dim in ["y", "x", "time"]:
+                coords = np.array(burns.coords[dim].values)
+                self._coordinates[dim] = coords
+        return burns.value.values
+
+    def mask_array(self, array, shape_file):
+        """Mask an xarray dataset with a shapefile.
+
+        Parameters
+        ----------
+        array : xarray.core.dataset.Dataset
+            An xarray dataset.
+        shape_file : str | pathlib.PosixPath
+            Path to a shapefile to use to mask the array with nans.
+
+        Returns
+        -------
+        xarray.core.dataset.Dataset : A masked xarray dataset.
+        """
+        # Check that the coordinate reference systems match
+        mask = gpd.read_file(shape_file)
+        target_crs = CRS(array.crs.spatial_ref).to_wkt()
+        if mask.crs != target_crs:
+            mask = mask.to_crs(target_crs)
+
+        # Buffer mask to ensure fires immediately outside border are captured
+        # Dissolve?
+        mask["geometry"] = mask["geometry"].buffer(100_00)
+
+        # Get the geometries used to burn values to the array
+        shapes = ((geom, 1) for geom in mask["geometry"])
+
+        # Get the target array geometry
+        ny, nx = array.sizes["y"], array.sizes["x"]
+        xmin, xmax = array.x.values[0], array.x.values[-1]
+        ymax, ymin = array.y.values[0], array.y.values[-1]
+        transform = from_bounds(xmin, ymin, xmax, ymax, nx, ny)
+
+        # Rasterize mask
+        mask_array = rasterize(
+            shapes=shapes,
+            out_shape=(ny, nx),
+            transform=transform,
+            fill=0,
+            all_touched=False
+        )
+
+        # mask original array
+        array["value"] *= mask_array
+
+        return array
 
     def _get_spatial_window(self, y, x, array_dims):
         """
@@ -407,22 +465,24 @@ class EventGrid(Base):
         checked in the event classification step.
         """
         # Using memory - can handle large tiles, but gets pretty high
-        locs = np.where(np.any(self._input_array > 0, axis=0))
+        locs = np.where(np.any(self.input_array > 0, axis=0))
 
         return list(zip(locs[0], locs[1]))
 
-    def get_event_perimeters(
-            self,
-            progress_position: int = 0,
-            progress_description: str = '',
-            all_t: bool = False
-    ):
-        """
-        Iterate through each cell in the 3D MODIS Burn Date tile and group it
-        into fire events using the space-time window.
+    def get_event_perimeters(self, all_t=False):
+        """Group MODIS burn detections cells into fire events.
+
+        Parameters
+        ----------
+        all_t : bool
+            All touch.
+
+        Returns
+        -------
+
         """
         available_pairs = self._get_available_cells()
-        nz, ny, nx = self._input_array.shape
+        nz, ny, nx = self.input_array.shape
         dims = [ny, nx]
         perimeters = RandomAccessSet()
         identified_points = {}
@@ -436,7 +496,7 @@ class EventGrid(Base):
                 self._get_spatial_window(y, x, dims)
 
             center_y, center_x = center
-            window = self._input_array[:, top:bottom + 1, left:right + 1]
+            window = self.input_array[:, top:bottom + 1, left:right + 1]
             center_burn = window[:, center_y, center_x]
             valid_center_burn_indices = np.where(center_burn > 0)[0]
             valid_center_burn_values = center_burn[valid_center_burn_indices]
@@ -543,17 +603,50 @@ class EventGrid(Base):
 class ModelBuilder(Base):
     def __init__(
             self,
-            project_directory: str,
-            tiles: List[str],
-            spatial_param: int = 5,
-            temporal_param: int = 11,
-            start_year: int = 2020,
-            end_year: int = 2025,
-            n_cores: int = 0
+            project_directory,
+            tiles,
+            country=None,
+            shape_file=None,
+            spatial_param=5,
+            temporal_param=11,
+            start_year=2020,
+            end_year=2025,
+            n_cores=0
     ):
-        """Methods for classifying fire events.`"""
+        """Methods for classifying fire events.
+
+        Parameters
+        ----------
+        project_directory : str
+            Project output directory path. Required.
+        tiles : str | list
+            A string representing a single MODIS tile (e.g., 'h08v04'), a
+            string representing multiple tiles separated by spaces
+            (e.g., 'h08v04 h09v04') or a list representing multiple tiles
+            (e.g., ['h08v04', 'h09v04']).
+        country : str
+            The name of a country to use as a study area. If not provided,
+            either 'tiles' or 'shape_file' parameter must be provided.
+        shape_file : str
+            Path to a shapefile to use for the fire study area. Defaults to
+            None.
+        spatial_param : int
+            The number of cells (~463 m resolution) to search for neighboring
+            burn detections.
+        temporal_param : int
+            The number of days to search for neighboring burn detections.
+        start_year : int
+            The first year of fire events. Defaults to 2000.
+        end_year : int
+            The last year of fire events. Defaults to 2025.
+        n_cores : int
+            Number of cores to use for parallel processing. A value of 0 or None
+            will use all available cores. Defaults to 0.
+        """
         super().__init__(project_directory, n_cores)
         self.tiles = tiles
+        self.country = country
+        self.shape_file = shape_file
         self.spatial_param = spatial_param
         self.temporal_param = temporal_param
         self.start_year = start_year
@@ -571,6 +664,27 @@ class ModelBuilder(Base):
             self._coordinates = {
                 dim: np.array(data_set.coords[dim].values) for dim in dims
             }
+
+    def __repr__(self):
+        """Return representation string for BurnData object."""
+        name = self.__class__.__name__
+        address = hex(id(self))
+        attrs = {}
+        msgs = []
+        for key, attr in self.__dict__.items():
+            if "data_frame" in key:
+                attr = f"{type(attr)} {attr.shape}"  # Too big for preview
+            if not key.startswith("_"):  # Avoid secrets/private attributes
+                attrs[key] = attr
+            if key == "crs":
+                attrs[key] = CRS(attr.spatial_ref).to_proj4()
+        for key, value in attrs.items():
+            if isinstance(value, (str, PosixPath)):
+                msgs.append(f"\n   {key}='{value}'")
+            else:
+                msgs.append(f"\n   {key}={value}")
+        msg = " ".join(msgs)
+        return f"<{name} object at {address}> {msg}"
 
     def add_fire_attributes(self, gdf):
         """Add fired attributes to an event geodataframe.
@@ -708,17 +822,13 @@ class ModelBuilder(Base):
             polygon = MultiPolygon([polygon])
         return polygon
 
-    def build_events(self, shape_file, country=None):
+    def build_events(self):
         """Build the fire event geodataframe."""
         # Classify MODIS burn data into fire events
         event_perimeters = self.classify_events()
 
         # Build the event geodataframe
-        gdf = self.build_points(
-            event_perimeters=event_perimeters,
-            shape_file=shape_file,
-            country=country
-        )
+        gdf = self.build_points(event_perimeters)
 
         # Add fire event attributes
         gdf = self.add_fire_attributes(gdf)
@@ -731,23 +841,13 @@ class ModelBuilder(Base):
 
         return gdf
 
-    def build_points(
-            self,
-            event_perimeters,
-            shape_file=None,
-            country=None
-    ):
+    def build_points(self, event_perimeters):
         """Build point geometries of fire events.
 
         Parameters
         ----------
         event_perimeters : List[firedpy.model_classes.EventPerimeter]
             List of EventPerimeter objects.
-        shape_file : str | pathlib.PosixPath
-            Path to the shapefile representing the target study area. Defaults
-            to None, full MODIS tile extents will be used.
-        country : str
-            The name of a country to use as a study area.
 
         Returns
         -------
@@ -779,8 +879,8 @@ class ModelBuilder(Base):
         gdf = gpd.GeoDataFrame(df, crs=self.crs.proj4, geometry="geometry")
 
         # Clip to study area if requested
-        if country:
-            shape_file = get_country_file(country)
+        if self.country:
+            shape_file = get_country_file(self.country)
         if shape_file is not None:
             gdf = self._clip_to_shape_file(gdf, shape_file)
 
@@ -788,37 +888,21 @@ class ModelBuilder(Base):
 
     def classify_events(self):
         """Classify wildfire events perimeters by tile and merge together."""
-
         print("Building fire event perimeters.")
-
-        # Collect perimeter processing arguments
-        perim_kwargs = []
-        for i, nc_file_path in enumerate(self.files):
-            kwargs = dict(
-                nc_file_path=nc_file_path,
-                project_directory=self.project_directory,
-                spatial_param=self.spatial_param,
-                temporal_param=self.temporal_param,
-                start_year=self.start_year,
-                end_year=self.end_year,
-                i=i
-            )
-            perim_kwargs.append(kwargs)
 
         # Build & Collect fire event perimeters
         fire_events = []
         if self.n_cores == 1:
-
             # Run serially
-            for kwargs in tqdm(perim_kwargs):
-                out = process_file_perimeter(**kwargs)
+            for nc_fpath in tqdm(self.files):
+                out = self.process_perimeters(nc_fpath)
                 fire_events.extend(out)
         else:
             # Run in parallel
             with ProcessPoolExecutor(self.n_cores) as pool:
                 jobs = []
-                for kwargs in perim_kwargs:
-                    jobs.append(pool.submit(process_file_perimeter, **kwargs))
+                for nc_fpath in self.files:
+                    jobs.append(pool.submit(self.process_perimeters, nc_fpath))
                 for job in tqdm(as_completed(jobs), total=len(jobs)):
                     fire_events.extend(job.result())
 
@@ -1083,19 +1167,15 @@ class ModelBuilder(Base):
         groups = self.group_by_t(self.group_by_y(self.group_by_x(edge_events)))
 
         merged_events = []
-        for i, group in enumerate(groups):
+        print(f"Merging edge {len(groups)} tiles")
+        for group in tqdm(groups):
             group_array, coordinates = self._create_event_grid_array(group)
             event_grid = EventGrid(
                 project_directory=self.project_directory,
                 input_array=group_array,
                 coordinates=coordinates
             )
-            desc = f'Merging edge tiles for group {i} of {len(groups)}'
-            perimeters = event_grid.get_event_perimeters(
-                progress_position=i,
-                progress_description=desc,
-                all_t=True
-            )
+            perimeters = event_grid.get_event_perimeters(all_t=True)
             del event_grid, group_array, coordinates, group
             merged_events.extend(perimeters)
 
@@ -1167,6 +1247,31 @@ class ModelBuilder(Base):
         edf["geometry"] = edf["geometry"].apply(self._as_multi_polygon)
 
         return edf
+
+    def process_perimeters(self, nc_fpath):
+        """Process a perimeter for a given burn data file.
+
+        Parameters
+        ----------
+        nc_fpath : str
+            Path to NetCDF file containing burn data for a MODIS tile.
+
+        Returns
+        -------
+
+        """
+        event_grid = EventGrid(
+            nc_fpath=nc_fpath,
+            project_directory=self.project_directory,
+            spatial_param=self.spatial_param,
+            temporal_param=self.temporal_param,
+            start_year=self.start_year,
+            end_year=self.end_year,
+            country=self.country,
+            shape_file=self.shape_file
+        )
+        fire_events = event_grid.get_event_perimeters()
+        return fire_events
 
     def process_geometry(self, gdf):
         """Process event geometries.

@@ -577,7 +577,7 @@ class BurnData(LPDAAC):
         start_date = f"{start_year}-01-01"
         end_date = f"{end_year}-12-31"
         print(f"Getting burn data using EarthAccess for tiles: {tiles}")
-        print(f"📅 Date range: {start_date} to {end_date}")
+        print(f"Date range: {start_date} to {end_date}")
 
         try:
             # Search for granules

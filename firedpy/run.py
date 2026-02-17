@@ -52,9 +52,6 @@ def fired(
 ):
     """Run all steps of the firedpy modeling pipeline.
 
-    TODO: Consolidate some of these code chunks to make it a bit easier to
-        read. Maybe create a "Fired" class.
-
     Parameters
     ----------
     project_directory : str
@@ -190,6 +187,8 @@ def fired(
         tiles=tiles,
         spatial_param=spatial_param,
         temporal_param=temporal_param,
+        country=country,
+        shape_file=shape_file,
         start_year=start_year,
         end_year=end_year,
         n_cores=n_cores
@@ -197,7 +196,7 @@ def fired(
 
     # Build event perimeters
     logger.info("Building event perimeter geometries.")
-    gdf = models.build_events(shape_file)
+    gdf = models.build_events()
 
     # Sometimes no fire events are captured
     if gdf.shape[0] == 0:
@@ -288,14 +287,14 @@ def fired(
 
 
 if __name__ == "__main__":
-    tiles = 'h08v04 h09v04'
+    tiles = None
     daily = True
     full_csv = True
-    project_directory = '/home/travis/scratch/firedpy/par_events'
-    project_name = 'par_events'
-    n_cores = 1
+    project_directory = '/home/travis/scratch/firedpy/masking_test'
+    project_name = 'masking_test'
+    n_cores = 5
     start_year = 2023
-    country = None
+    country = "Democratic Republic of the Congo"
     shape_file = None
     end_year = 2025
     spatial_param = 8  # pixels (nominally ~3,704 m but varies by location)
@@ -305,4 +304,23 @@ if __name__ == "__main__":
     eco_region_type = 'na'  # North American Ecoregions (Omernick, 1987)
     land_cover_type = 1  # International Geosphere-Biosphere Programme (IGBP) scheme
     cleanup = False
-    interactive = False
+
+    fired(
+        tiles=tiles,
+        daily=daily,
+        full_csv=full_csv,
+        project_directory=project_directory,
+        project_name=project_name,
+        n_cores=n_cores,
+        start_year=start_year,
+        country=country,
+        shape_file=shape_file,
+        end_year=end_year,
+        spatial_param=spatial_param,  # pixels (nominally ~3,704 m but varies by location)
+        temporal_param=temporal_param,  # days
+        shape_type=shape_type,  # GeoPackage
+        eco_region_level=eco_region_level,  # Level I - Least Detailed
+        eco_region_type=eco_region_type,  # North American Ecoregions (Omernick, 1987)
+        land_cover_type=land_cover_type,  # International Geosphere-Biosphere Programme (IGBP) scheme
+        cleanup=cleanup
+    )
