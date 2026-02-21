@@ -14,7 +14,12 @@ The algorithm outputs shapefiles of delineated fire events in either .shp or .gp
 *Illustration of the event-level and daily-level output of FIREDpy for the 2013 Rim Fire in California. Figure is from Mahood et al. 2022.*
 
 
-## 
+## The MODIS Sinusioidal Project
+
+You may specify study areas for FIREDpy using individual MODIS tiles. This product uses a Sinusoidal, Lambert Azimuthal Equal-Area projection. There are several spatial resolutions available for this data, but FIREDpy uses the 500m resolution (actual distances depend on location). For more information about this projection, see https://modis-land.gsfc.nasa.gov/MODLAND_grid.html. If you would like to use the MODIS sinusoidal grid IDs to identify FIREDpy study areas, see the visualization this grid below.
+
+
+
 
 ## FIREDpy citations
 
