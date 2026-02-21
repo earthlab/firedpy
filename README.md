@@ -297,56 +297,13 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 
 ## Installation
 
-There are two main ways to install firedpy. Method one is to run it out of a docker container, Method 2 is to install locally.
+There are two main ways to install firedpy. Method 1 is to install locally from source and Method two is to run it out of a Docker container.
 
-### Method 1 - Run from a Docker Container:
+### Method 1 - Install from source:
 
-#### 1.1 Get the docker container running:
+#### 1.1 Package Installer for Python (pip):
 
-Note, the docker container has changed from `earthlab/firedpy` to `earthlabcu/firedpy`
-  - Run the docker container in a detached state (-d) and bind it to an available port on localhost (-p 127.0.0.1:0:7681)
-  - `docker run -d -p 127.0.0.1:0:7681 earthlabcu/firedpy:latest`
- 
-  - Call `docker ps` to get the name of the docker container you just created and the port it is running on.
-  
-  - Then get into the docker container by either running docker exec:
-
-    `docker exec -it <silly_name> /bin/bash`
-
-  - Or access the CLI from your browser. The output from docker ps will look like this:
-
-|CONTAINER ID |  IMAGE |                     COMMAND                |   CREATED    |     STATUS       |         PORTS                |                         NAMES|
-|-------------|----------------------------|------------------------|---------------|------------------|-----------------------------|------------------------------|
-|58a8a6ed926a |  earthlabcu/firedpy:latest | "/bin/entry.sh ttyd …" | 2 minutes ago |  Up 2 minutes  | 127.0.0.1:32768->7681/tcp     |                stupefied_hypatia|
-
-
-In this example the container is running on the host machine at 127.0.0.1:32768. It may be different when you run it. Access this location in your browser by copy and pasting it into your browser's address bar
-
-#### 1.2 Copy firedpy outputs to your local machine
-
-After creating a new fire product, it might be useful to get it out of the docker container in order to use it.
-
-  - First, exit the docker container by typing
-
-    `exit`
-
-  - Second, copy the file out. Here we will use the example of a container with the name "unruffled_clarke". The `docker cp` command uses the syntax `docker cp <source> <destination>`. Files inside of a docker container will have a prefix of the docker container name (or container ID) followed by a colon, then with a normal path.
-
-    Here is an example command using the container name:
-
-    `docker cp unruffled_clarke:/home/firedpy/proj/outputs/shapefiles/fired_events_s5_t11_2020153.gpkg /home/Documents/fired_events_s5_t11_2020153.gpkg`
-
-    Another example command using the container ID:
-
-    `docker cp fa73c6d3e007:/home/firedpy/proj/outputs/shapefiles/fired_events_s5_t11_2020153.gpkg /home/Documents/fired_events_s5_t11_2020153.gpkg`
-
-
-### Method 2 - Local Installation Instructions:
-
-#### 2.1 Package Installer for Python (pip):
-The benefit of a local installation with this method is that you may install the largest FIREDpy dependency (Geospatial Data Abstraction Library or GDAL) once and quickly Python packages that depend on it quickly. It is the lightest-weight option for heavy users of geospatial Python packages.
-
-  - **Step #1**: Install the GDAL on your machine. This is the largest dependency for FIREDpy and there are many ways to install it. The method depends on your operating system (OS) and package manager (for Linux and MacOS). See the GDAL Documentation page for the official download options: https://gdal.org/en/stable/download.html. Below are a subset of options.
+- **Step #1**: Install the Geospatial Data Abstraction Library (GDAL) on your machine, if it is not installed already. The isntallation method depends on your operating system (OS) and package manager (for Linux and MacOS). See the GDAL Documentation page for official downloads: https://gdal.org/en/stable/download.html. Below are a subset of installation options.
   
     **MacOS (brew)**
     ```bash
@@ -374,7 +331,7 @@ The benefit of a local installation with this method is that you may install the
 
       The most commonly recommended approach for install GDAL with Windows is to use the Conda method (described below), but you may also use the OSGeo4W network installer. Go to the OSGeo4W landing page and download and run the installer: https://trac.osgeo.org/osgeo4w/. More detailed installation instructions are available on that site.
 
-  - **Step 2**: Create a Python environment and activate it. There are many options for doing this, one way is to use Python's virtual environment package as follows:
+- **Step 2**: Create a Python environment and activate it. There are many options for doing this, one way is to use Python's virtual environment package as follows:
 
     **MacOS or Linux**:
     ```bash
@@ -390,7 +347,7 @@ The benefit of a local installation with this method is that you may install the
     ~/envs/firedpy/Scripts/activate.bat
     ```
 
-  - **Step #3**: Now you may install FIREDpy from source using pip. Clone this repository, change directories into it, and install using the pip installation command:
+- **Step #3**: Now you may install FIREDpy from source using pip. Clone this repository, change directories into it, and install using the pip installation command:
   
     ```bash
     git clone https://github.com/earthlab/firedpy.git
@@ -424,6 +381,49 @@ The benefit of a local installation with this method is that you may install the
     ```bash
     pip install .
     ```
+
+
+### Method 2 - Run from a Docker Container:
+
+#### 2.1 Get the docker container running:
+
+Note, the docker container has changed from `earthlab/firedpy` to `earthlabcu/firedpy`
+  - Run the docker container in a detached state (-d) and bind it to an available port on localhost (-p 127.0.0.1:0:7681)
+  - `docker run -d -p 127.0.0.1:0:7681 earthlabcu/firedpy:latest`
+ 
+  - Call `docker ps` to get the name of the docker container you just created and the port it is running on.
+  
+  - Then get into the docker container by either running docker exec:
+
+    `docker exec -it <silly_name> /bin/bash`
+
+  - Or access the CLI from your browser. The output from docker ps will look like this:
+
+|CONTAINER ID |  IMAGE |                     COMMAND                |   CREATED    |     STATUS       |         PORTS                |                         NAMES|
+|-------------|----------------------------|------------------------|---------------|------------------|-----------------------------|------------------------------|
+|58a8a6ed926a |  earthlabcu/firedpy:latest | "/bin/entry.sh ttyd …" | 2 minutes ago |  Up 2 minutes  | 127.0.0.1:32768->7681/tcp     |                stupefied_hypatia|
+
+
+In this example the container is running on the host machine at 127.0.0.1:32768. It may be different when you run it. Access this location in your browser by copy and pasting it into your browser's address bar
+
+#### 2.2 Copy firedpy outputs to your local machine
+
+After creating a new fire product, it might be useful to get it out of the docker container in order to use it.
+
+  - First, exit the docker container by typing
+
+    `exit`
+
+  - Second, copy the file out. Here we will use the example of a container with the name "unruffled_clarke". The `docker cp` command uses the syntax `docker cp <source> <destination>`. Files inside of a docker container will have a prefix of the docker container name (or container ID) followed by a colon, then with a normal path.
+
+    Here is an example command using the container name:
+
+    `docker cp unruffled_clarke:/home/firedpy/proj/outputs/shapefiles/fired_events_s5_t11_2020153.gpkg /home/Documents/fired_events_s5_t11_2020153.gpkg`
+
+    Another example command using the container ID:
+
+    `docker cp fa73c6d3e007:/home/firedpy/proj/outputs/shapefiles/fired_events_s5_t11_2020153.gpkg /home/Documents/fired_events_s5_t11_2020153.gpkg`
+
 
 ## Use:
   - Run the command line interface `firedpy` or `firedpy --help` in your terminal for its help file:
@@ -487,7 +487,7 @@ The benefit of a local installation with this method is that you may install the
     firedpy -p ~/scratch/firedpy_nw_brazil --tiles "h11v09 h12v09" -sp 6 -tp 10
     ```
 
-  - Specify specific years to run (defaults to 2000 to 2025)
+  - Specify specific years to run (defaults to 2000 to 2025):
 
     ```bash
     firedpy -p ~/scratch/firedpy_nw_brazil -t "h11v09 h12v09" -sp 6 -tp 10 --start_year 2020 --end_year 2024
@@ -499,7 +499,7 @@ The benefit of a local installation with this method is that you may install the
     firedpy -p ~/scratch/firedpy_nw_brazil -t "h11v09 h12v09" -sp 6 -tp 10 -y1 2020 -y2 2024 --eco_region_type 3
     ```
 
-  - Add landcover information and produce the daily burn file
+  - Add landcover information and produce the daily burn file:
 
     ```bash
     firedpy -p ~/scratch/firedpy_nw_brazil -t "h11v09 h12v09" -sp 6 -tp 10 -y1 2020 -y2 2024 --et 3 --land_cover_type 4 --daily
