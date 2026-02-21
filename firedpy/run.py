@@ -14,9 +14,6 @@ from firedpy.utilities.logging import init_logger
 
 logger = getLogger(__name__)
 
-# People want this check mark, saving it here to move into place later
-# CHECKMARK = ✅
-
 
 def cleanup_intermediate_files(project_directory):
     """Remove temporary `burn_area` and `land_cover` raster files.
