@@ -1,4 +1,5 @@
 """Spatial data manipulation utilities."""
+import logging
 import os
 import warnings
 
@@ -9,6 +10,8 @@ import pandas as pd
 
 from osgeo import gdal
 from firedpy import DATA_DIR
+
+logger = logging.getLogger(__name__)
 
 
 # MODIS CRS retrieved from a single HDF file
@@ -85,8 +88,8 @@ def get_country_file(country):
         similars = similar_strings(key, list(files))
         msg = (f"{country} not recognized in given format, similar "
                f"options include: {similars}")
-        print(msg)
-        raise
+        logger.error(msg)
+        raise KeyError(msg)
 
     return file
 
@@ -238,9 +241,15 @@ def similar_strings(string, strings, threshold_ratio=0.7):
     """
     matches = []
     for strng in strings:
+        # Try the built-in sequence matcher
         ratio = SequenceMatcher(isjunk=None, a=string, b=strng).ratio()
         if ratio >= threshold_ratio:
             matches.append(strng)
+
+        # Also return anything that contains the target string
+        elif string in strng:
+            matches.append(strng)
+
     return matches
 
 

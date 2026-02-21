@@ -402,7 +402,6 @@ class EventGrid(Base):
             mask = mask.to_crs(target_crs)
 
         # Buffer mask to ensure fires immediately outside border are captured
-        # Dissolve?
         mask["geometry"] = mask["geometry"].buffer(100_000)
 
         # Get the geometries used to burn values to the array
@@ -712,10 +711,10 @@ class ModelBuilder(Base):
             attribute fields appended.
         """
         if gdf.shape[0] == 0:
-            print("No fire events found")
+            logger.warning("No fire events found")
             return gdf
 
-        print("Adding fire attributes ...")
+        logger.info("Adding fire attributes ...")
         gdf['pixels'] = gdf.groupby(['id', 'date'])['id'].transform('count')
         gdf['ig_utm_x'] = gdf.groupby(['id', 'date'])['x'].nth(0)
         gdf['ig_utm_y'] = gdf.groupby(['id', 'date'])['y'].nth(0)
@@ -883,7 +882,7 @@ class ModelBuilder(Base):
         df.loc[:, "y"] = df["y"] + (self.geom[-1] / 2)
 
         # Each entry gets a point object from the x and y coordinates.
-        print("Converting data frame to spatial object...")
+        logger.info("Converting event data frame to spatial object...")
         df.loc[:, "geometry"] = df[["x", "y"]].apply(
             lambda x: Point(tuple(x)),
             axis=1
@@ -900,7 +899,7 @@ class ModelBuilder(Base):
 
     def classify_events(self):
         """Classify wildfire events perimeters by tile and merge together."""
-        print("Building fire event perimeters.")
+        logger.info("Building fire event perimeters.")
 
         # Build & Collect fire event perimeters
         fire_events = []
@@ -1178,7 +1177,7 @@ class ModelBuilder(Base):
         groups = self.group_by_t(self.group_by_y(self.group_by_x(edge_events)))
 
         merged_events = []
-        print(f"Merging edge {len(groups)} tiles")
+        logger.info(f"Merging edge {len(groups)} tiles")
         for group in tqdm(groups):
             group_array, coordinates = self._create_event_grid_array(group)
             event_grid = EventGrid(
@@ -1204,7 +1203,7 @@ class ModelBuilder(Base):
         # Convert from MODIS sinusoidal to WGS84
         lon, lat = transform(modis_sinu_proj, wgs84_proj, x_sinu, y_sinu)
 
-        print(f"Longitude: {lon}, Latitude: {lat}")
+        logger.info(f"Longitude: {lon}, Latitude: {lat}")
 
     def process_daily_data(self, gdf):
         """Process daily data geometries.
@@ -1218,12 +1217,12 @@ class ModelBuilder(Base):
         -------
         geopandas.geodataframe.GeoDataFrame : The processed geodataframe.
         """
-        print("Dissolving polygons...")
+        logger.info("Dissolving polygons...")
         gdfc = gdf.copy()
         gdfc = self._create_did_column(gdfc, ["date", "id"])
         gdfd = gdfc.dissolve(by="did", as_index=False)
 
-        print("Converting polygons to multipolygons...")
+        logger.info("Converting polygons to multipolygons...")
         gdfd["geometry"] = gdfd["geometry"].apply(self._as_multi_polygon)
 
         return gdf
@@ -1247,14 +1246,14 @@ class ModelBuilder(Base):
         if "fid" in edf.columns:
             edf = edf.drop(["fid"])
 
-        print("Dissolving polygons...")
+        logger.info("Dissolving polygons...")
         edf = edf.dissolve(by="id", as_index=False)
         edf.loc[:, "date"] = edf["ig_date"]  # We need the date field later
 
-        print("Calculating perimeter lengths...")
+        logger.info("Calculating perimeter lengths...")
         edf["tot_perim"] = edf["geometry"].to_crs(MODIS_CRS).length
 
-        print("Converting polygons to multipolygons...")
+        logger.info("Converting polygons to multipolygons...")
         edf["geometry"] = edf["geometry"].apply(self._as_multi_polygon)
 
         return edf
@@ -1298,8 +1297,10 @@ class ModelBuilder(Base):
         geopandas.geodataframe.GeoDataFrame : The geodataframe with processed
             geometries.
         """
-        print("Creating buffer...")
-        geometry = gdf.buffer(1 + (self._res / 2))
+        buffer_m = 1 + (self._res / 2)
+        logger.info(f"Converting event point to pixel with {buffer_m:.2f}m "
+                    "buffer...")
+        geometry = gdf.buffer(buffer_m)
         gdf["geometry"] = geometry
         gdf["geometry"] = gdf.envelope
         return gdf
@@ -1364,15 +1365,11 @@ class ModelBuilder(Base):
             # GeoDataFrames
             if paths["daily_gpkg_path"]:
                 dst = paths["daily_gpkg_path"]
-                msg = f"Saving daily geodataframe to {dst}"
-                print(msg)
-                logger.info(msg)
+                logger.info(f"Saving daily geodataframe to {dst}")
                 ddf.to_file(dst, driver="GPKG")
             if paths["daily_shape_path"]:
                 dst = paths["daily_shape_path"]
-                msg = f"Saving daily ESRI Shapefile to {dst}"
-                print(msg)
-                logger.info(msg)
+                logger.info(f"Saving daily ESRI Shapefile to {dst}")
                 sdf = self.adjust_for_esri(ddf)
                 sdf.to_file(dst)
 
@@ -1394,15 +1391,11 @@ class ModelBuilder(Base):
         # GeoDataFrames
         if paths["event_gpkg_path"]:
             dst = paths["event_gpkg_path"]
-            msg = f"Saving event-level geo to {dst}"
-            print(msg)
-            logger.info(msg)
+            logger.info(f"Saving event-level geo to {dst}")
             edf.to_file(dst, driver="GPKG")
         if paths["event_shape_path"]:
             dst = paths["event_shape_path"]
-            msg = f"Writing ESRI Shapefile to {dst}"
-            print(msg)
-            logger.info(msg)
+            logger.info(f"Writing ESRI Shapefile to {dst}")
             sdf = self.adjust_for_esri(edf)
             sdf.to_file(dst)
 

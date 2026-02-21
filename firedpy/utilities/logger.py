@@ -4,6 +4,8 @@ Run init_logger here with a target directory after creating a logging object
 (`logger = logging.getLogger(__name__)`).
 """
 import logging
+import os
+import sys
 
 from pathlib import Path
 
@@ -28,17 +30,24 @@ def init_logger(project_directory, log_level="INFO"):
     log_level : str
         Level of logging detail to write to the log file.
     """
-    # Setup firedpy logging
-    filename = Path(project_directory).joinpath("logs/firedpy.log").absolute()
-    filename = filename.expanduser()
-    filename.parent.mkdir(exist_ok=True, parents=True)
+    # Create a log file name
+    fname = f"firedpy_{os.getppid()}.log"
+    fpath = Path(project_directory).joinpath(f"logs/{fname}").absolute()
+    fpath = fpath.expanduser()
+    fpath.parent.mkdir(exist_ok=True, parents=True)
+
+    # Make sure log level specific matches case in the level dictionary
     log_level = log_level.upper()
+
+    # Setup firedpy logging
     logging.basicConfig(
-        filename=filename,
         format=FORMAT,
         level=LOG_LEVELS[log_level],
-        encoding="utf-8"
+        encoding="utf-8",
+        handlers=[
+            logging.FileHandler(fpath),
+            logging.StreamHandler(sys.stdout)
+        ]
     )
 
-    # Control third party logging
     logging.getLogger("earthaccess").setLevel(logging.WARNING)

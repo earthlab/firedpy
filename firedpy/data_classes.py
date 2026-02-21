@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 import sys
+import traceback
 import urllib
 
 from concurrent.futures import as_completed, ThreadPoolExecutor
@@ -284,16 +285,14 @@ class LPDAAC(Base):
                 for _ in tqdm(mapper, total=len(download_requests)):
                     pass
         except Exception as pe:
-            # logger.error(f"Download failed: {pe}")
-            print(f"Download failed: {pe}")
+            logger.error(f"Download failed: {pe}")
             try:
                 for q in tqdm(download_requests, position=0, file=sys.stdout):
                     self._download_task(q)
             except Exception as e:
                 template = "Download failed: error type {0}:\n{1!r}"
                 message = template.format(type(e).__name__, e.args)
-                # logger.error(message)
-                print(message)
+                logger.error(message)
 
     def _download_task(self, request: Tuple[str, str]):
         """Try request with EarthAccess, fallback to original method."""
@@ -309,12 +308,14 @@ class LPDAAC(Base):
                 if success:
                     return
                 else:
-                    print(
+                    logger.error(
                         "EarthAccess download failed for "
                         f"{os.path.basename(dest)}, trying legacy method"
                     )
             except Exception as e:
-                print(f"EarthAccess error: {e}, falling back to legacy method")
+                logger.error(
+                    f"EarthAccess error: {e}, falling back to legacy method"
+                )
 
         # Fallback to original urllib method
         try:
@@ -341,7 +342,7 @@ class LPDAAC(Base):
                         break
 
         except Exception as e:
-            print(f"Download failed for {os.path.basename(dest)}: {e}")
+            logger.error(f"Download failed for {os.path.basename(dest)}: {e}")
 
     def _generate_local_hdf_path(self, year, remote_name):
         pass
@@ -357,7 +358,7 @@ class LPDAAC(Base):
             ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             ssh_client.connect(hostname="fuoco.geog.umd.edu",
                                username="fire", password="burnt")
-            print("Connected to 'fuoco.geog.umd.edu' ...")
+            logger.info("Connected to 'fuoco.geog.umd.edu' ...")
             # Open the connection to the SFTP
             with ssh_client.open_sftp() as sftp_client:
                 sftp_client.chdir("/data/MODIS/C61/MCD64A1/HDF")
@@ -399,14 +400,14 @@ class LPDAAC(Base):
         hdf_ds = gdal.Open(file_path)
 
         if hdf_ds is None:
-            print(f"Failed to open {file_path}.")
+            logger.warning(f"Failed to open {file_path}.")
             return False
 
         # List available sub-datasets (specific to HDF)
         sub_datasets = hdf_ds.GetSubDatasets()
 
         if not sub_datasets:
-            print("No sub-datasets found.")
+            logger.warning(f"No sub-datasets found in {file_path}.")
             return False
 
         return True
@@ -460,16 +461,18 @@ class BurnData(LPDAAC):
     def download_burn_data(self, tile, granules, download_dir):
         """Download a single tile's granules to a download diretory."""
         os.makedirs(download_dir, exist_ok=True)
-        print(f"Downloading to {tile} data to {download_dir}")
+        logger.info(f"Downloading to {tile} data to {download_dir}")
         try:
             downloaded_files = earthaccess.download(
                 granules,
                 download_dir
             )
-            print(f"Downloaded {tile} data ({len(downloaded_files)} files)")
+            logger.info(
+                f"Downloaded {tile} data ({len(downloaded_files)} files)"
+            )
 
         except Exception as e:
-            print(f"Download failed for tile {tile}: {e}")
+            logger.error(f"Download failed for tile {tile}: {e}")
 
     def _create_requests(self, available_year_paths, tiles):
         """Create a list of requests for each target year.
@@ -496,7 +499,7 @@ class BurnData(LPDAAC):
                 os.makedirs(os.path.dirname(local_file_path), exist_ok=True)
                 if os.path.exists(local_file_path):
                     if not self._verify_hdf_file(local_file_path):
-                        print("Removing", local_file_path)
+                        logger.info(f"Removing {local_file_path}")
                         os.remove(local_file_path)
                     else:
                         continue
@@ -576,12 +579,13 @@ class BurnData(LPDAAC):
         """
         start_date = f"{start_year}-01-01"
         end_date = f"{end_year}-12-31"
-        print(f"Getting burn data using EarthAccess for tiles: {tiles}")
-        print(f"Date range: {start_date} to {end_date}")
+        logger.info(f"Getting burn data using EarthAccess for tiles: {tiles}")
+        logger.info(f"Date range: {start_date} to {end_date}")
 
         try:
             # Search for granules
-            print(f"Searching for MCD64A1 granules: {start_date} - {end_date}")
+            logger.info(f"Searching for MCD64A1 granules: {start_date} - "
+                        f"{end_date}")
             granule_dict = self._get_granules(tiles, country, shape_file,
                                               start_date, end_date)
             tiles = list(granule_dict)
@@ -590,13 +594,13 @@ class BurnData(LPDAAC):
             tile_granules = {}
             download_dirs = {}
             for tile, granules in granule_dict.items():
-                print(f"Processing tile: {tile}")
+                logger.info(f"Processing tile: {tile}")
 
                 # Check if any granules were found
                 n_granules = len(granules)
-                print(f"Found {n_granules} granules for tile {tile}")
+                logger.info(f"Found {n_granules} granules for tile {tile}")
                 if not granules:
-                    print(f"No data found for tile {tile}")
+                    logger.info(f"No data found for tile {tile}")
                     continue
 
                 # Collect results
@@ -631,11 +635,10 @@ class BurnData(LPDAAC):
                         download_dir
                     )
 
-            print("EarthAccess burn data download completed!")
+            logger.info("EarthAccess burn data download completed!")
 
         except Exception as e:
-            print(f"EarthAccess download failed: {e}")
-            import traceback
+            logger.error(f"EarthAccess download failed: {e}")
             traceback.print_exc()
             raise RuntimeError(
                 f"Failed to get burn data with EarthAccess: {e}"
@@ -643,7 +646,7 @@ class BurnData(LPDAAC):
 
         # Convert to NetCDF
         self._write_ncs(tiles)
-        print(f"Created NetCDF for tile(s) {tiles}")
+        logger.info(f"Created NetCDF for tile(s) {tiles}")
 
         return tiles
 
@@ -705,7 +708,7 @@ class BurnData(LPDAAC):
 
     def _write_modis_template_file(self):
         # Merge one year into a reference mosaic
-        print("Creating reference mosaic ...")
+        logger.info(f"Creating reference mosaic raster...")
         folders = glob(os.path.join(self.hdf_dir, "*"))
         file_groups = [glob(os.path.join(f, "*hdf")) for f in folders]
         for f in file_groups:
@@ -724,8 +727,10 @@ class BurnData(LPDAAC):
             }
         )
 
-        with rasterio.open(self._modis_template_path, "w+", **crs) as dst:
-            dst.write(mosaic)
+        dst = self._modis_template_path
+        logger.info(f"Writing reference mosaic raster to {dst}.")
+        with rasterio.open(dst, "w+", **crs) as r:
+            r.write(mosaic)
 
     @staticmethod
     def _verify_hdf_file(file_path):
@@ -733,14 +738,14 @@ class BurnData(LPDAAC):
         hdf_ds = gdal.Open(file_path)
 
         if hdf_ds is None:
-            print(f"Failed to open {file_path}.")
+            logger.warning(f"Failed to open {file_path} with GDAL.")
             return False
 
         # List available sub-datasets (specific to HDF)
         sub_datasets = hdf_ds.GetSubDatasets()
 
         if not sub_datasets:
-            print("No sub-datasets found.")
+            logger.warning(f"No sub-datasets found in {file_path}.")
             return False
 
         return True
@@ -755,7 +760,7 @@ class BurnData(LPDAAC):
         """
         # Build the netcdfs here
         fill_value = -9999  # Default fill value in original file is -1
-        print(f"Building netcdf files for tiles {tiles}")
+        logger.info(f"Building netcdf files for tiles {tiles}")
         for tile in tqdm(tiles):
 
             # Build/find file paths needed for this operation
@@ -987,18 +992,23 @@ class LandCover(Base):
             attributes added.
         """
         if gdf.shape[0] == 0:
-            print("No fire events found, not adding land cover attributes")
+            logger.warning(
+                f"No fire events found in tiles {tiles}, not adding land cover"
+                " attributes"
+            )
             return gdf
 
         # This will use a config file or a prompt if one isn't available
         auth = earthaccess.login(strategy="all")
         if not auth:
-            raise RuntimeError("EarthAccess authentication failed")
+            msg = "EarthAccess authentication failed"
+            logger.error(msg)
+            raise RuntimeError(msg)
         else:
-            print("EarthAccess authentication successful.")
+            logger.info("EarthAccess authentication successful.")
 
         # Match possible land cover type argument types
-        print("Adding land cover attributes...")
+        logger.info("Adding land cover attributes...")
         if isinstance(land_cover_type, str):
             land_cover_type = int(land_cover_type)
         if isinstance(land_cover_type, LandCoverType):
@@ -1037,7 +1047,9 @@ class LandCover(Base):
                     tile, str(year), "mosaics"
                 )
                 if not mosaic_dir.exists():
-                    print(f"No land cover data for {tile} in year {year}")
+                    logger.warning(
+                        f"No land cover data for {tile} in year {year}"
+                    )
                     continue
 
                 # I don't understand why were taking this step below  # <------ Address this
@@ -1152,25 +1164,27 @@ class LandCover(Base):
             for tile in requested_tiles:
                 if tile in available_tiles:
                     tiles_to_use.add(tile)
-                    print(f"   {tile} - Available directly")
+                    logger.info(f"   {tile} - Available directly")
                 elif tile in self._tile_mapping:
                     for alt_tile in self._tile_mapping[tile]:
                         if alt_tile in available_tiles:
                             tiles_to_use.add(alt_tile)
-                            print(
+                            logger.info(
                                 f"   {tile} -> using {alt_tile} (nearby "
                                 "coverage)"
                             )
                             break
                     else:
-                        print(f"   {tile} - No suitable alternative found")
+                        logger.warning(
+                            f"   {tile} - No suitable alternative found"
+                        )
                 else:
-                    print(f"   {tile} - No mapping defined")
+                    logger.warning(f"   {tile} - No mapping defined")
 
             return list(tiles_to_use)
 
         except Exception as e:
-            print(f"Error finding available tiles: {e}")
+            logger.error(f"Error finding available tiles: {e}")
             return []
 
     def _generate_land_cover_mosaic_dir(self, tile: str, year: str) -> str:
@@ -1207,30 +1221,32 @@ class LandCover(Base):
             https://urs.earthdata.nasa.gov/home. Defaults to 1.
         """
         if not self._earthaccess.authenticated:
-            print("EarthAccess not authenticated for land cover")
+            logger.warning("EarthAccess not authenticated for land cover.")
             return
 
         if tiles is None:
-            print("No tiles specified for land cover")
+            logger.warning("No tiles specified for land cover.")
             return
 
         # Find available tiles that can cover our region
-        print(f"Getting land cover data using EarthAccess for region: {tiles}")
-        print("Finding available land cover tiles for region...")
+        logger.info(
+            f"Getting land cover data using EarthAccess for region: {tiles}"
+        )
+        logger.info("Finding available land cover tiles for region...")
         available_tiles = self._find_available_tiles_for_region(tiles)
 
         if not available_tiles:
-            print("No land cover tiles available for this region.")
+            logger.warning("No land cover tiles available for this region.")
             return
 
         try:
             # Get available years (this is fixed?)
             available_years = gdf["ig_year"].unique()
             for tile in available_tiles:
-                print(f"\nProcessing land cover for tile: {tile}")
+                logger.info(f"\nProcessing land cover for tile: {tile}")
 
                 for year in available_years:
-                    print(f"   Processing year: {year}")
+                    logger.info(f"   Processing year: {year}")
                     year = str(year)
 
                     # Check if mosaic already exists
@@ -1241,11 +1257,11 @@ class LandCover(Base):
                     mosaic_path = os.path.join(mosaic_dir, output_file)
                     os.makedirs(mosaic_dir, exist_ok=True)
                     if os.path.exists(mosaic_path):
-                        print(f"   Mosaic already exists: {output_file}")
+                        logger.info(f"   Mosaic already exists: {output_file}")
                         continue
 
                     # Search for granules for this year and tile
-                    print(f"   Searching for {tile} data in {year}...")
+                    logger.info(f"Searching for {tile} data in {year}...")
                     granules = earthaccess.search_data(
                         short_name="MCD12Q1",
                         version="061",
@@ -1259,14 +1275,12 @@ class LandCover(Base):
                         granule_name = granule.get("meta", {}).get(id, "")
                         if tile in granule_name:
                             tile_granules.append(granule)
-
                     if not tile_granules:
-                        print(f"   No land cover data for {tile} in year "
-                              f"{year}")
+                        msg = f"No land cover data for {tile} in year {year}."
+                        logger.warning(msg)
                         continue
-
-                    print(f"   Found {len(tile_granules)} granules, "
-                          "downloading...")
+                    msg = f"Found {len(tile_granules)} granules, downloading.."
+                    logger.info(msg)
 
                     # Download granules
                     download_dir = self._generate_local_hdf_dir(tile, year)
@@ -1276,12 +1290,13 @@ class LandCover(Base):
                             granules=tile_granules,
                             local_path=download_dir
                         )
-                        print(f"   Downloaded {len(downloaded_files)} files")
+                        msg = f"Downloaded {len(downloaded_files)} files."
+                        logger.info(msg)
 
                         # Create mosaic (simplified version)
                         if downloaded_files:
-                            msg = f"   Land cover data ready for {tile} {year}"
-                            print(msg)
+                            msg = f"Land cover data ready for {tile} {year}."
+                            logger.info(msg)
 
                             # This only creates a single netcdf per year and
                             # tile. The way the filesytem and loop here is
@@ -1298,14 +1313,15 @@ class LandCover(Base):
                             )
 
                     except Exception as e:
-                        print(f"   Processing failed for {tile} {year}: {e}")
+                        msg = f"Processing failed for {tile} {year}: {e}"
+                        logger.error(msg)
                         continue
 
-            print("\nEarthAccess land cover processing completed!")
+            logger.info("EarthAccess land cover processing completed.")
 
         except Exception as e:
-            print(f"EarthAccess land cover failed: {e}")
-            print("Continuing without land cover data...")
+            logger.error(f"EarthAccess land cover failed: {e}")
+            logger.info("Continuing without land cover data...")
 
     def mosaic_landuse(self, downloaded_files, mosaic_path, land_cover_type):
         """Merge a list of MODIS HDF files into one GeoTiff.
@@ -1439,10 +1455,11 @@ class EcoRegion(Base):
             eco region attributes added.
         """
         if gdf.shape[0] == 0:
-            print("No fire events found, not adding eco-region attributes.")
+            msg = "No fire events found, not adding eco-region attributes."
+            logger.error(msg)
             return gdf
 
-        print("Adding eco-region attributes ...")
+        logger.info("Adding eco-region attributes ...")
         eco_region_type = EcoRegionType(eco_region_type)
         if eco_region_level or (eco_region_type == EcoRegionType.NA):
             gdf = self.add_attributes_from_na_cec(gdf, eco_region_level)
@@ -1475,7 +1492,7 @@ class EcoRegion(Base):
         else:
             eco_code = eco_code[0]
 
-        print("Selected ecoregion code: " + str(eco_code))
+        logger.info(f"Selected ecoregion code: {eco_code}")
 
         # Find modal eco-region for each event id
         eco = eco[[eco_code, "geometry"]]
@@ -1672,7 +1689,8 @@ class EcoRegion(Base):
                 eco = eco.to_crs("epsg:5070")
                 eco.to_file(self.eco_region_shape_path)
             except Exception as e:
-                print(f"Download from EPA FTP site, using local file {e}")
+                msg = f"Download from EPA FTP site, using local file {e}"
+                logger.info(msg)
                 shutil.copytree(
                     self.project_eco_region_dir,
                     self.eco_region_shape_dir

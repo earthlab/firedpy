@@ -1,8 +1,11 @@
+import logging
 import os
 
 from pathlib import Path
 
 from firedpy import DATA_DIR
+
+logger = logging.getLogger(__name__)
 
 
 SUMMARY_TEMPLATE = DATA_DIR.joinpath("SUMMARY_TEMPLATE.txt")
@@ -158,3 +161,4 @@ def make_read_me(gdf, project_directory, tiles, spatial_param,
     with open(fpath, "w") as summary:
         for line in formatted_lines:
             summary.write(line)
+    logger.info(f"Run summary written to {fpath}.")

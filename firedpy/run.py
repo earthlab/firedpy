@@ -10,7 +10,7 @@ from pathlib import Path
 from firedpy.data_classes import ATTR_DESCS, BurnData, EcoRegion, LandCover
 from firedpy.model_classes import ModelBuilder
 from firedpy.utilities.create_readme import make_read_me
-from firedpy.utilities.logging import init_logger
+from firedpy.utilities.logger import init_logger
 
 logger = getLogger(__name__)
 
@@ -156,10 +156,8 @@ def fired(
 
     # Make sure they have a target location
     if not country and not tiles and not shape_file:
-        msg = (
-            "Must provide one of `country`, `tiles`, or `shape_file` "
-            "parameters"
-        )
+        msg = ("Must provide one of `country`, `tiles`, or `shape_file` "
+               "parameters")
         logger.error(msg)
         raise KeyError(msg)
 
@@ -197,12 +195,10 @@ def fired(
 
     # Sometimes no fire events are captured
     if gdf.shape[0] == 0:
-        msg = (
+        logger.info(
             f"No fire events found in tiles: {tiles} for years "
             f"{start_year} - {end_year}."
         )
-        print(msg)
-        logger.info(msg)
 
     # Add initial fire characteristic
     else:
@@ -260,8 +256,8 @@ def fired(
         runtime = seconds / 60
         logger.info(f"Job completed in {runtime:.2f} minutes")
         logger.info(f"Peak memory usage: {peak_memory:.2f} GB")
-        print(f"Job completed in {runtime:.2f} minutes")
-        print(f"Peak memory usage: {peak_memory:.2f} GB")
+        logger.info(f"Job completed in {runtime:.2f} minutes")
+        logger.info(f"Peak memory usage: {peak_memory:.2f} GB")
 
         # Create a summary readme
         make_read_me(
@@ -278,6 +274,7 @@ def fired(
 
     # Remove intermediate files if requested
     if cleanup:
+        logger.info(f"Cleaning up intermediate files in {project_directory}.")
         cleanup_intermediate_files(project_directory)
 
     return gdf
@@ -287,11 +284,11 @@ if __name__ == "__main__":
     tiles = None
     daily = True
     full_csv = True
-    project_directory = '/home/travis/scratch/firedpy/masking_test'
+    project_directory = '/home/travis/scratch/firedpy/logging_test'
     project_name = 'masking_test'
     n_cores = 5
     start_year = 2023
-    country = "Democratic Republic of the Congo"
+    country = "Republic of the Congo"
     shape_file = None
     end_year = 2025
     spatial_param = 8  # pixels (nominally ~3,704 m but varies by location)
