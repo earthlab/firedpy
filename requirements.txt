@@ -3,10 +3,10 @@ earthaccess
 geopandas>=1.0.1
 matplotlib>=3.7.2
 mock>=5.1.0
-netCDF4>=1.6.4
-numpy>=1.26.1
+netCDF4>=1.7.1
+numpy>=2.1.2
 pandas>=2.1.0
-paramiko>=3.3.1
+paramiko>=3.5.0
 rasterio>=1.3.8
 requests>=2.31.0
 scipy>=1.11.3

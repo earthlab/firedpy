@@ -49,6 +49,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Keeps Python environment lighter weight and reduces installation times.
     - Provides an alternative to conda for users who prefer native Python package installations (e.g.,  Python Installs Packages or pip).
     - Is a necessary step for hosting firedpy on the Python Packaging Index (PyPI): https://pypi.org/.
+- **Moved all print statements to logs**:
+    - Initial move, can improve logging later
+    - Writes logs to a file
+    - Includes datetime, file, and line number for each statement
+    - Still prints to stdout
 - **Map of MODIS tile IDs added to firedpy/data/images**
     - Should help both to identify target MODIS tiles and to visualize part of the firedpy classification process.
 
