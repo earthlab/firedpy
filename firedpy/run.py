@@ -286,7 +286,7 @@ if __name__ == "__main__":
     full_csv = True
     project_directory = '/home/travis/scratch/firedpy/logging_test'
     project_name = 'masking_test'
-    n_cores = 5
+    n_cores = 1
     start_year = 2023
     country = "Republic of the Congo"
     shape_file = None

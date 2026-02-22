@@ -838,13 +838,13 @@ class ModelBuilder(Base):
         # Classify MODIS burn data into fire events
         event_perimeters = self.classify_events()
 
-        # Build the event geodataframe
+        # Build the event point geodataframe
         gdf = self.build_points(event_perimeters)
 
         # Add fire event attributes
         gdf = self.add_fire_attributes(gdf)
 
-        # What is this doing? (buffering with an envelope)
+        # Convert points to pixels
         gdf = self.process_geometry(gdf)
 
         # Calculate fire spread speed and maximum travel vectors
@@ -893,7 +893,7 @@ class ModelBuilder(Base):
         if self.country:
             shape_file = get_country_file(self.country)
         if shape_file is not None:
-            gdf = self._clip_to_shape_file(gdf, shape_file)
+            gdf = self.clip_to_shape_file(gdf, shape_file)
 
         return gdf
 
@@ -939,10 +939,35 @@ class ModelBuilder(Base):
 
         return fire_events
 
-    def _clip_to_shape_file(self, gdf, shape_file_path):
-        shp = gpd.read_file(shape_file_path)
+    def clip_to_shape_file(self, gdf, shape_file):
+        """Clip fire events to shapefile boundry, keep overlapping events.
+
+        Parameters
+        ----------
+        gdf : geopandas.geodataframe.GeoDataFrame
+            GeoDataFrame of Firedpy fire events.
+        shape_file : str | pathlib.PosixPath
+            Path to shapefile representing a study area.
+
+        Returns
+        -------
+        geopandas.geodataframe.GeoDataFrame : A clipped GeoDataFrame.     
+        """
+        # Read in the shapefile
+        shp = gpd.read_file(shape_file)
         shp.to_crs(gdf.crs, inplace=True)
-        clipped_gdf = gdf.clip(shp)
+
+        # Characterize shapefile intersection events by ID
+        shp.loc[:, "intersects"] = 1
+        gdf = gpd.sjoin(gdf, shp, how="left")
+        gdf.loc[:, "keep"] = gdf.groupby("id")["intersects"].transform("any")
+
+        # Drop non-intersecting events
+        clipped_gdf = gdf[gdf["keep"]]
+        del clipped_gdf["index_right"]
+        del clipped_gdf["intersects"]
+        del clipped_gdf["keep"]
+
         return clipped_gdf
 
     @staticmethod
