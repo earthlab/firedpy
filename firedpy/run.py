@@ -298,23 +298,3 @@ if __name__ == "__main__":
     eco_region_type = 'na'  # North American Ecoregions (Omernick, 1987)
     land_cover_type = None  # International Geosphere-Biosphere Programme (IGBP) scheme
     cleanup = False
-
-    fired(
-        tiles=tiles,
-        daily=daily,
-        full_csv=full_csv,
-        project_directory=project_directory,
-        project_name=project_name,
-        n_cores=n_cores,
-        start_year=start_year,
-        country=country,
-        shape_file=shape_file,
-        end_year=end_year,
-        spatial_param=spatial_param,  # pixels (nominally ~3,704 m but varies by location)
-        temporal_param=temporal_param,  # days
-        shape_type=shape_type,  # GeoPackage
-        eco_region_level=eco_region_level,  # Level I - Least Detailed
-        eco_region_type=eco_region_type,  # North American Ecoregions (Omernick, 1987)
-        land_cover_type=land_cover_type,  # International Geosphere-Biosphere Programme (IGBP) scheme
-        cleanup=cleanup
-    )

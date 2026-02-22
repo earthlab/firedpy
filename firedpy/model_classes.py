@@ -651,8 +651,8 @@ class ModelBuilder(Base):
         end_year : int
             The last year of fire events. Defaults to 2025.
         n_cores : int
-            Number of cores to use for parallel processing. A value of 0 or None
-            will use all available cores. Defaults to 0.
+            Number of cores to use for parallel processing. A value of 0 or
+            None will use all available cores. Defaults to 0.
         """
         super().__init__(project_directory, n_cores)
         self.tiles = tiles
@@ -840,7 +840,7 @@ class ModelBuilder(Base):
 
         # Build the event point geodataframe
         gdf = self.build_points(event_perimeters)
-
+ 
         # Add fire event attributes
         gdf = self.add_fire_attributes(gdf)
 
@@ -857,24 +857,23 @@ class ModelBuilder(Base):
 
         Parameters
         ----------
-        event_perimeters : List[firedpy.model_classes.EventPerimeter]
+        event_perimeters : list[firedpy.model_classes.EventPerimeter]
             List of EventPerimeter objects.
 
         Returns
         -------
-        geopandas.geodataframe.GeoDataFrame : A geodataframe of points
-            representing MODIS tiles with burn signals.
+        geopandas.geodataframe.GeoDataFrame : A GeoDataFrame of points
+            representing grouped fire detections with event IDs, x and y
+            coordinates, and detection dates.
         """
         # Build a datetime coordinate dataframe from the events
+        logger.info("Converting event perimeters frame to data frame...")
         data = []
         for event in event_perimeters:
-            for coord in event.spacetime_coordinates:
-                eid = event.event_id
-                coord0 = coord[0]
-                coord1 = coord[1]
-                coord3 = self._convert_unix_day_to_calendar_date(coord[2])
-                entry = [eid, coord1, coord0, coord3]
-                data.append(entry)
+            for coords in event.spacetime_coordinates:
+                coord0, coord1 = coords[:2]
+                coord3 = self._convert_unix_day_to_calendar_date(coords[2])
+                data.append([event.event_id, coord1, coord0, coord3])
         df = pd.DataFrame(data, columns=["id", "x", "y", "date"])
 
         # Center pixel coordinates
@@ -882,7 +881,7 @@ class ModelBuilder(Base):
         df.loc[:, "y"] = df["y"] + (self.geom[-1] / 2)
 
         # Each entry gets a point object from the x and y coordinates.
-        logger.info("Converting event data frame to spatial object...")
+        logger.info("Converting event data frame to GeoDataFrame...")
         df.loc[:, "geometry"] = df[["x", "y"]].apply(
             lambda x: Point(tuple(x)),
             axis=1
@@ -893,6 +892,8 @@ class ModelBuilder(Base):
         if self.country:
             shape_file = get_country_file(self.country)
         if shape_file is not None:
+            shp_name = Path(shape_file).name
+            logger.info(f"Clipping event GeoDataFrame with {shp_name}...")
             gdf = self.clip_to_shape_file(gdf, shape_file)
 
         return gdf
@@ -951,22 +952,21 @@ class ModelBuilder(Base):
 
         Returns
         -------
-        geopandas.geodataframe.GeoDataFrame : A clipped GeoDataFrame.     
+        geopandas.geodataframe.GeoDataFrame : A clipped GeoDataFrame.
         """
         # Read in the shapefile
         shp = gpd.read_file(shape_file)
         shp.to_crs(gdf.crs, inplace=True)
 
-        # Characterize shapefile intersection events by ID
+        # Characterize shapefile intersecting events by ID
         shp.loc[:, "intersects"] = 1
         gdf = gpd.sjoin(gdf, shp, how="left")
         gdf.loc[:, "keep"] = gdf.groupby("id")["intersects"].transform("any")
 
         # Drop non-intersecting events
         clipped_gdf = gdf[gdf["keep"]]
-        del clipped_gdf["index_right"]
-        del clipped_gdf["intersects"]
-        del clipped_gdf["keep"]
+        for tmp_field in ["index_right", "intersects", "keep"]:
+            del clipped_gdf[tmp_field]
 
         return clipped_gdf
 

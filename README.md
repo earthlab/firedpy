@@ -297,13 +297,13 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 
 ## Installation
 
-There are two main ways to install firedpy. Method 1 is to install locally from source and Method two is to run it out of a Docker container.
+There are two main ways to install firedpy. Method 1 is to install locally from source and method 2 is to run it out of a Docker container.
 
 ### Method 1 - Install from source:
 
 #### 1.1 Package Installer for Python (pip):
 
-- **Step #1**: Install the Geospatial Data Abstraction Library (GDAL) on your machine, if it is not installed already. The isntallation method depends on your operating system (OS) and package manager (for Linux and MacOS). See the GDAL Documentation page for official downloads: https://gdal.org/en/stable/download.html. Below are a subset of installation options.
+- **Step #1**: Install the Geospatial Data Abstraction Library (GDAL) on your machine, if it is not installed already. The installation method depends on your operating system (OS) and package manager (for Linux and MacOS). Below are a subset of installation options (see the GDAL Documentation page for official downloads: https://gdal.org/en/stable/download.html).
   
     **MacOS (brew)**
     ```bash
@@ -329,7 +329,7 @@ There are two main ways to install firedpy. Method 1 is to install locally from 
 
     **Windows**
 
-      The most commonly recommended approach for install GDAL with Windows is to use the Conda method (described below), but you may also use the OSGeo4W network installer. Go to the OSGeo4W landing page and download and run the installer: https://trac.osgeo.org/osgeo4w/. More detailed installation instructions are available on that site.
+    The most commonly recommended approach for installing GDAL with Windows is to use the Conda method (described below), but you may also use the OSGeo4W network installer. Go to the OSGeo4W landing page and download and run the installer: https://trac.osgeo.org/osgeo4w/. More detailed installation instructions are available on that site.
 
 - **Step 2**: Create a Python environment and activate it. There are many options for doing this, one way is to use Python's virtual environment package as follows:
 
