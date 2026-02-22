@@ -39,7 +39,7 @@ find = {include = ["firedpy*"]}
 version = {attr = "firedpy.__version__"}
 
 [tool.setuptools.package-data]
-firedpy = ["data/*"]
+firedpy = ["data/**"]
 
 [project.scripts]
 firedpy = "firedpy.cli:cli"

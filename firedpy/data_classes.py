@@ -1243,7 +1243,7 @@ class LandCover(Base):
             # Get available years (this is fixed?)
             available_years = gdf["ig_year"].unique()
             for tile in available_tiles:
-                logger.info(f"\nProcessing land cover for tile: {tile}")
+                logger.info(f"Processing land cover for tile: {tile}")
 
                 for year in available_years:
                     logger.info(f"   Processing year: {year}")

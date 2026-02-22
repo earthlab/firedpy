@@ -360,7 +360,7 @@ There are two main ways to install firedpy. Method 1 is to install locally from 
   Anaconda and its package manager `conda` is a system-independent method and should work for MacOS, Linux, or Windows.
 
   - **Step #1**: Install Anaconda
-  The installation method you use will depend on your operating system. Visit Conda's installation site, choose either `Miniconda`, `Anaconda Distribution`, or `Miniforge` (all options should work well) and following the installation instructions there: https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html.
+  The installation method you use will depend on your operating system. Visit Conda's installation site, choose either `Miniconda`, `Anaconda Distribution`, or `Miniforge` (all options should work well) and following the installation instructions there: https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html. The easiest way to find an installer is through this miniconda repository: https://repo.anaconda.com/miniconda/. 
 
   - **Step #2**: Clone this repository to a local folder and change directories into it:
 
