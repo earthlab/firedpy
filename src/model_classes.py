@@ -29,7 +29,7 @@ import rasterio
 
 from src.enums import LandCoverType, EcoRegionType
 from src.data_classes import Base
-from src.firespeed import computefirespeed
+from src.firespeed import computefirespeed, build_cumulative_perims
 
 import cProfile
 import pstats
@@ -864,40 +864,98 @@ class ModelBuilder(Base):
         df['did'] = df['temp'].apply(lambda x: hashlib.md5(x.encode()).hexdigest())
         df.drop('temp', axis=1, inplace=True)  # Remove temporary column
         return df
+    
+    def build_cumulative_perims(gdf, date_col="date"):
+        gdf = gdf.sort_values(date_col).copy()
+        gdf[date_col] = pd.to_datetime(gdf[date_col])
 
-    def process_daily_data(self, gdf: gpd.GeoDataFrame, output_csv_path: str, daily_shp_path: str,
-                           daily_gpkg_path: str) -> gpd.GeoDataFrame:
-        print("Dissolving polygons...")
+        cumulative = []
+        union_so_far = None
 
-        gdf = self._create_did_column(gdf, ['date', 'id'])
+        for geom in gdf.geometry:
+            geom = geom.buffer(0) if not geom.is_valid else geom
+            union_so_far = geom if union_so_far is None else unary_union([union_so_far, geom])
+            cumulative.append(union_so_far)
 
-        gdfd = gdf.dissolve(by="did", as_index=False)
-        print("Converting polygons to multipolygons...")
-        gdfd["geometry"] = gdfd["geometry"].apply(self._as_multi_polygon)
-
-        self.save_data(gdfd, daily_shp_path, daily_gpkg_path, output_csv_path)
-
-        gdf = gdfd.drop(['did', 'pixels', 'date', 'event_day', 'dy_ar_km2'], axis=1)
-        gdf = gdf.dissolve(by="id", as_index=False)
-        print("Calculating perimeter lengths...")
-        gdf["tot_perim"] = gdf["geometry"].length
-        gdf["geometry"] = gdf["geometry"].apply(self._as_multi_polygon)
-
-        print("Calculating maximum travel vectors ...")
-        ### save GDF for sanity check --- REMOVE THIS
-        gdf.to_file('verification.gpkg', driver='GPKG', layer='pre_comp_fs')
-        fs_orig_x, fs_orig_y, fs_dest_x, fs_dest_y, fs_max_dist, fs_speed = computefirespeed(gdf)
-
-        ### fire speed test code -- add dummy variables for max travel vector
-        ### characterized by origin x, y and destination x, y
-        gdf["max_vec_origin_x"] = fs_orig_x
-        gdf["max_vec_origin_y"] = fs_orig_y
-        gdf["max_vec_dest_x"] = fs_dest_x
-        gdf["max_vec_dest_y"] = fs_dest_y
-        gdf["fire_distance"] = fs_max_dist
-        gdf["fire_speed"] = fs_speed
-
+        gdf["cumulative_geom"] = cumulative
         return gdf
+
+    def process_daily_data(self, gdf: gpd.GeoDataFrame, output_csv_path: str,
+                       daily_shp_path: str, daily_gpkg_path: str) -> gpd.GeoDataFrame:
+        """
+        Process daily fire perimeters and compute cumulative perimeters and fire speed per fire.
+        Each fire ID is handled separately to avoid cross-fire contamination in cumulative geometry.
+        """
+
+        print("Checking CRS...")
+
+        if gdf.crs is None:
+            raise ValueError("Input GeoDataFrame has no CRS")
+
+        if gdf.crs.is_geographic:
+            print(f"Reprojecting perimeters from {gdf.crs} to EPSG:5070")
+            gdf = gdf.to_crs("EPSG:5070")
+
+        # --- Create daily fire ID (DID) for grouping ---
+        gdf = self._create_did_column(gdf, ['date', 'id'])
+        
+        # Dissolve polygons per fire per day
+        print("Dissolving polygons by day + fire ID...")
+        daily_gdf = gdf.dissolve(by="did", as_index=False)
+        print(f"Daily rows after dissolve: {len(daily_gdf)}")
+
+        # --- BUILD CUMULATIVE PERIMETERS PER FIRE ---
+        print("Building cumulative perimeters per fire...")
+        cumulative_gdfs = []
+
+        for fire_id, sub_gdf in daily_gdf.groupby("id"):
+            sub_cum = build_cumulative_perims(sub_gdf, id_col="id", date_col="date")
+            
+            # Ensure multipolygon format
+            sub_cum["geometry"] = sub_cum["geometry"].apply(self._as_multi_polygon)
+            sub_cum["geometry"] = sub_cum["geometry"].apply(
+                lambda mp: MultiPolygon(sorted(mp.geoms, key=lambda p: p.area, reverse=True))
+            )
+            cumulative_gdfs.append(sub_cum)
+
+        fire_gdf_cum = pd.concat(cumulative_gdfs, ignore_index=True)
+
+        # --- COMPUTE FIRE SPEED VECTORS ---
+        print("Calculating maximum linear speed vectors for daily perimeters...")
+        fs_orig_x, fs_orig_y, fs_dest_x, fs_dest_y, fs_max_dist, fs_speed = computefirespeed(fire_gdf_cum)
+
+        # Attach results to cumulative GDF
+        fire_gdf_cum["origin_x"] = fs_orig_x
+        fire_gdf_cum["origin_y"] = fs_orig_y
+        fire_gdf_cum["dest_x"] = fs_dest_x
+        fire_gdf_cum["dest_y"] = fs_dest_y
+        fire_gdf_cum["vec_dist"] = fs_max_dist
+        fire_gdf_cum["fire_speed"] = fs_speed
+
+        # Save daily cumulative data
+        self.save_data(fire_gdf_cum, daily_shp_path, daily_gpkg_path, output_csv_path)
+
+        # -------------------------
+        # EVENT GDF: collapse daily into event-level
+        gdf_event = fire_gdf_cum.drop(['did', 'pixels', 'date', 'event_day', 'dy_ar_km2'], axis=1)
+        gdf_event = fire_gdf_cum.dissolve(by="id", as_index=False, aggfunc={
+            'fire_speed': 'max',
+            'vec_dist': 'max',
+            'origin_x': 'max',
+            'origin_y': 'max',
+            'dest_x': 'max',
+            'dest_y': 'max',
+            'ig_date': 'min',
+            'mx_grw_dte': 'max',
+            'last_date': 'max',
+        })
+        print("Calculating event-level perimeter lengths...")
+        gdf_event["tot_perim"] = gdf_event["geometry"].length
+        gdf_event["geometry"] = gdf_event["geometry"].apply(self._as_multi_polygon)
+
+        # Return event-level GDF
+        return gdf_event
+
 
     def process_event_data(self, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         gdf = gdf.drop(['pixels', 'date', 'event_day', 'dy_ar_km2'], axis=1)

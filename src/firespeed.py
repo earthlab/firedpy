@@ -1,6 +1,9 @@
 import math
 import numpy as np
+import pandas as pd
+import shapely
 from shapely import LineString
+from shapely.geometry import Polygon, MultiPolygon, LineString, Point
 import geopandas as gpd
 import pyproj
 
@@ -11,11 +14,47 @@ def auto_density_func(density_param, shape):
     ### arbitrarily set pt density to 1...
     n_pts = len(shape)
     max_bins = int(math.sqrt(n_pts)/density_param)
-    print("bin density verification:", len(shape), "pts, ", len(shape)/(max_bins * max_bins), "LD")
+    #print("bin density verification:", len(shape), "pts, ", len(shape)/(max_bins * max_bins), "LD")
 
     return max_bins
 
+def build_cumulative_perims(gdf, id_col="id", date_col="date"):
+    gdf = gdf.sort_values([id_col, date_col]).copy()
+    gdf[date_col] = pd.to_datetime(gdf[date_col])
+
+    cumulative_list = []
+
+    for fire_id, sub_gdf in gdf.groupby(id_col):
+        union_so_far = None
+        for geom in sub_gdf.geometry:
+            # fix invalid geometries
+            geom = geom.buffer(0) if not geom.is_valid else geom
+
+            # cumulative union
+            union_so_far = geom if union_so_far is None else shapely.ops.unary_union([union_so_far, geom])
+            
+            # --- strip all holes robustly ---
+            def remove_holes(g):
+                if isinstance(g, Polygon):
+                    return Polygon(g.exterior)
+                elif isinstance(g, MultiPolygon):
+                    return MultiPolygon([Polygon(p.exterior) for p in g.geoms])
+                else:
+                    return g
+
+            union_so_far = remove_holes(union_so_far)
+
+            cumulative_list.append(union_so_far)
+
+    gdf["cum_geom"] = cumulative_list
+    return gdf
+
+
 def computefirespeed(fire_gdf):
+    if fire_gdf.crs is None or fire_gdf.crs.is_geographic:
+        raise ValueError(
+            f"computefirespeed requires projected CRS in meters, got {fire_gdf.crs}"
+        )
     transformer = pyproj.Transformer.from_crs(fire_gdf.crs, "EPSG:4326", always_xy=True)
     geod = pyproj.Geod(ellps="WGS84")
     orig_x = [np.nan]
@@ -24,50 +63,106 @@ def computefirespeed(fire_gdf):
     dest_y = [np.nan]
     result_max_dist = [np.nan]
     result_speed = [np.nan]
-    prev_step = [fire_gdf.iloc[0]["geometry"].geoms[ii].simplify(0.05).exterior.coords for ii in range(len(fire_gdf.iloc[0]["geometry"].geoms))]
-    ### need to deal with resampling or something here in future iteration of code
+
+    fire_gdf = fire_gdf.reset_index(drop=True).copy()
+
     ### iterate over time steps
-    for i in range(1, min(fire_gdf.shape[0], 10)):
-        ### setup for overlap and spot checks...
-        inter_matrix = np.zeros((len(fire_gdf.iloc[i-1]["geometry"].geoms), len(fire_gdf.iloc[i]["geometry"].geoms)))
+    for i in range(1, fire_gdf.shape[0]):
+
+        # --- TRUE cumulative geometries ---
+        prev_cum = fire_gdf.iloc[i - 1].cum_geom
+        curr_cum = fire_gdf.iloc[i].cum_geom
+
+        # ensure MultiPolygon
+        if isinstance(prev_cum, Polygon):
+            prev_cum = MultiPolygon([prev_cum])
+        if isinstance(curr_cum, Polygon):
+            curr_cum = MultiPolygon([curr_cum])
+
+        # safe difference
+        try:
+            new_area = curr_cum.difference(prev_cum)
+        except shapely.errors.GEOSException:
+            # tiny buffer fallback
+            new_area = curr_cum.buffer(0.001).difference(prev_cum.buffer(0.001))
+        
+        if isinstance(new_area, Polygon):
+            new_area = MultiPolygon([new_area])
+        # --- setup for overlap and spot checks ---
+        inter_matrix = np.zeros((len(prev_cum.geoms), len(new_area.geoms)))
+
         for ii in range(inter_matrix.shape[0]):
             for jj in range(inter_matrix.shape[1]):
-                inter_matrix[ii, jj] = fire_gdf.iloc[i-1]["geometry"].geoms[ii].intersects(fire_gdf.iloc[i]["geometry"].geoms[jj])
-        ### bug check
-        if inter_matrix.shape[0] == 1 and inter_matrix.shape[1] == 1 and inter_matrix[0, 0] == False:
-            print("Error: No overlap at", i)
+                inter_matrix[ii, jj] = prev_cum.geoms[ii].buffer(1e-6).intersects(new_area.geoms[jj])
+            
+        # --- rebuild inner_coords to match prev_cum.geoms ---
+        prev_step = [
+            prev_cum.geoms[ii].simplify(0.05).exterior.coords
+            for ii in range(len(prev_cum.geoms))
+        ]
 
-        ### return maximum_distance, max_dist_origin, max_dist_destination
-        max_fire_dist, max_origin, max_destination, prev_step = compute_max_vector(fire_gdf["geometry"][i-1].geoms, fire_gdf["geometry"][i].geoms, prev_step, 
-                                                                                   inter_matrix, buffer=200, maxbins=200, slop=2)
-        orig_x.append(max_origin[0])    ### error is here
+        # Calculates buffer dynamically based on the current perimeter length
+        flex_buffer = min(5000,  # 5 km hard cap
+            max(200, math.sqrt(new_area.area) / 2)
+        )
+
+
+        max_fire_dist, max_origin, max_destination, _ = compute_max_vector(
+            prev_cum.geoms,
+            new_area.geoms,
+            prev_step,
+            inter_matrix,
+            buffer=flex_buffer,
+            maxbins=200,
+            slop=2
+        )
+
+        # --- Vector checks ---
+        if max_origin is not None and max_destination is not None:
+            orig_pt = Point(max_origin)
+            dest_pt = Point(max_destination)
+
+            if not any(g.intersects(dest_pt) for g in new_area.geoms):
+                raise RuntimeError("Destination not within newly burned area")
+            '''
+            line = LineString([max_origin, max_destination])
+            overlap = sum([line.intersection(poly).length for poly in curr_cum.geoms]) / line.length
+            if overlap < 0.75:  # at least 75% of the line must be within the current perimeter
+                max_origin = max_destination = None  # discard this candidate
+            '''
+        # --- preserve original failure behavior ---
+        if max_origin is None or max_destination is None:
+            orig_x.append(np.nan)
+            orig_y.append(np.nan)
+            dest_x.append(np.nan)
+            dest_y.append(np.nan)
+            result_max_dist.append(np.nan)
+            result_speed.append(np.nan)
+            continue
+        orig_x.append(max_origin[0])
         orig_y.append(max_origin[1])
         dest_x.append(max_destination[0])
         dest_y.append(max_destination[1])
 
         ### compute meter distance
-        lons, lats = transformer.transform([max_origin[0], max_destination[0]],
-                                           [max_origin[1], max_destination[1]])
+        lons, lats = transformer.transform(
+            [max_origin[0], max_destination[0]],
+            [max_origin[1], max_destination[1]]
+        )
         dist = geod.line_length(lons, lats)
-        result_max_dist.append(dist)
+        result_max_dist.append(dist/1000)  # in km
 
-        ### assumption here is these are daily perims...
-        ### so to compute spread in km/h, we do (dist in km) / 24
-        result_speed.append((dist * 1000) / 24)
+        ### compute spread in km/h
+        result_speed.append((dist/1000) / 24) # in km/hr
 
-    
-        
     return orig_x, orig_y, dest_x, dest_y, result_max_dist, result_speed
 
 
 def compute_max_vector(perim_inner_geoms, perim_outer_geoms, inner_coords, inter_matrix, buffer, maxbins, slop, debug=False):
-    ### distance computation 2 -- binned
-    outer_coords = []
 
-    ### does computing this beforehand speed things up? maybe a bit
+    outer_coords = [geom.simplify(0.05).exterior.coords for geom in perim_outer_geoms]
+    #inner_coords = [list(geom.simplify(0.05).exterior.coords)for geom in perim_inner_geoms]
     root2 = round(math.sqrt(2), 5)
-
-    verify_outer = False
 
     result_dist = []
     result_coord_pair = []
@@ -79,39 +174,52 @@ def compute_max_vector(perim_inner_geoms, perim_outer_geoms, inner_coords, inter
     ### minimize distances between Px and Py with x fixed (closest polygon to the one looked at)
     ### maximize distances between Px and Pymax (furthest point from closest point on closest polygon)
     for poly_outer in range(len(perim_outer_geoms)):
+
         buffer_poly = perim_outer_geoms[poly_outer].buffer(buffer)
         ### computer poly_outer bounding box
         outer_bbox = perim_outer_geoms[poly_outer].exterior.bounds
         outer = perim_outer_geoms[poly_outer].simplify(0.05).exterior.coords
         #else:
         #    outer = resample(perim_outer_geoms[poly_outer].simplify(0.05).exterior, params["resample"]).coords
-        outer_coords.append(outer)
+        #outer_coords.append(outer)
         ### this checks if any previous perimeter is inside this one...
         ### if not, spotted
+
         spot_flag = not np.any(inter_matrix[:, poly_outer])
+        spot_threshold = 4000  # meters
+
         polyids = []
         if spot_flag:
-            ### in the R code, this is resampling to get more points per meter to get accurate estimate...?
-            ### need to compare with all polygons
-            polyids= [ii for ii in range(len(perim_inner_geoms))]
-        ### if it hasn't spotted, compare to all perims that fall inside:
+            distances = [g.distance(perim_outer_geoms[poly_outer]) for g in perim_inner_geoms]
+            nearest_idx = np.argmin(distances)
+            if distances[nearest_idx] > spot_threshold:
+                # too far → new ignition, skip this polygon
+                print(f"Warning: spotted polygon at index {poly_outer} with nearest distance {distances[nearest_idx]:.2f} m, skipping")
+                continue
+            polyids = [nearest_idx]
         else:
+            # if there is overlap, pick only overlapping polygons
             for ii in range(len(perim_inner_geoms)):
                 if inter_matrix[ii, poly_outer]:
                     polyids.append(ii)
+
         ### now, keep track of all comparisons for this polygon
         poly_min_dist = float("inf")
         poly_coordpair = None
         poly_pair = None
+        found_valid_inner = False
 
-        verify_inner = False
 
         for poly_inner in polyids:
             ### compute inner bounding box...
             inner_bbox = perim_inner_geoms[poly_inner].exterior.bounds
             ### compute combined bounding box
-            bbox = (min(inner_bbox[0], outer_bbox[0]), min(inner_bbox[1], outer_bbox[1]), 
-                    max(inner_bbox[2], outer_bbox[2]), max(inner_bbox[3], outer_bbox[3]))
+            minx = min(inner_bbox[0], outer_bbox[0])
+            miny = min(inner_bbox[1], outer_bbox[1])
+            maxx = max(inner_bbox[2], outer_bbox[2])
+            maxy = max(inner_bbox[3], outer_bbox[3])
+            bbox = (minx, miny, maxx, maxy)
+            
             ### guess x, y bin sizes 
             bins_x = math.ceil((bbox[2] - bbox[0])/maxbins)
             bins_y = math.ceil((bbox[3] - bbox[1])/maxbins)
@@ -144,8 +252,7 @@ def compute_max_vector(perim_inner_geoms, perim_outer_geoms, inner_coords, inter
             ### now, bin inner layer
             for i in range(len(inner_coords[poly_inner])):
                 ### bin inner layer 
-                inner_ids = (int((inner_coords[poly_inner][i][0]-lower[0])//bin_res), 
-                           (int(inner_coords[poly_inner][i][1]-lower[1])//bin_res))
+                inner_ids = (int((inner_coords[poly_inner][i][0]-lower[0])//bin_res), (int(inner_coords[poly_inner][i][1]-lower[1])//bin_res))
                 inner_bins[inner_ids[0], inner_ids[1]].append(i)
                 inner_occu[inner_ids[0], inner_ids[1]] = True
             ### now, bin outer layer
@@ -165,8 +272,6 @@ def compute_max_vector(perim_inner_geoms, perim_outer_geoms, inner_coords, inter
                 print("- debug -", inner_bins, outer_bins)
                 print("- debug -", inner_occu, outer_occu)
 
-            nothing_found_flag = True
-
             ### finally ... we can do binned nearest neighbors
             ### do root2 rings... focus on points in outer perim
             ### iterate over occupied bins in outer ring to narrow comparison
@@ -176,7 +281,6 @@ def compute_max_vector(perim_inner_geoms, perim_outer_geoms, inner_coords, inter
                 ### expand out until we find all squares with UL distance of 2sqrt(2) of the closest
                 ### start with this loose upper bound because this is the furthest we can possibly iterate 
                 ### ...because there are only so many bins...
-                root2_dist = maxbins ### needs some work... to tighten upper bound?
                 root2_dist = max(grid_size)
                 root2_set = True
                 ring = 0
@@ -206,8 +310,7 @@ def compute_max_vector(perim_inner_geoms, perim_outer_geoms, inner_coords, inter
                         else:
                             for k in range(len(outer_bins[occu_loc[0], occu_loc[1]])):
                                 for i in range(len(temp)):
-                                    temp_box = inner_bins[temp[i][0] + max(occu_loc[0]-ring, 0), 
-                                                            temp[i][1] + max(occu_loc[1]-ring, 0)]
+                                    temp_box = inner_bins[temp[i][0] + max(occu_loc[0]-ring, 0), temp[i][1] + max(occu_loc[1]-ring, 0)]
                                     for l in range(len(temp_box)):
                                         ## s1c[bins_1[occu_loc[0], occu_loc[1]][k]]
                                         if buffer_poly.contains(LineString([(inner_coords[poly_inner][temp_box[l]]),
@@ -234,8 +337,6 @@ def compute_max_vector(perim_inner_geoms, perim_outer_geoms, inner_coords, inter
                     if debug:
                         print("- debug - no rings found on this occu_loc", ring, root2_dist)
                     continue
-                else:
-                    nothing_found_flag = False
                 ### for each outer box (occu_loc) we have a series of points (len(bins_1[][])) -- 
                 ###     for each point we have a series of inner boxes (ring_sqs[][][i/j])
                 ###         for each inner box we have a series of points --- measure distances and find min
@@ -274,30 +375,36 @@ def compute_max_vector(perim_inner_geoms, perim_outer_geoms, inner_coords, inter
                 ### now we can compare the longest shortest-pair combo we found from this bin to the ones
                 ### found in other bins...
                 ### TODO -- some way to account for ties...
-                if sdist > sample_dist:
+                if spair is not None and sdist > sample_dist:
                     sample_dist = sdist
                     sample_pair = spair
-            if nothing_found_flag:
-                continue
+            if sample_pair is None:
+                continue # this inner polygon contributes nothing
+            # from here on, we know this poly_inner produced a valid pair
+            found_valid_inner = True
+
             ### at this point we have the furthest nearest-neighbor for this polygon pair
             if sample_dist < poly_min_dist:
                 poly_min_dist = sample_dist
                 poly_coordpair = sample_pair
-                poly_pair = (poly_inner, poly_outer)
-                verify_inner = True
+                #poly_pair = (poly_inner, poly_outer)
+                poly_pair = (perim_inner_geoms[poly_inner], perim_outer_geoms[poly_outer])
+
         ### aggregate over all outer polygons
-        if verify_inner:
-            result_dist.append(poly_min_dist)
-            result_coord_pair.append(poly_coordpair)
-            result_poly_pair.append(poly_pair)
-            verify_outer = True
-        else:
+        if not found_valid_inner or poly_coordpair is None:
             continue
-    if verify_outer:
+        result_dist.append(poly_min_dist)
+        result_coord_pair.append(poly_coordpair)
+        result_poly_pair.append(poly_pair)
+        
+    if len(result_dist) > 0:
         max_loc = np.argmax(result_dist)
         maximum_distance = result_dist[max_loc]
         max_dist_origin = result_coord_pair[max_loc][0]
         max_dist_destination = result_coord_pair[max_loc][1]
+
+        chosen_outer = result_poly_pair[max_loc][1]
+
     else:
         if debug:
             print("- debug - no pairs found!")
@@ -313,6 +420,7 @@ def compute_max_vector(perim_inner_geoms, perim_outer_geoms, inner_coords, inter
         maximum_distance = np.nan
         max_dist_origin = None
         max_dist_destination = None
+        
     return maximum_distance, max_dist_origin, max_dist_destination, outer_coords
 
 ### fire distance computations
