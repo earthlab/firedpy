@@ -8,17 +8,6 @@ from shapely.ops import unary_union, transform, nearest_points
 import geopandas as gpd
 import pyproj
 
-
-def auto_density_func(density_param, shape):
-    ### thinking on this is we want the density per-square to remain similar...?
-    ### so density to go with the sqrt of n_points
-    ### arbitrarily set pt density to 1...
-    n_pts = len(shape)
-    max_bins = int(math.sqrt(n_pts)/density_param)
-    #print("bin density verification:", len(shape), "pts, ", len(shape)/(max_bins * max_bins), "LD")
-
-    return max_bins
-
 def build_cumulative_perims(gdf, id_col="id", date_col="date"):
     gdf = gdf.sort_values([id_col, date_col]).copy()
     gdf[date_col] = pd.to_datetime(gdf[date_col])
