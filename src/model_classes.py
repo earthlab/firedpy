@@ -887,15 +887,6 @@ class ModelBuilder(Base):
         Each fire ID is handled separately to avoid cross-fire contamination in cumulative geometry.
         """
 
-        print("Checking CRS...")
-
-        if gdf.crs is None:
-            raise ValueError("Input GeoDataFrame has no CRS")
-
-        if gdf.crs.is_geographic:
-            print(f"Reprojecting perimeters from {gdf.crs} to EPSG:5070")
-            gdf = gdf.to_crs("EPSG:5070")
-
         # --- Create daily fire ID (DID) for grouping ---
         gdf = self._create_did_column(gdf, ['date', 'id'])
         
