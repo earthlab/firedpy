@@ -1,11 +1,4 @@
-"""firedpy Command Line Interface (CLI).
-
-They want prompts. I want it to be optional. Here's an example of how to do
-that:
-
-https://gist.github.com/jzbruno/d167d256f6c426e2b6fdf2dbfc1ba3c9
-
-"""
+"""firedpy Command Line Interface (CLI)."""
 import click
 import re
 
