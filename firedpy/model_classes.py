@@ -772,6 +772,9 @@ class ModelBuilder(Base):
 
         return gdf
 
+    ## Note from Nate: this is the definition that was exporting the data as WGS84
+    ## Need to re-work this attribute type if we want to keep it
+    ## currently commented out where called in build_events (line 855)
     def add_kg_attributes(self, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         """Assign Köppen-Geiger climate zones to events with a raster file.
 
@@ -848,7 +851,8 @@ class ModelBuilder(Base):
         gdf = self.process_geometry(gdf)
 
         # Calculate fire spread speed and maximum travel vectors
-        gdf = self.add_kg_attributes(gdf)
+        # Note from Nate: this does not calculate fire speed and max travel vectors? And we aren't currently using KG regions
+        #gdf = self.add_kg_attributes(gdf)
 
         return gdf
 
