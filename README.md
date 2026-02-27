@@ -30,7 +30,7 @@ Balch, J. K., St. Denis, L. A., Mahood, A. L., Mietkiewicz, N. P., Williams, T. 
 
 ### Description of the 2000 - 2021 data sets: 
 
-Mahood, A.L. Lindrooth, E.J., Cook, M.C. and Balch, J.K. Country-level fire perimeter datasets (2001-2021). 2022. Nature Scientific Data, 9(458). https://doi.org/10.1038/s41597-022-01572-3
+Mahood, A.L. Lindrooth, E.J., Cook, M.C. and Balch, J.K. 2022. Country-level fire perimeter datasets (2001-2021). Nature Scientific Data, 9(458). https://doi.org/10.1038/s41597-022-01572-3
 
 ### Methodological information for FIREDpy 2.0, description of 2000-2024 datasets:
 
