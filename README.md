@@ -355,7 +355,7 @@ There are two main ways to install firedpy. Method 1 is to install locally from 
     pip install .
     ```
 
-### 2.2 Conda: 
+#### 1.2 Conda: 
 
   Anaconda and its package manager `conda` is a system-independent method and should work for MacOS, Linux, or Windows.
 
