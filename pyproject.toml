@@ -1,0 +1,45 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = [
+    "setuptools>=80"
+]
+
+[project]
+name = "firedpy"
+dynamic = ["version", "dependencies"]
+description = "The Fire Event Delineation Model Python Package"
+readme = "README.md"
+authors = [
+    {name="Adam Mahood", email="admahood@duck.com"},
+    {name="Travis Williams"},
+    {name="Lise St. Denis"},
+    {name="Maxwell Cook"},
+    {name="Ellie Lindrooth"},
+    {name="Nate Hofford"},
+    {name="Kyle Manley"},
+    {name="Maxwell Joseph"},
+    {name="Erick Verleye"}
+]
+license = "MIT"
+keywords = ["FIRED", "firedpy", "fire", "wildfire"]
+requires-python = ">=3.12"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14"
+]
+
+[tool.setuptools.packages]
+find = {include = ["firedpy*"]}
+
+[tool.setuptools.dynamic]
+version = {attr = "firedpy.__version__"}
+
+[tool.setuptools.package-data]
+firedpy = ["data/**"]
+
+[project.scripts]
+firedpy = "firedpy.cli:cli"

@@ -7,6 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.1] - 2026
+### Changed
+- **Regoranized code to allow for Python package installation**
+    - *Moved all Python scripts to `firedpy/` folder*.
+        - Scripts in `src/` moved directly into `firedpy/`.
+            - `src/spatial/` moved to `firedpy/utilities/spatial/`.
+        - Scripts in `bin/` moved directly into `firedpy/`.
+            - `bin/firedpy.py` moved to `firedpy/run.py` to avoid name conflicts with package.
+        - Scripts in `utilities/` moved to `firedpy/utilities/`.
+    - *Moved code within scripts in general reorganization effort*
+        - Moved "HELP" string constants from `src/__init__.py` to dictionary in `firepy/help.py`.
+        - Various other portions of code shifted around as well, too many to outline briefly.
+    - *Moved data in `ref/` into `firedpy/data/` which is now handled as embedded package data.*
+
+- **Began process of refactoring to comply with Python Enhancement Proposal (PEP) recommendations:**
+    - *Notable PEP recommendations include:*
+        - PEP-8: Style Guide for Python Code
+            - This is somewhat flexible, but is generally considered as a set of standards, is beneficial to readability, and is built into code linting checks embedded in continous integration and deployment (CI/CD).
+            - https://peps.python.org/pep-0008/
+        - PEP-257: Docstring Conventions
+            - Provides a human readable description of function/class purpose, arguments, and outputs.
+            - Will enable automated documentation with tools such as Sphinx (https://www.sphinx-doc.org/en/master/).
+            - https://peps.python.org/pep-0257/
+### Added
+- **Pip Dependencies**
+    - Added a `requirements.txt` file.
+    - Replicates the `environment.yaml` for conda.
+    - Is called throught `setup.py` which is coordinated through `pyproject.toml` via the `dynamic` entry ("version" and "dependencies")
+- **Removed most type hinting and began inevitable debate over utility of practice in this context.**
+    - *Reasons include:*
+        - Redundancy with docstring type declarations.
+        - Prioritization of simplicity and quick development time over benefits of IDE integration and enhanced coder type awareness.
+        - Lack of consistent, dedicated development team for proper implementation (code will be managed by rotating graduate students from different departments).
+        - Inconsistent use of hints in existing code base.
+- **Packaging code added to `pyproject.toml` file, which is recommended practice as per PEP-621:**
+    - https://peps.python.org/pep-0621/
+- **Simple GDAL discovery routine added to `setup.py` script:**
+    - Called through `setup.py`.
+    - Enables firedpy to use existing system installations of GDAL/OGR.
+    - Keeps Python environment lighter weight and reduces installation times.
+    - Provides an alternative to conda for users who prefer native Python package installations (e.g.,  Python Installs Packages or pip).
+    - Is a necessary step for hosting firedpy on the Python Packaging Index (PyPI): https://pypi.org/.
+- **Moved all print statements to logs**:
+    - Initial move, can improve logging later
+    - Writes logs to a file
+    - Includes datetime, file, and line number for each statement
+    - Still prints to stdout
+- **Map of MODIS tile IDs added to firedpy/data/images**
+    - Should help both to identify target MODIS tiles and to visualize part of the firedpy classification process.
+
+### Fixed
+
 ## [2.0.0] - 2023
 
 ### Added

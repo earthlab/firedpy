@@ -14,15 +14,23 @@ The algorithm outputs shapefiles of delineated fire events in either .shp or .gp
 *Illustration of the event-level and daily-level output of FIREDpy for the 2013 Rim Fire in California. Figure is from Mahood et al. 2022.*
 
 
+## The MODIS Sinusioidal Project
+
+You may specify study areas for FIREDpy using individual MODIS tiles. This product uses a Sinusoidal, Lambert Azimuthal Equal-Area projection. There are several spatial resolutions available for this data, but FIREDpy uses the 500m resolution (actual distances depend on location). For more information about this projection, see https://modis-land.gsfc.nasa.gov/MODLAND_grid.html. If you would like to use the MODIS sinusoidal grid IDs to identify FIREDpy study areas, see the visualization of this grid below.
+
+<img width="1900" alt="image" src="https://github.com/earthlab/firedpy/blob/tw/installation/firedpy/data/images/modis_land_id_map_robinson.png" />
+
+
+
 ## FIREDpy citations
 
 ### Methodological information for FIREDpy 1.0:
 
-Balch, J. K., St. Denis, L. A., Mahood, A. L., Mietkiewicz, N. P., Williams, T. P., McGlinchy J, and Cook, M. C. 2020. FIRED (Fire Events Delineation): An open, flexible algorithm & database of U.S. fire events derived from the MODIS burned area product (2001-19). Remote Sensing, 12(21), 3498; https://doi.org/10.3390/rs12213498
+Balch, J. K., St. Denis, L. A., Mahood, A. L., Mietkiewicz, N. P., Williams, T. W., McGlinchy J, and Cook, M. C. 2020. FIRED (Fire Events Delineation): An open, flexible algorithm & database of U.S. fire events derived from the MODIS burned area product (2001-19). Remote Sensing, 12(21), 3498; https://doi.org/10.3390/rs12213498
 
 ### Description of the 2000 - 2021 data sets: 
 
-Mahood, A.L. Lindrooth, E.J., Cook, M.C. and Balch, J.K. Country-level fire perimeter datasets (2001-2021). 2022. Nature Scientific Data, 9(458). https://doi.org/10.1038/s41597-022-01572-3
+Mahood, A.L. Lindrooth, E.J., Cook, M.C. and Balch, J.K. 2022. Country-level fire perimeter datasets (2001-2021). Nature Scientific Data, 9(458). https://doi.org/10.1038/s41597-022-01572-3
 
 ### Methodological information for FIREDpy 2.0, description of 2000-2024 datasets:
 
@@ -289,11 +297,95 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 
 ## Installation
 
-There are two ways to install firedpy. Method one is to run it out of a docker container, Method 2 is to install locally.
+There are two main ways to install firedpy. Method 1 is to install locally from source and method 2 is to run it out of a Docker container.
 
-### Method 1. Run from a Docker Container:
+### Method 1 - Install from source:
 
-#### 1.1 Get the docker container running:
+#### 1.1 Package Installer for Python (pip):
+
+- **Step #1**: Install the Geospatial Data Abstraction Library (GDAL) on your machine, if it is not installed already. The installation method depends on your operating system (OS) and package manager (for Linux and MacOS). Below are a subset of installation options (see the GDAL Documentation page for official downloads: https://gdal.org/en/stable/download.html).
+  
+    **MacOS (brew)**
+    ```bash
+    brew install gdal
+    ```
+  
+    **Linux (Debian or Debian-derivatives such as Ubuntu):**
+    ```bash
+    sudo apt update
+    sudo apt install gdal-bin libgdal-dev python3-gdal
+    ```
+  
+    **Linux (Fedora, RHEL, CentOS, Rocky Linux, and other OSs that use dnf)**
+    ```bash
+    sudo dnf install gdal gdal-devel python3-gdal
+    ```
+  
+    **Linux (Arch)**
+    ```bash
+    sudo pacman -Syu
+    sudo pacman -S gdal python-gdal
+    ```
+
+    **Windows**
+
+    The most commonly recommended approach for installing GDAL with Windows is to use the Conda method (described below), but you may also use the OSGeo4W network installer. Go to the OSGeo4W landing page and download and run the installer: https://trac.osgeo.org/osgeo4w/. More detailed installation instructions are available on that site.
+
+- **Step 2**: Create a Python environment and activate it. There are many options for doing this, one way is to use Python's virtual environment package as follows:
+
+    **MacOS or Linux**:
+    ```bash
+    mkdir ~/envs
+    python3 -m venv ~/envs/firedpy
+    source ~/envs/firedpy/bin/activate
+    ```
+  
+    **Windows (CMD)**:
+    ```cmd
+    mkdir ~/envs
+    python3 -m venv ~/envs/firedpy
+    ~/envs/firedpy/Scripts/activate.bat
+    ```
+
+- **Step #3**: Now you may install FIREDpy from source using pip. Clone this repository, change directories into it, and install using the pip installation command:
+  
+    ```bash
+    git clone https://github.com/earthlab/firedpy.git
+    cd firedpy
+    pip install .
+    ```
+
+#### 1.2 Conda: 
+
+  Anaconda and its package manager `conda` is a system-independent method and should work for MacOS, Linux, or Windows.
+
+  - **Step #1**: Install Anaconda
+  The installation method you use will depend on your operating system. Visit Conda's installation site, choose either `Miniconda`, `Anaconda Distribution`, or `Miniforge` (all options should work well) and following the installation instructions there: https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html. The easiest way to find an installer is through this miniconda repository: https://repo.anaconda.com/miniconda/. 
+
+  - **Step #2**: Clone this repository to a local folder and change directories into it:
+
+    ```bash
+    git clone https://github.com/earthlab/firedpy.git
+    cd firedpy
+    ```
+
+  - **Step 3**: Use the `environment.yml` file to create a conda environment with all dependencies, including the system-level GDAL libraries.
+
+    ```bash
+    conda env create -f environment.yml
+    conda activate firedpy
+    ```
+
+  - **Step 4**: Install FIREDpy with pip.
+
+    ```bash
+    pip install .
+    ```
+
+
+### Method 2 - Run from a Docker Container:
+
+#### 2.1 Get the docker container running:
 
 Note, the docker container has changed from `earthlab/firedpy` to `earthlabcu/firedpy`
   - Run the docker container in a detached state (-d) and bind it to an available port on localhost (-p 127.0.0.1:0:7681)
@@ -314,7 +406,7 @@ Note, the docker container has changed from `earthlab/firedpy` to `earthlabcu/fi
 
 In this example the container is running on the host machine at 127.0.0.1:32768. It may be different when you run it. Access this location in your browser by copy and pasting it into your browser's address bar
 
-#### 1.2 Copy firedpy outputs to your local machine
+#### 2.2 Copy firedpy outputs to your local machine
 
 After creating a new fire product, it might be useful to get it out of the docker container in order to use it.
 
@@ -333,103 +425,115 @@ After creating a new fire product, it might be useful to get it out of the docke
     `docker cp fa73c6d3e007:/home/firedpy/proj/outputs/shapefiles/fired_events_s5_t11_2020153.gpkg /home/Documents/fired_events_s5_t11_2020153.gpkg`
 
 
-### Method 2. Local Installation Instructions:
-
-  - Clone this repository to a local folder and change directories into it:
-
-    `git clone https://github.com/earthlab/firedpy.git`
-
-    `cd firedpy`
-    
-  - Ensure your anaconda setup has **conda-forge**, **channel_priority** set to **strict**, and **update your conda**.
-
-    `conda config --add channels conda-forge`
-    
-    `conda config --set channel_priority strict`
-
-    `conda update conda --yes`
-
-  - You must have all packages listed in the environment.yaml installed using
-  
-    `conda install -c conda-forge <package_name>`
-
-  - Create and activate a conda environment:
-
-    `conda env create -f environment.yml`
-    
-  - Activate firedpy
-
-    `conda activate firedpy`
-
 ## Use:
-  - Run firedpy with no options to be prompted with input questions for each option/attribute
-     
-    `python bin/firedpy.py` or if running from Docker container, simply `firedpy` 
-    
-  - Or use the following commands in your command line to specify the options/attributes you would like:   
+  - Run the command line interface `firedpy` or `firedpy --help` in your terminal for its help file:
 
-  - In your terminal use this command to print out the available options and their descriptions:
+  ```bash
+  firedpy --help
+  ```
 
-    `python bin/firedpy.py --help`
+  You should see the help file with a description of the CLI and each of its options:
 
-  - Run firedpy with the default option to download required data and write a data table of classified fire events to a temporary directory. This uses CONUS as the default area of interest with a spatial parameter of 5 pixels (~2.3 km) and 11 days:
+  ```bash
 
-    `python bin/firedpy.py --default`
+  Usage: firedpy [OPTIONS]
+
+    firedpy command line interface.
+
+  Options:
+    --version                       Show the version and exit.
+    -i, --interactive               Interactive Mode. Firedpy will prompt the user for all parameter
+                                    values and confirm selections before proceeding. Defaults to
+                                    False.
+    -p, --project_directory TEXT    Interactive Mode. Firedpy will prompt the user for all parameter
+                                    values and confirm selections before proceeding. Defaults to
+                                    False.  [required]
+    -n, --project_name TEXT         A name used to identify the output files of this project. Defaults
+                                    to None, which will use the name of the parent run directory.
+  ...
+  ```
+
+  Then you may either run the CLI with each non-default parameter you wish define. You must define the project directory to help avoid writing outputs in your current working directory. You must also define either a `--tiles`, `--shape_file` or `--country` option for your study area. Be careful, running with defaults and a fire-intensive study area can be a very resource intensive operation:
+
+  ```bash
+  firedpy --project_directory ~/scratch/firedpy_finland --country Finland
+  ```
+
+  You may also run firedpy with the `--interactive` or `-i` flag to be prompted with input questions for each option:
+
+  ```bash
+  firedpy -i
+  ```
+
+  In this case, you will see a series of prompts starting with
+
+  ```bash
+  Using interactive mode, please enter parameter values as prompted. Press enter to accept defaults if availabile (value in square brackets)
+
+  Project directory path. Inputs and outputs will all be written here. Required (Use "." for the present directory).: 
+  ```
+
+  The following set of commands demonstrates how to run `firedpy` with increasingly detailed control over the run options:
 
   - Change the spatial and temporal parameters of the model run:
 
-    `python bin/firedpy.py -spatial 6 -temporal 10`
+    ```bash
+    firedpy -project_directory ~/scratch/firedpy_finland --country Finland --spatial_param 6 --temporal_param 10
+    ```
 
-  - Specify specific tiles and a local project_directory for required data and model outputs:
+  - Specify specific MODIS tiles instead of a full country study area:
 
-    `python bin/firedpy.py -spatial 6 -temporal 10 -aoi h11v09 h12v09 -proj_dir /home/<user>/fired_project`
+    ```bash
+    firedpy -p ~/scratch/firedpy_nw_brazil --tiles "h11v09 h12v09" -sp 6 -tp 10
+    ```
 
-  - Write shapefiles as outputs in addition to the data table:
+  - Specify specific years to run (defaults to 2000 to 2025):
 
-    `python bin/firedpy.py -spatial 6 -temporal 10 -aoi h11v09 h12v09 -proj_dir /home/<user>/fired_project --shapefile`
+    ```bash
+    firedpy -p ~/scratch/firedpy_nw_brazil -t "h11v09 h12v09" -sp 6 -tp 10 --start_year 2020 --end_year 2024
+    ```
 
   - Add the most common level 3 Ecoregion as an attribute to each event:
 
-    `python bin/firedpy.py bin/firedpy.py -spatial 6 -temporal 10 -aoi h11v09 h12v09 -proj_dir /home/<user>/fired_project --shapefile -ecoregion_level 3`
+    ```bash
+    firedpy -p ~/scratch/firedpy_nw_brazil -t "h11v09 h12v09" -sp 6 -tp 10 -y1 2020 -y2 2024 --eco_region_type 3
+    ```
 
-  - Add landcover information and produce the daily burn file
+  - Add landcover information and produce the daily burn file:
 
-    `python bin/firedpy.py -spatial 6 -temporal 10 -aoi h11v09 h12v09 -proj_dir /home/<user>/fired_project --shapefile -ecoregion_level 3 -landcover_type 1 -daily yes`
+    ```bash
+    firedpy -p ~/scratch/firedpy_nw_brazil -t "h11v09 h12v09" -sp 6 -tp 10 -y1 2020 -y2 2024 --et 3 --land_cover_type 4 --daily
+    ```
 
-  For more information about each parameter, use:
 
-    'python bin/firedpy.py --help'
-    
-    
 ### Parameter table
   
 | parameter | value(s)| example | description|
 |:--------------|:----------|:-----|:---------|
-| -spatial | integer | -spatial 5 | pixel radius for moving window, defaults to 5|
-| -temporal | integer | -temporal 11 | day radius for moving window, defaults to 11|
-| -aoi | character (MODIS tile) | -aoi h11v09 | which modis tiles should be used |
-| -aoi | character (shapefile) | -aoi /home/firedpy/individual_countries/canada.gpkg | figures out which modis tiles to download based on the polygon -- **polygon must be in the same projection as MODIS MCD64** -- all the polygons in the *ref* folder are correctly projected and can be used as crs templates to prepare other polygons. |
-| -proj_dir| character| -proj_dir /home/firedpy/proj | which directory should firedpy operate within? Defaults to a folder called "proj" within the current working directory.|
-| -ecoregion_type | character | -ecoregion_type na | type of ecoregion, either world or na|
- | -ecoregion_level | integer | -ecoregion_level 3 | if ecoregion type = na, the level (1-3) of North American ecoregions |
- | -landcover_type | integer and character | -landcover_type 2:username:password | number (1-3) corresponding with a MODIS/Terra+Aqua Land Cover (MCD12Q1) category. You will need to also make an account at https://urs.earthdata.nasa.gov/home and include your login information within the argument. |
- | -shp_type | character | -shp_type gpkg | option to build a shapefile for the fired event in gpkg, ESRI shapefile (shp), both, or none  |
- | -file | character | -file fired_colorado | specifies the base of the file name for the tables and shapefile outputs, defaults to "fired", in the format: "(-file aruguement)_toYYYYDDD_(either events or daily).gpkg", with YYYY being the year, and DDD being the julian day of the last month in the time series. The example would output fired_colorado_to2021031_events.gpkg.|
- | -daily | character (yes or no) | -daily yes | creates daily polygons, if no just the event-level perimeters will be created. Defaults to no. |
- | -start_yr |integer | -start_yr 2001 | gets the hdf files from the MODIS tiles starting in this year. The first year avalible is 2001 |
- | -end_yr |integer | -end_yr 2021 | gets the hdf files from the MODIS tiles ending in this year. The last year avalible is 2021 |
+| --spatial_param, -sp | integer | -sp 5 | Pixel radius for moving window, defaults to 5|
+| --temporal_param, -tp | integer | -tp 11 | Day radius for moving window, defaults to 11|
+| --tiles, -t | character (MODIS tile) | -t h11v09 | which modis tiles should be used |
+| --shape_file, -sf | character (shapefile) | -sf ~/firedpy/data/individual_countries/canada.gpkg |  Finds MODIS tiles to download based on the polygon and clips output by the shapefile boundaries
+| --project_directory, -p | character| -p /home/firedpy/proj | Sets the output directory. Will also download all input data to this path |
+| --eco_region_type, -et | character | -et na | Type of ecoregion, either 'world' or 'na'|
+| --eco_region_level, -el | integer | -el 3 | If ecoregion type = na, the level (1-3) of North American ecoregions |
+| --land_cover_type, -lt | integer and character | -lt 2 | Number (1-3) corresponding with a MODIS/Terra+Aqua Land Cover (MCD12Q1) category. You will need to also make an account at https://urs.earthdata.nasa.gov/home |
+| --shape_type, -st | character | -st gpkg | Option to build a shapefile for the fired event as a GeoPackage (gpkg), ESRI shapefile (shp), or both  |
+| --project_name, -n | character | -n fired_colorado | Specifies a base name for output files for the tables and shapefile outputs |
+| --daily, -d | character (yes or no) | -d | Creates daily polygons, if not provided only event-level perimeters will be created |
+| --start_year, -y1 |integer | -y1 2001 | Gets the HDF4 files from the MODIS tiles starting in this year. The first year avalible is 2001 |
+| --end_year |integer | -y2 2021 | Gets the HDF4 files from the MODIS tiles ending in this year. The last year avalible is 2021 |
  
  
  
 ### Boundary files are available for use as areas of interest
  
- - Country boundaries are in **ref/individual_countries**
- - Continent boundaries are in **ref/continents**
- - United States state boundaries for the United States of America are in **ref/us_states**
- - Australian state boundaries are in **ref/australian_states**
- - For example `python bin/firedpy.py -aoi /home/firedpy/ref/us_states/colorado.gpkg`, and so on. Every space is a '_'. 
- - If using the user input option, when prompted for the name of the continent, country, or state use "_" for spaces. 
- - **Ensure that the input shapefiles are in the modis sinusiodal projection**
+ - Country boundaries are in **data/individual_countries**
+ - Continent boundaries are in **data/continents**
+ - United States state boundaries for the United States of America are in **dat/us_states**
+ - Australian state boundaries are in **data/australian_states**
+ - For example `firedpy -sf ~/firedpy/firedpy/data/us_states/colorado.gpkg` gets Colorado, USA. 
+ - If using the ineractive option, when prompted for the name of the country, spaces will be replaced with spaces and case does not matter. 
 
 
 ## How to update the docker container
