@@ -159,7 +159,7 @@ def compute_max_vector(perim_inner_geoms,
                                perim_outer_geoms,
                                inter_matrix,
                                spot_threshold=4000,
-                               debug=True):
+                               debug=False):
     
     result_dist = []
     result_coord_pair = []
