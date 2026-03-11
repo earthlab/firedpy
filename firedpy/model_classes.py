@@ -1238,7 +1238,7 @@ class ModelBuilder(Base):
 
         logger.info(f"Longitude: {lon}, Latitude: {lat}")
 
-    def process_daily_data(self, gdf):
+    def process_daily_data(self, gdf, run_firespeed=True):
         """Process daily data geometries.
 
         Parameters
@@ -1277,18 +1277,22 @@ class ModelBuilder(Base):
 
         fire_gdf_cum = pd.concat(cumulative_gdfs, ignore_index=True)
 
-        logger.info("Calculating maximum linear speed vectors for daily perimeters...")
-        fs_orig_x, fs_orig_y, fs_dest_x, fs_dest_y, fs_max_dist, fs_speed = computefirespeed(fire_gdf_cum)
-        fire_gdf_cum["origin_x"] = fs_orig_x
-        fire_gdf_cum["origin_y"] = fs_orig_y
-        fire_gdf_cum["dest_x"] = fs_dest_x
-        fire_gdf_cum["dest_y"] = fs_dest_y
-        fire_gdf_cum["vec_dist"] = fs_max_dist
-        fire_gdf_cum["fire_speed"] = fs_speed
+        if run_firespeed:
+            logger.info("Proceeding with fire speed computation for daily output.")
+            logger.info("Calculating maximum linear speed vectors for daily perimeters...")
+            fs_orig_x, fs_orig_y, fs_dest_x, fs_dest_y, fs_max_dist, fs_speed = computefirespeed(fire_gdf_cum)
+            fire_gdf_cum["origin_x"] = fs_orig_x
+            fire_gdf_cum["origin_y"] = fs_orig_y
+            fire_gdf_cum["dest_x"] = fs_dest_x
+            fire_gdf_cum["dest_y"] = fs_dest_y
+            fire_gdf_cum["vec_dist"] = fs_max_dist
+            fire_gdf_cum["fire_speed"] = fs_speed
+        else:
+            logger.info("Skipping fire speed computation for daily output.")
 
         return fire_gdf_cum
 
-    def process_event_data(self, gdf):
+    def process_event_data(self, gdf, run_firespeed=True):
         """Process a firedpy geodataframe for non-daily ouputs.
 
         Parameters
@@ -1316,6 +1320,51 @@ class ModelBuilder(Base):
 
         logger.info("Converting polygons to multipolygons...")
         edf["geometry"] = edf["geometry"].apply(self._as_multi_polygon)
+
+        if run_firespeed:
+            logger.info("Proceeding with fire speed computation for event output.")
+            logger.info("Calculating maximum linear speed vectors for event output...")
+            gdfc = gdf.copy()
+            gdfc = self._create_did_column(gdfc, ["date", "id"])
+            daily_gdf = gdfc.dissolve(by="did", as_index=False)
+
+            cumulative_gdfs = []
+            for _, sub_gdf in daily_gdf.groupby("id"):
+                sub_cum = build_cumulative_perims(
+                    sub_gdf,
+                    id_col="id",
+                    date_col="date"
+                )
+                sub_cum["geometry"] = sub_cum["geometry"].apply(
+                    self._as_multi_polygon
+                )
+                sub_cum["geometry"] = sub_cum["geometry"].apply(
+                    lambda mp: MultiPolygon(
+                        sorted(mp.geoms, key=lambda p: p.area, reverse=True)
+                    )
+                )
+                cumulative_gdfs.append(sub_cum)
+
+            fire_gdf_cum = pd.concat(cumulative_gdfs, ignore_index=True)
+            fs_orig_x, fs_orig_y, fs_dest_x, fs_dest_y, fs_max_dist, fs_speed = computefirespeed(fire_gdf_cum)
+            fire_gdf_cum["origin_x"] = fs_orig_x
+            fire_gdf_cum["origin_y"] = fs_orig_y
+            fire_gdf_cum["dest_x"] = fs_dest_x
+            fire_gdf_cum["dest_y"] = fs_dest_y
+            fire_gdf_cum["vec_dist"] = fs_max_dist
+            fire_gdf_cum["fire_speed"] = fs_speed
+
+            fs_event = fire_gdf_cum.groupby("id", as_index=False).agg({
+                "fire_speed": "max",
+                "vec_dist": "max",
+                "origin_x": "max",
+                "origin_y": "max",
+                "dest_x": "max",
+                "dest_y": "max",
+            })
+            edf = edf.merge(fs_event, on="id", how="left")
+        else:
+            logger.info("Skipping fire speed computation for event output.")
 
         return edf
 
@@ -1375,7 +1424,8 @@ class ModelBuilder(Base):
         end_year,
         daily,
         shape_type,
-        full_csv
+        full_csv,
+        run_firespeed
     ):
         """Save event data to various output formats.
 
@@ -1408,6 +1458,9 @@ class ModelBuilder(Base):
             Write all attributes from input geodataframe to a CSV. Defaults to
             False and includes only a subset of attributes: "x", "y", "id",
             "ig_date", and "last_date".
+        run_firespeed : bool
+            If enabled, firedpy computes maximum travel vectors, and origin/
+            destination points for daily and event level outputs.
         """
         # Get all the output file paths
         paths = self.get_output_paths(
@@ -1417,13 +1470,14 @@ class ModelBuilder(Base):
             end_year=end_year,
             shape_type=shape_type
         )
+        logger.info(f"Fire speed computation needed - {run_firespeed}")
 
         edf = None
 
         # Process and write daily-level events to file if requested
         if daily:
             # Apply output processing for daily version
-            ddf = self.process_daily_data(gdf)
+            ddf = self.process_daily_data(gdf, run_firespeed=run_firespeed)
 
             # GeoDataFrames
             if paths["daily_gpkg_path"]:
@@ -1449,28 +1503,28 @@ class ModelBuilder(Base):
                 df.to_csv(dst, index=False)
 
             logger.info("Building event-level data from daily cumulative perimeters...")
-            edf = ddf.dissolve(
-                by="id",
-                as_index=False,
-                aggfunc={
+            agg_map = {
+                "ig_date": "min",
+                "mx_grw_dte": "max",
+                "last_date": "max",
+            }
+            if run_firespeed:
+                agg_map.update({
                     "fire_speed": "max",
                     "vec_dist": "max",
                     "origin_x": "max",
                     "origin_y": "max",
                     "dest_x": "max",
                     "dest_y": "max",
-                    "ig_date": "min",
-                    "mx_grw_dte": "max",
-                    "last_date": "max",
-                }
-            )
+                })
+            edf = ddf.dissolve(by="id", as_index=False, aggfunc=agg_map)
             logger.info("Calculating event-level perimeter lengths...")
             edf["tot_perim"] = edf["geometry"].to_crs(MODIS_CRS).length
             edf["geometry"] = edf["geometry"].apply(self._as_multi_polygon)
 
         # Process and write event-level events to file
         if edf is None:
-            edf = self.process_event_data(gdf)
+            edf = self.process_event_data(gdf, run_firespeed=run_firespeed)
 
         # GeoDataFrames
         if paths["event_gpkg_path"]:

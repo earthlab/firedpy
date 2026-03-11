@@ -128,6 +128,13 @@ CLI_HELP = {
         None, which will use the name of the parent run directory.
         """
     ),
+    "run_firespeed": (
+        """
+        Run Fire Speed. If enabled, firedpy computes maximum travel vectors,
+        and the origin and destination points for each vector, for event and
+        daily level outputs.
+        """
+    ),
     "shape_file": (
         """
         Shapefile. A shapefile representing the target study area. If not

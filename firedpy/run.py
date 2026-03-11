@@ -38,6 +38,7 @@ def fired(
     end_year=2025,
     spatial_param=8,
     temporal_param=3,
+    run_firespeed=False,
     daily=True,
     shape_type="gpkg",
     eco_region_level=1,
@@ -76,6 +77,10 @@ def fired(
         detections.
     temporal_param : int
         The number of days to search for neighboring burn detections.
+    run_firespeed : bool
+        If enabled, firedpy computes maximum travel vectors, and the origin
+        and destination points for each vector, for event and daily level
+        outputs.
     daily : boolean
         Create the daily polygons or just the event-level perimeter for your
         analysis area. If this flag is set, the daily and event polygons will
@@ -153,6 +158,7 @@ def fired(
         f"Running firedpy for years {start_year} to {end_year} on MODIS "
         f"tiles: {tiles}."
     )
+    logger.info(f"Fire speed computation needed - {run_firespeed}")
 
     # Make sure they have a target location
     if not country and not tiles and not shape_file:
@@ -244,7 +250,8 @@ def fired(
             end_year=end_year,
             daily=daily,
             shape_type=shape_type,
-            full_csv=full_csv
+            full_csv=full_csv,
+            run_firespeed=run_firespeed
         )
 
         # Done with processing, collect time and memory usage
