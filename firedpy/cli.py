@@ -233,6 +233,12 @@ def _prompts(ctx, _, interactive):
     help=CLI_HELP["temporal_param"]
 )
 @click.option(
+    "--run_firespeed/--no_run_firespeed",
+    default=False,
+    is_eager=True,
+    help=CLI_HELP["run_firespeed"]
+)
+@click.option(
     "-d", "--daily",
     is_flag=True,
     is_eager=True,
@@ -263,8 +269,8 @@ def _prompts(ctx, _, interactive):
     help=CLI_HELP["land_cover_type"]
 )
 @click.option(
-    "-f", "--full_csv",
-    is_flag=True,
+    "--full_csv/--no_full_csv",
+    default=True,
     is_eager=True,
     help=CLI_HELP["full_csv"]
 )
