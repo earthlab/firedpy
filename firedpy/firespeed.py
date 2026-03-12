@@ -83,10 +83,11 @@ def computefirespeed(fire_gdf, id_col="id"):
         # --- parent-child intersection matrix ---
         inter_matrix = np.zeros((len(prev_geom.geoms), len(curr_geom.geoms)),dtype=bool)
 
+        prev_buffered = [p.buffer(1e-6) for p in prev_geom.geoms]
+
         for ii in range(len(prev_geom.geoms)):
             for jj in range(len(curr_geom.geoms)):
-                inter_matrix[ii, jj] = (
-                    prev_geom.geoms[ii].buffer(1e-6).intersects(curr_geom.geoms[jj]))
+                inter_matrix[ii, jj] = prev_buffered[ii].intersects(curr_geom.geoms[jj])
             
         # --- parent perimeter coordinates ---
         prev_coords = [
@@ -149,7 +150,8 @@ def computefirespeed(fire_gdf, id_col="id"):
             [best_origin[1], best_dest[1]]
         )
 
-        dist_m = geod.line_length(lons, lats)
+        dist_m = np.linalg.norm(np.array(best_dest) - np.array(best_origin))
+
 
         result_max_dist[i] = dist_m / 1000
         result_speed[i] = (dist_m / 1000) / 24
@@ -170,6 +172,9 @@ def compute_max_vector(perim_inner_geoms,
     
     points_per_meter = 1 / 200
 
+     # --------------------------------------------------
+    # Iterate over parent polygons
+    # --------------------------------------------------
     for poly_outer_idx, outer_poly in enumerate(perim_outer_geoms):
         outer_poly = outer_poly.buffer(0)
         spot_flag = not np.any(inter_matrix[:, poly_outer_idx])
@@ -197,40 +202,40 @@ def compute_max_vector(perim_inner_geoms,
         poly_best_parent_idx = None
 
         # --------------------------------------------------
-        # Iterate over child polygons
+        # Iterate over parent polygons
         # --------------------------------------------------
         for poly_inner_idx in polyids:
-            child_poly = perim_inner_geoms[poly_inner_idx].buffer(0)
+            parent_poly = perim_inner_geoms[poly_inner_idx].buffer(0)
 
-            if child_poly.is_empty:
+            if parent_poly.is_empty:
                 continue
 
-            # Sample points along child perimeter
-            n_child = max(1, int(child_poly.length * points_per_meter))
+            # Sample points along parent perimeter
+            n_child = max(1, int(parent_poly.length * points_per_meter))
             if n_child == 0:
                 # fallback: use coords from the polygon
-                child_pts = [Point(c) for c in child_poly.exterior.coords]
+                parent_pts = [Point(x, y) for x, y in parent_poly.exterior.coords]
             else:
                 # sample_perimeter should return shapely Points
-                child_pts = sample_perimeter(child_poly, n_child)
+                parent_pts = sample_perimeter(parent_poly, n_child)
 
-            if child_poly.intersects(outer_poly):
+            if parent_poly.intersects(outer_poly):
                 # overlapping child → compute max distance from child points to parent exterior
                 outer_boundary = outer_poly.exterior
-                dists = [pt.distance(outer_boundary) for pt in child_pts]
+                dists = [pt.distance(outer_boundary) for pt in parent_pts]
                 best_idx = np.argmax(dists)
-                pt_child = np.array(child_pts[best_idx].coords[0])
-                pt_parent = np.array(outer_boundary.interpolate(outer_boundary.project(child_pts[best_idx])).coords[0])
+                pt_parent = np.array(parent_pts[best_idx].coords[0])
+                pt_child = np.array(outer_boundary.interpolate(outer_boundary.project(parent_pts[best_idx])).coords[0])
                 max_dist = dists[best_idx]
 
-                test_line = LineString([tuple(pt_child), tuple(pt_parent)])
+                test_line = LineString([tuple(pt_parent), tuple(pt_child)])
                 if test_line.length == 0:
                     continue
 
                 sample_step = min(50, test_line.length)
                 n_samples = max(2, int(math.ceil((test_line.length - sample_step) / 50)) + 1)
                 sample_distances = np.linspace(sample_step, test_line.length, n_samples)
-                invalid_vector = any(child_poly.covers(test_line.interpolate(sample_dist))
+                invalid_vector = any(parent_poly.covers(test_line.interpolate(sample_dist))
                                      for sample_dist in sample_distances)
 
                 if invalid_vector:
@@ -239,9 +244,9 @@ def compute_max_vector(perim_inner_geoms,
             else:
                 # disconnected child → nearest points as usual
                 
-                pt_child_sh, pt_parent_sh = nearest_points(child_poly, outer_poly)
-                pt_child = np.array([pt_child_sh.x, pt_child_sh.y])
+                pt_parent_sh, pt_child_sh = nearest_points(parent_poly, outer_poly)
                 pt_parent = np.array([pt_parent_sh.x, pt_parent_sh.y])
+                pt_child  = np.array([pt_child_sh.x, pt_child_sh.y])
                 max_dist = np.linalg.norm(pt_parent - pt_child)
                 '''
                 # disconnected child → anchor to nearest parent boundary point,
@@ -260,12 +265,12 @@ def compute_max_vector(perim_inner_geoms,
             if debug:
                 logger.info(f"Poly_outer {poly_outer_idx}, Poly_inner {poly_inner_idx}, "
                     f"dist_val={max_dist:.2f}")
-                logger.info(f"Child coord: {pt_child}, Parent coord: {pt_parent}")
+                logger.info(f"Parent coord: {pt_parent}, Child coord: {pt_child}")
 
             if max_dist > poly_best_dist:
                 poly_best_dist = max_dist
-                poly_best_pair = (pt_child, pt_parent)
-                poly_best_poly = (child_poly, outer_poly)
+                poly_best_pair = (pt_parent, pt_child)
+                poly_best_poly = (parent_poly, outer_poly)
                 poly_best_parent_idx = poly_inner_idx
 
         # Append results if a valid vector was found
