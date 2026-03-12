@@ -242,26 +242,24 @@ def compute_max_vector(perim_inner_geoms,
                     continue
 
             else:
-                # disconnected child → nearest points as usual
-                
+                # disconnected polygon → anchor to nearest parent boundary point
                 pt_parent_sh, pt_child_sh = nearest_points(parent_poly, outer_poly)
-                pt_parent = np.array([pt_parent_sh.x, pt_parent_sh.y])
-                pt_child  = np.array([pt_child_sh.x, pt_child_sh.y])
-                max_dist = np.linalg.norm(pt_parent - pt_child)
-                '''
-                # disconnected child → anchor to nearest parent boundary point,
-                # then find the farthest point on this child perimeter from that anchor.
-                pt_child_sh, pt_parent_sh = nearest_points(child_poly, outer_poly)
                 parent_anchor = Point(pt_parent_sh.x, pt_parent_sh.y)
 
+                # sample along child perimeter
+                n_child = max(1, int(outer_poly.length * points_per_meter))
+                if n_child == 0:
+                    child_pts = [Point(x, y) for x, y in outer_poly.exterior.coords]
+                else:
+                    child_pts = sample_perimeter(outer_poly, n_child)
+
+                # compute distances from parent anchor to all child perimeter points
                 dists = [pt.distance(parent_anchor) for pt in child_pts]
                 best_idx = np.argmax(dists)
+                pt_parent = np.array([parent_anchor.x, parent_anchor.y])
                 pt_child = np.array(child_pts[best_idx].coords[0])
-                pt_parent = np.array([pt_parent_sh.x, pt_parent_sh.y])
                 max_dist = dists[best_idx]
-                '''
                 
-
             if debug:
                 logger.info(f"Poly_outer {poly_outer_idx}, Poly_inner {poly_inner_idx}, "
                     f"dist_val={max_dist:.2f}")
