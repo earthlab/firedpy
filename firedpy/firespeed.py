@@ -1,3 +1,4 @@
+
 import math
 from logging import getLogger
 
@@ -44,24 +45,30 @@ def build_cumulative_perims(gdf, id_col="id", date_col="date"):
     return gdf
 
 
-def computefirespeed(fire_gdf):
+def computefirespeed(fire_gdf, id_col="id"):
     if fire_gdf.crs is None or fire_gdf.crs.is_geographic:
         raise ValueError(
             f"computefirespeed requires projected CRS in meters, got {fire_gdf.crs}"
         )
     transformer = pyproj.Transformer.from_crs(fire_gdf.crs, "EPSG:4326", always_xy=True)
     geod = pyproj.Geod(ellps="WGS84")
-    orig_x = [np.nan]
-    orig_y = [np.nan]
-    dest_x = [np.nan]
-    dest_y = [np.nan]
-    result_max_dist = [np.nan]
-    result_speed = [np.nan]
-
     fire_gdf = fire_gdf.reset_index(drop=True).copy()
+    n_rows = fire_gdf.shape[0]
+    orig_x = [np.nan] * n_rows
+    orig_y = [np.nan] * n_rows
+    dest_x = [np.nan] * n_rows
+    dest_y = [np.nan] * n_rows
+    result_max_dist = [np.nan] * n_rows
+    result_speed = [np.nan] * n_rows
+
+    has_ids = id_col in fire_gdf.columns
 
     ### iterate over time steps
     for i in range(1, fire_gdf.shape[0]):
+        # first perimeter in each fire has no valid predecessor
+        if has_ids and fire_gdf.iloc[i][id_col] != fire_gdf.iloc[i - 1][id_col]:
+            continue
+
         prev_geom = fire_gdf.iloc[i - 1].cum_geom
         curr_geom = fire_gdf.iloc[i].cum_geom
 
@@ -129,18 +136,12 @@ def computefirespeed(fire_gdf):
 
         # --- finalize timestep ---
         if best_origin is None:
-            orig_x.append(np.nan)
-            orig_y.append(np.nan)
-            dest_x.append(np.nan)
-            dest_y.append(np.nan)
-            result_max_dist.append(np.nan)
-            result_speed.append(np.nan)
             continue
         
-        orig_x.append(best_origin[0])
-        orig_y.append(best_origin[1])
-        dest_x.append(best_dest[0])
-        dest_y.append(best_dest[1])
+        orig_x[i] = best_origin[0]
+        orig_y[i] = best_origin[1]
+        dest_x[i] = best_dest[0]
+        dest_y[i] = best_dest[1]
 
         lons, lats = transformer.transform(
             [best_origin[0], best_dest[0]],
@@ -149,8 +150,8 @@ def computefirespeed(fire_gdf):
 
         dist_m = geod.line_length(lons, lats)
 
-        result_max_dist.append(dist_m / 1000)
-        result_speed.append((dist_m / 1000) / 24)
+        result_max_dist[i] = dist_m / 1000
+        result_speed[i] = (dist_m / 1000) / 24
 
     return (orig_x, orig_y, dest_x, dest_y, result_max_dist, result_speed)
 
@@ -168,8 +169,8 @@ def compute_max_vector(perim_inner_geoms,
     
     points_per_meter = 1 / 200
 
-    for poly_outer_idx, parent_poly in enumerate(perim_outer_geoms):
-        parent_poly = parent_poly.buffer(0)
+    for poly_outer_idx, outer_poly in enumerate(perim_outer_geoms):
+        outer_poly = outer_poly.buffer(0)
         spot_flag = not np.any(inter_matrix[:, poly_outer_idx])
 
         # --------------------------------------------------
@@ -177,7 +178,7 @@ def compute_max_vector(perim_inner_geoms,
         # --------------------------------------------------
         if spot_flag:
             # No intersecting children → compute distances to all children
-            distances = [g.distance(parent_poly) for g in perim_inner_geoms]
+            distances = [g.distance(outer_poly) for g in perim_inner_geoms]
             nearest_idx = np.argmin(distances)
             if distances[nearest_idx] > spot_threshold:
                 continue
@@ -212,18 +213,18 @@ def compute_max_vector(perim_inner_geoms,
                 # sample_perimeter should return shapely Points
                 child_pts = sample_perimeter(child_poly, n_child)
 
-            if child_poly.intersects(parent_poly):
+            if child_poly.intersects(outer_poly):
                 # overlapping child → compute max distance from child points to parent exterior
-                parent_boundary = parent_poly.exterior
-                dists = [pt.distance(parent_boundary) for pt in child_pts]
+                outer_boundary = outer_poly.exterior
+                dists = [pt.distance(outer_boundary) for pt in child_pts]
                 best_idx = np.argmax(dists)
                 pt_child = np.array(child_pts[best_idx].coords[0])
-                pt_parent = np.array(parent_boundary.interpolate(parent_boundary.project(child_pts[best_idx])).coords[0])
+                pt_parent = np.array(outer_boundary.interpolate(outer_boundary.project(child_pts[best_idx])).coords[0])
                 max_dist = dists[best_idx]
 
             else:
                 # disconnected child → nearest points as usual
-                pt_child_sh, pt_parent_sh = nearest_points(child_poly, parent_poly)
+                pt_child_sh, pt_parent_sh = nearest_points(child_poly, outer_poly)
                 pt_child = np.array([pt_child_sh.x, pt_child_sh.y])
                 pt_parent = np.array([pt_parent_sh.x, pt_parent_sh.y])
                 max_dist = np.linalg.norm(pt_parent - pt_child)
@@ -236,8 +237,8 @@ def compute_max_vector(perim_inner_geoms,
             if max_dist > poly_best_dist:
                 poly_best_dist = max_dist
                 poly_best_pair = (pt_child, pt_parent)
-                poly_best_poly = (child_poly, parent_poly)
-                poly_best_parent_idx = poly_outer_idx
+                poly_best_poly = (child_poly, outer_poly)
+                poly_best_parent_idx = poly_inner_idx
 
         # Append results if a valid vector was found
         if poly_best_pair is not None:

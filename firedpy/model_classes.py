@@ -2,6 +2,7 @@ import hashlib
 import math
 import random
 import re
+import sys
 
 from argparse import Namespace
 from concurrent.futures import as_completed, ProcessPoolExecutor
@@ -1276,15 +1277,26 @@ class ModelBuilder(Base):
         fire_gdf_cum = pd.concat(cumulative_gdfs, ignore_index=True)
 
         if run_firespeed:
-            logger.info("Proceeding with fire speed computation for daily output.")
             logger.info("Calculating maximum linear speed vectors for daily perimeters...")
-            fs_orig_x, fs_orig_y, fs_dest_x, fs_dest_y, fs_max_dist, fs_speed = computefirespeed(fire_gdf_cum)
-            fire_gdf_cum["origin_x"] = fs_orig_x
-            fire_gdf_cum["origin_y"] = fs_orig_y
-            fire_gdf_cum["dest_x"] = fs_dest_x
-            fire_gdf_cum["dest_y"] = fs_dest_y
-            fire_gdf_cum["vec_dist"] = fs_max_dist
-            fire_gdf_cum["fire_speed"] = fs_speed
+            fire_ids = fire_gdf_cum["id"].drop_duplicates().tolist()
+            fs_results = []
+            pbar = tqdm(
+                fire_ids,
+                total=len(fire_ids),
+                position=0,
+                file=sys.stdout
+            )
+            for fire_id in pbar:
+                sub_gdf = fire_gdf_cum[fire_gdf_cum["id"] == fire_id].copy()
+                fs_orig_x, fs_orig_y, fs_dest_x, fs_dest_y, fs_max_dist, fs_speed = computefirespeed(sub_gdf)
+                sub_gdf["origin_x"] = fs_orig_x
+                sub_gdf["origin_y"] = fs_orig_y
+                sub_gdf["dest_x"] = fs_dest_x
+                sub_gdf["dest_y"] = fs_dest_y
+                sub_gdf["vec_dist"] = fs_max_dist
+                sub_gdf["fire_speed"] = fs_speed
+                fs_results.append(sub_gdf)
+            fire_gdf_cum = pd.concat(fs_results, ignore_index=True)
         else:
             logger.info("Skipping fire speed computation for daily output.")
 
