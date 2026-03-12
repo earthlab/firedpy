@@ -105,7 +105,7 @@ def computefirespeed(fire_gdf, id_col="id"):
         for j, child_poly in enumerate(curr_geom.geoms):
 
             parent_ids = np.where(inter_matrix[:, j])[0].tolist()            
-            chosen_parent = None
+            #chosen_parent = None
 
             # --- spot fire handling ---
             if len(parent_ids) == 0:
@@ -121,12 +121,13 @@ def computefirespeed(fire_gdf, id_col="id"):
             dist, origin, dest, parent_local_idx = compute_max_vector(
                 perim_inner_geoms=parent_geoms,
                 perim_outer_geoms=[child_poly],
-                inter_matrix=np.ones((len(parent_geoms), 1)), # fix shape: N x 1
+                #inter_matrix=np.ones((len(parent_geoms), 1)), # fix shape: N x 1
+                inter_matrix = inter_matrix[parent_ids][:, [j]],
                 spot_threshold=4000
             )
             
             # infer which parent geometry produced the origin
-            chosen_parent = parent_ids[parent_local_idx]
+            #chosen_parent = parent_ids[parent_local_idx]
 
             if dist > best_dist:
                 best_dist = dist
@@ -222,12 +223,39 @@ def compute_max_vector(perim_inner_geoms,
                 pt_parent = np.array(outer_boundary.interpolate(outer_boundary.project(child_pts[best_idx])).coords[0])
                 max_dist = dists[best_idx]
 
+                test_line = LineString([tuple(pt_child), tuple(pt_parent)])
+                if test_line.length == 0:
+                    continue
+
+                sample_step = min(50, test_line.length)
+                n_samples = max(2, int(math.ceil((test_line.length - sample_step) / 50)) + 1)
+                sample_distances = np.linspace(sample_step, test_line.length, n_samples)
+                invalid_vector = any(child_poly.covers(test_line.interpolate(sample_dist))
+                                     for sample_dist in sample_distances)
+
+                if invalid_vector:
+                    continue
+
             else:
                 # disconnected child → nearest points as usual
+                
                 pt_child_sh, pt_parent_sh = nearest_points(child_poly, outer_poly)
                 pt_child = np.array([pt_child_sh.x, pt_child_sh.y])
                 pt_parent = np.array([pt_parent_sh.x, pt_parent_sh.y])
                 max_dist = np.linalg.norm(pt_parent - pt_child)
+                '''
+                # disconnected child → anchor to nearest parent boundary point,
+                # then find the farthest point on this child perimeter from that anchor.
+                pt_child_sh, pt_parent_sh = nearest_points(child_poly, outer_poly)
+                parent_anchor = Point(pt_parent_sh.x, pt_parent_sh.y)
+
+                dists = [pt.distance(parent_anchor) for pt in child_pts]
+                best_idx = np.argmax(dists)
+                pt_child = np.array(child_pts[best_idx].coords[0])
+                pt_parent = np.array([pt_parent_sh.x, pt_parent_sh.y])
+                max_dist = dists[best_idx]
+                '''
+                
 
             if debug:
                 logger.info(f"Poly_outer {poly_outer_idx}, Poly_inner {poly_inner_idx}, "
