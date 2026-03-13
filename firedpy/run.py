@@ -281,14 +281,14 @@ def fired(
 
 
 if __name__ == "__main__":
-    tiles = None
+    tiles = "h09v05"
     daily = True
     full_csv = True
-    project_directory = '/home/travis/scratch/firedpy/logging_test'
-    project_name = 'masking_test'
+    project_directory = '/home/travis/scratch/firedpy/rockies_test'
+    project_name = 'rockies_test'
     n_cores = 1
     start_year = 2023
-    country = "Republic of the Congo"
+    country = None
     shape_file = None
     end_year = 2025
     spatial_param = 8  # pixels (nominally ~3,704 m but varies by location)
