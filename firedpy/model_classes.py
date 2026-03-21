@@ -457,18 +457,17 @@ class EventGrid(Base):
 
             return center, origin, is_edge
 
-        dim0 = array_dims[0]
-        dim1 = array_dims[1]
         sp = self.spatial_param
-        ycenter, oy, is_y_edge = get_edge_positions(dim0, y, sp)
-        xcenter, ox, is_x_edge = get_edge_positions(dim1, x, sp)
+        ycenter, oy, is_y_edge = get_edge_positions(array_dims[0], y, sp)
+        xcenter, ox, is_x_edge = get_edge_positions(array_dims[1], x, sp)
 
         edge = is_x_edge or is_y_edge
 
         return top, bottom, left, right, [ycenter, xcenter], [oy, ox], edge
 
     def _get_available_cells(self):
-        """
+        """Find cell coordinates with burn data.
+
         To save time, avoid checking cells with no events at any time step.
         Create a mask of max values at each point. If the maximum at a cell is
         less than or equal to zero there were no values and it will not be
@@ -497,7 +496,6 @@ class EventGrid(Base):
         dims = [ny, nx]
         perimeters = RandomAccessSet()
         identified_points = {}
-
         time_index_buffer = max(1, self.temporal_param // 30)
 
         for pair in available_pairs:
@@ -518,14 +516,14 @@ class EventGrid(Base):
 
                 # In each time slice we have a possible range of 30 days
                 if all_t:
-                    left = 0
-                    right = nz
+                    t0 = 0
+                    t1 = nz
                 else:
-                    n = int(valid_center_burn_indices[i] - time_index_buffer)
-                    left = max(0, n)
-                    right = min(nz, n + 1)
+                    vi = valid_center_burn_indices[i]
+                    t0 = max(0, vi - time_index_buffer)
+                    t1 = min(nz, vi + time_index_buffer + 1)
 
-                burn_window = window[left:right, :, :]
+                burn_window = window[t0:t1, :, :]
                 val_locs = np.where(
                     abs(burn_value - burn_window) <= self.temporal_param
                 )
@@ -656,7 +654,6 @@ class ModelBuilder(Base):
         """
         super().__init__(project_directory, n_cores)
         self.tiles = tiles
-        self.country = country
         self.shape_file = shape_file
         self.spatial_param = spatial_param
         self.temporal_param = temporal_param
@@ -664,6 +661,13 @@ class ModelBuilder(Base):
         self.end_year = end_year
         self._lc_mosaic_re = r'lc_mosaic_(?P<land_cover_type>\d{1})_\
             (?P<year>\d{4})\.tif$'
+
+        # Let country override shapefile?
+        self.country = country
+        if country:
+            self.shape_file = get_country_file(country)
+        else:
+            self.shape_file = shape_file
 
         # Use the first file to get some geometry data for later
         with xr.open_dataset(self.files[0]) as data_set:
@@ -772,9 +776,9 @@ class ModelBuilder(Base):
 
         return gdf
 
-    ## Note from Nate: this is the definition that was exporting the data as WGS84
-    ## Need to re-work this attribute type if we want to keep it
-    ## currently commented out where called in build_events (line 855)
+    # Note from Nate: this is the definition that was exporting data as WGS84
+    # Need to re-work this attribute type if we want to keep it
+    # currently commented out where called in build_events (line 855)
     def add_kg_attributes(self, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         """Assign Köppen-Geiger climate zones to events with a raster file.
 
@@ -843,7 +847,7 @@ class ModelBuilder(Base):
 
         # Build the event point geodataframe
         gdf = self.build_points(event_perimeters)
- 
+
         # Add fire event attributes
         gdf = self.add_fire_attributes(gdf)
 
@@ -851,8 +855,9 @@ class ModelBuilder(Base):
         gdf = self.process_geometry(gdf)
 
         # Calculate fire spread speed and maximum travel vectors
-        # Note from Nate: this does not calculate fire speed and max travel vectors? And we aren't currently using KG regions
-        #gdf = self.add_kg_attributes(gdf)
+        # Note from Nate: this does not calculate fire speed and max travel
+        # vectors? And we aren't currently using KG regions
+        # gdf = self.add_kg_attributes(gdf)
 
         return gdf
 
@@ -893,12 +898,10 @@ class ModelBuilder(Base):
         gdf = gpd.GeoDataFrame(df, crs=self.crs.proj4, geometry="geometry")
 
         # Clip to study area if requested
-        if self.country:
-            shape_file = get_country_file(self.country)
-        if shape_file is not None:
-            shp_name = Path(shape_file).name
+        if self.shape_file is not None:
+            shp_name = Path(self.shape_file).name
             logger.info(f"Clipping event GeoDataFrame with {shp_name}...")
-            gdf = self.clip_to_shape_file(gdf, shape_file)
+            gdf = self.clip_to_shape_file(gdf, self.shape_file)
 
         return gdf
 
