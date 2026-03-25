@@ -804,14 +804,14 @@ class ModelBuilder(Base):
         sgdf = gdf.copy()
 
         with rasterio.open(tif_path) as src:
-            # Project GeoDataFrame to match raster CRS
-            if sgdf.crs != src.crs:
-                sgdf = sgdf.to_crs(src.crs)
+            # Reproject a temporary copy for coordinate sampling only, so that
+            # sgdf retains its original CRS throughout
+            tmp = sgdf.to_crs(src.crs) if sgdf.crs != src.crs else sgdf
 
             # Extract centroid coordinates from geometry (handles points,
             # polygons, multipolygons)
             coords = [
-                (geom.centroid.x, geom.centroid.y) for geom in sgdf.geometry
+                (geom.centroid.x, geom.centroid.y) for geom in tmp.geometry
             ]
 
             sampled_vals = list(src.sample(coords))
@@ -854,10 +854,8 @@ class ModelBuilder(Base):
         # Convert points to pixels
         gdf = self.process_geometry(gdf)
 
-        # Calculate fire spread speed and maximum travel vectors
-        # Note from Nate: this does not calculate fire speed and max travel
-        # vectors? And we aren't currently using KG regions
-        # gdf = self.add_kg_attributes(gdf)
+        # Add Köppen-Geiger climate zone attributes
+        gdf = self.add_kg_attributes(gdf)
 
         return gdf
 
