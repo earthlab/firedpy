@@ -35,13 +35,13 @@ def fired(
     tiles=None,
     shape_file=None,
     start_year=2000,
-    end_year=2025,
+    end_year=2026,
     spatial_param=8,
     temporal_param=3,
     daily=True,
     shape_type="gpkg",
-    eco_region_level=1,
     eco_region_type=None,
+    eco_region_level=3,
     land_cover_type=None,
     full_csv=True,
     n_cores=0,
@@ -70,7 +70,7 @@ def fired(
     start_year : int
         The first year of fire events. Defaults to 2000.
     end_year : int
-        The last year of fire events. Defaults to 2025.
+        The last year of fire events. Defaults to 2026.
     spatial_param : int
         The number of cells (~463 m resolution) to search for neighboring burn
         detections.
@@ -87,7 +87,7 @@ def fired(
         the chosen project directory. These will be saved in the specified
         geopackage format (.gpkg), ERSI Shapefile format (.shp), or save them
         in both formats using the file basename of the fire event data frame
-        (e.g. 'modis_events_daily.gpkg' and 'modis_events.gpkg').
+        (e.g. 'fired_events_daily.gpkg' and 'fired_events.gpkg').
     eco_region_level : int
         The desired Ecoregions level from the North American Commission for
         Environmental Cooperation (CEC). Levels 1 to 3 are available, with
