@@ -555,7 +555,7 @@ class BurnData(LPDAAC):
         return str(self.hdf_dir.joinpath(tile, hdf_name))
 
     def get_burns(self, tiles=None, country=None, shape_file=None,
-                  start_year=2000, end_year=2025):
+                  start_year=2000, end_year=2026):
         """Download MODIS burn data using EarthAccess.
 
         NOTE: One of tiles, country, or shapefile must be supplied. If mulitple
@@ -575,7 +575,7 @@ class BurnData(LPDAAC):
         start_year : int
             The first year of fire events. Defaults to 2000.
         end_year : int
-            The last year of fire events. Defaults to 2025.
+            The last year of fire events. Defaults to 2026.
         """
         start_date = f"{start_year}-01-01"
         end_date = f"{end_year}-12-31"
