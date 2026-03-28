@@ -1,12 +1,26 @@
+# -*- coding: utf-8 -*-
+"""Run selected countries."""
 import os
 import subprocess as sp
 import sys
 
-from firedpy.run import fired, cleanup_intermediate_files
+import pandas as pd
 
-PROJECT_DIR = os.path.dirname(os.path.dirname(__file__))
+from firedpy import DATA_DIR
+from firedpy.run import fired
 
-if __name__ == '__main__':
+
+PARAMETER_FPATH = DATA_DIR.joinpath("parameters_for_individual_countries.csv")
+
+
+def main():
+    """Run firedpy for all countries."""
+    parameters = pd.read_csv(PARAMETER_FPATH)
+
+
+
+
+def old():
     countries = [c.rstrip('.gpkg') for c in os.listdir(os.path.join(PROJECT_DIR, 'ref', 'individual_countries'))]
 
     with open('unprocessable.txt', 'r') as file:
@@ -74,3 +88,7 @@ if __name__ == '__main__':
                 _ = process.wait()
 
                 cleanup_intermediate_files(os.path.join(PROJECT_DIR, 'output'))
+
+
+if __name__ == '__main__':
+    pass
