@@ -426,6 +426,11 @@ After creating a new fire product, it might be useful to get it out of the docke
 
 
 ## Use:
+
+  - To avoid having to type in your username and password every time, follow the instructions below to create a .netrc file in your home directory
+
+`https://nsidc.org/data/user-resources/help-center/creating-netrc-file-earthdata-login`
+
   - Run the command line interface `firedpy` or `firedpy --help` in your terminal for its help file:
 
   ```bash
