@@ -1255,7 +1255,7 @@ class ModelBuilder(Base):
         logger.info("Converting polygons to multipolygons...")
         gdfd["geometry"] = gdfd["geometry"].apply(self._as_multi_polygon)
 
-        return gdf
+        return gdfd
 
     def process_event_data(self, gdf):
         """Process a firedpy geodataframe for non-daily ouputs.
