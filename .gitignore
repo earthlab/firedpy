@@ -3,7 +3,7 @@ output/
 
 # The process all countries outputs
 process_all_countries/runs/
-
+process_all_countries/all/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 .pytest_cache

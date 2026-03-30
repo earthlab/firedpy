@@ -26,7 +26,9 @@ def main():
     # Simple loop for now (reformat into slurm submission)
     for i, row in parameters.iterrows():
         country = row['country_name']
-        directory = HOME.joinpath(f"runs/{country}")
+        sparam = row["spatial"]
+        tparam = row["temporal"]
+        directory = HOME.joinpath(f"all")
         if country not in processed and country not in unprocessable:
             print(f"Processing {country}..")
             try:
@@ -34,16 +36,16 @@ def main():
                     project_directory=directory,
                     project_name=country,
                     country=country,
-                    start_year=2025,
-                    end_year=2026,
+                    start_year=2000,
+                    end_year=2025,
                     spatial_param=row["spatial"],
                     temporal_param=row["temporal"],
                     daily=True,
                     shape_type="gpkg",
-                    eco_region_type=None,
-                    eco_region_level=3,
-                    land_cover_type=None,
-                    full_csv=True,
+                    eco_region_type="world",
+                    eco_region_level=None,
+                    land_cover_type=1,
+                    full_csv=False,
                     n_cores=0,
                     cleanup=True
                 )
