@@ -28,26 +28,26 @@ def main():
         country = row['country_name']
         sparam = row["spatial"]
         tparam = row["temporal"]
-        directory = HOME.joinpath(f"all")
+        directory = HOME.joinpath(f"all") # have them all in a common directory so we don't download the same thing twice
         if country not in processed and country not in unprocessable:
             print(f"Processing {country}..")
             try:
                 fired(
                     project_directory=directory,
-                    project_name=country,
+                    project_name=country, # here we can add the s and t params to the filename
                     country=country,
                     start_year=2000,
-                    end_year=2025,
+                    end_year=2026,
                     spatial_param=row["spatial"],
                     temporal_param=row["temporal"],
                     daily=True,
                     shape_type="gpkg",
-                    eco_region_type="world",
+                    eco_region_type=None,
                     eco_region_level=None,
                     land_cover_type=1,
                     full_csv=False,
                     n_cores=0,
-                    cleanup=True
+                    cleanup=False
                 )
                 with open("processed.txt", "a") as file:
                     file.write(f"{country}\n")
