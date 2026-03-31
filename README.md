@@ -375,6 +375,12 @@ There are two main ways to install firedpy. Method 1 is to install locally from 
     conda env create -f environment.yml
     conda activate firedpy
     ```
+    - *Recommendation: be explicit about the environment location*
+    
+    ```bash
+    conda env create -f environment.yml --prefix /path/to/firedenv
+    conda activate /path/to/firedenb
+    ```
 
   - **Step 4**: Install FIREDpy with pip.
 
