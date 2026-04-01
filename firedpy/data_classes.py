@@ -96,7 +96,6 @@ class Base(MODISEarthAccess):
         self.shape_dir = project_directory.joinpath("shapefiles")
         self.burn_area_dir = self.raster_dir.joinpath("burn_area")
         self.land_cover_dir = self.raster_dir.joinpath("land_cover")
-        self.eco_region_raster_dir = self.raster_dir.joinpath("eco_region")
         self.eco_region_shape_dir = self.shape_dir.joinpath("eco_region")
         self.tables_dir = project_directory.joinpath("tables")
         self.nc_dir = self.burn_area_dir.joinpath("netcdfs")
@@ -105,11 +104,6 @@ class Base(MODISEarthAccess):
             "modis_sinusoidal_grid_world.shp"
         )
         self.conus_shape_path = self.shape_dir.joinpath("conus.shp")
-        self.eco_region_csv_path = self.tables_dir.joinpath("eco_refs.csv")
-        self.project_eco_region_dir = DATA_DIR.joinpath("us_eco")
-        self.eco_region_shape_path = self.eco_region_shape_dir.joinpath(
-            "NA_CEC_Eco_Level3.gpkg"
-        )
 
         # Can we shorten this or use another method?
         # This is used both to ensure the file format matches and to extract
@@ -136,10 +130,6 @@ class Base(MODISEarthAccess):
         if not auth:
             raise RuntimeError("EarthAccess authentication failed")
         return auth
-
-    def _copy_cec_file(self):
-        src = DATA_DIR.joinpath("ec_eco", "NA_CEC_Eco_Level3.gpkg")
-        return self._copy_file(src, self.eco_region_shape_path)
 
     @staticmethod
     def _copy_file(src_path, dest_path):
@@ -1131,14 +1121,6 @@ class LandCover(Base):
         )
         return self._copy_file(lookup, land_cover_out_dir_path)
 
-    def _copy_wwf_file(self) -> str:
-        lookup = DATA_DIR.joinpath('world_eco_regions', 'wwf_terr_ecos.gpkg')
-        wwf_out_dir_path = os.path.join(
-            self.project_directory, 'shapefiles', 'eco_region',
-            'wwf_terr_ecos.gpkg'
-        )
-        return self._copy_file(lookup, wwf_out_dir_path)
-
     def _find_available_tiles_for_region(self, requested_tiles):
         """Find available land cover tiles that cover the requested region."""
         try:
@@ -1387,19 +1369,20 @@ class EcoRegion(Base):
             Path to firedpy output directory.
         """
         super().__init__(project_directory)
-        self._eco_region_ftp_url = (
-            "https://dmap-prod-oms-edc.s3.us-east-1.amazonaws.com/ORD/"
-            "Ecoregions/cec_na/NA_CEC_Eco_Level3.zip"
+        self.eco_region_shape_path = self.eco_region_shape_dir.joinpath(
+            "NA_CEC_Eco_Level3.gpkg"
         )
-        self._eco_region_raster_path = os.path.join(
-            self.eco_region_raster_dir,
-            "NA_CEC_Eco_Level3_modis.tif"
+        self._wwf_shape_path = self.eco_region_shape_dir.joinpath(
+            "wwf_terr_ecos.gpkg"
         )
-        self._ref_cols = [
-            "NA_L3CODE", "NA_L3NAME", "NA_L2CODE", "NA_L2NAME", "NA_L1CODE",
-            "NA_L1NAME", "NA_L3KEY", "NA_L2KEY", "NA_L1KEY"
-        ]
-        self.eco_region_data_frame = None
+
+    def _copy_cec_file(self):
+        src = DATA_DIR.joinpath("na_eco", "NA_CEC_Eco_Level3.gpkg")
+        return self._copy_file(src, self.eco_region_shape_path)
+
+    def _copy_wwf_file(self):
+        src = DATA_DIR.joinpath("world_eco_regions", "wwf_terr_ecos.gpkg")
+        return self._copy_file(src, self._wwf_shape_path)
 
     def __repr__(self):
         """Return representation string for an EcoRegion object."""
@@ -1461,14 +1444,13 @@ class EcoRegion(Base):
 
         logger.info("Adding eco-region attributes ...")
         eco_region_type = EcoRegionType(eco_region_type)
-        if eco_region_level or (eco_region_type == EcoRegionType.NA):
+        if eco_region_type == EcoRegionType.NA:
             gdf = self.add_attributes_from_na_cec(gdf, eco_region_level)
         else:
             gdf = self.add_attributes_from_wwf(gdf)
         return gdf
 
     def add_attributes_from_na_cec(self, gdf, eco_region_level):
-        # Different levels have different sources
         institution = "(NA-Commission for Environmental Cooperation)"
         eco_types = {
             "NA_L1CODE": f"Level I Ecoregions {institution}",
@@ -1476,17 +1458,13 @@ class EcoRegion(Base):
             "NA_L3CODE": f"Level III Ecoregions {institution}"
         }
 
-        # Read in the Level File (contains every level) and reference table
         shp_path = self._copy_cec_file()
         eco = gpd.read_file(shp_path)
         eco.to_crs(gdf.crs, inplace=True)
 
-        # Filter for selected level (level III defaults to US-EPA version)
         if not eco_region_level:
             eco_region_level = 3
-        eco_code = [c for c in eco if str(eco_region_level) in
-                    c and "CODE" in c]
-
+        eco_code = [c for c in eco if str(eco_region_level) in c and "CODE" in c]
         if len(eco_code) > 1:
             eco_code = [c for c in eco_code if "NA" in c][0]
         else:
@@ -1494,23 +1472,18 @@ class EcoRegion(Base):
 
         logger.info(f"Selected ecoregion code: {eco_code}")
 
+        # Build name lookup directly from the gpkg
+        eco_name_col = eco_code.replace("CODE", "NAME")
+        eco_map = dict(zip(eco[eco_code], eco[eco_name_col]))
+
         # Find modal eco-region for each event id
         eco = eco[[eco_code, "geometry"]]
         gdf = gpd.sjoin(gdf, eco, how="left", predicate="within")
         gdf = gdf.reset_index(drop=True)
         gdf["eco_mode"] = gdf.groupby("id")[eco_code].transform(self._mode)
-
-        # Add in the type of eco-region
         gdf["eco_type"] = eco_types[eco_code]
-
-        # Add in the name of the modal ecoregion
-        eco_ref = pd.read_csv(self.eco_region_csv_path)
-        eco_name = eco_code.replace("CODE", "NAME")
-        eco_df = eco_ref[[eco_code, eco_name]].drop_duplicates()
-        eco_map = dict(zip(eco_df[eco_code], eco_df[eco_name]))
         gdf["eco_name"] = gdf[eco_code].map(eco_map)
 
-        # Clean up column names
         gdf = gdf.drop("index_right", axis=1)
         gdf = gdf.drop(eco_code, axis=1)
 
@@ -1537,166 +1510,3 @@ class EcoRegion(Base):
 
         return gdf
 
-    def create_eco_region_raster(self, tiles: List[str]):
-        """Create an EcoRegion raster.
-
-        Parameters
-        ----------
-        tiles: list
-            A list of strings representing the target MODIS tiles in which to
-            create the Ecoregion raster, e.g., ["", ""]
-
-        Returns
-        -------
-        """
-        if self.eco_region_data_frame is None:
-            self.get_eco_region()
-
-        # We need something with the correct geometry
-        template1 = gpd.read_file(self._modis_sinusoidal_grid_shape_path)
-
-        # Getting the extent regardless of existing files from other runs
-        template1["h"] = template1["h"].apply(lambda x: "{:02d}".format(x))
-        template1["v"] = template1["v"].apply(lambda x: "{:02d}".format(x))
-        template1["tile"] = "h" + template1["h"] + "v" + template1["v"]
-        template1 = template1[template1["tile"].isin(tiles)]
-
-        # We can use this to query which tiles are needed for coordinates
-        bounds = template1.geometry.bounds
-        minx = min(bounds["minx"])
-        miny = min(bounds["miny"])
-        maxx = max(bounds["maxx"])
-        maxy = max(bounds["maxy"])
-        minx_tile = template1["tile"][bounds["minx"] == minx].iloc[0]
-        miny_tile = template1["tile"][bounds["miny"] == miny].iloc[0]
-        maxx_tile = template1["tile"][bounds["maxx"] == maxx].iloc[0]
-        maxy_tile = template1["tile"][bounds["maxy"] == maxy].iloc[0]
-        extent_tiles = [minx_tile, miny_tile, maxx_tile, maxy_tile]
-
-        # If these aren't present, I say just go ahead and download
-        exts = []
-        projection = None
-        xres = None
-        for tile in extent_tiles:
-            burn_dir = os.path.join(self.hdf_dir, tile)
-            if not os.path.exists(burn_dir):
-                raise FileNotFoundError(
-                    f"Burn HDFs do not exist for tile {tile} at {burn_dir}. "
-                    "Use the BurnData class to download this data before "
-                    "rasterizing the eco region file"
-                )
-
-            # Find the matching file
-            files = []
-            for f in glob(os.path.join(burn_dir, "*")):
-                if re.match(self._file_regex, os.path.basename(f)) is not None:
-                    files.append(os.path.join(burn_dir, f))
-            file = files[0]
-            file_pointer = gdal.Open(file)
-            dataset_pointer = file_pointer.GetSubDatasets()[0][0]
-            ds = gdal.Open(dataset_pointer)
-            geom = ds.GetGeoTransform()
-            ulx, xres, xskew, uly, yskew, yres = geom
-            lrx = ulx + (ds.RasterXSize * xres)
-            lry = uly + (ds.RasterYSize * yres)
-            exts.append([ulx, lry, lrx, uly])
-            projection = ds.GetProjection()
-
-        extent = [exts[0][0], exts[1][1], exts[2][2], exts[3][3]]
-        attribute = "US_L3CODE"
-        self._rasterize_vector_data(
-            self.eco_region_data_frame,
-            self._eco_region_raster_path,
-            attribute,
-            xres,
-            projection,
-            extent
-        )
-
-    def get_eco_region(self):
-        """Download Ecoregion shapefile to the project directory.
-
-        NOTE: This currently only downloads the EPA Omernick Ecoregions North
-            for North American, though we tell the user they could have this
-            or the World Terrestrial Ecoregions (World Wildlife Fund).
-        """
-        # Download the file from source
-        eco = self._read_eco_region_file()
-
-        # Create a reference table for ecoregions
-        eco_ref = eco[self._ref_cols].drop_duplicates()
-        eco_ref = eco_ref.map(self._normalize_string)
-        eco_ref.to_csv(self.eco_region_csv_path, index=False)
-        self.eco_region_data_frame = eco_ref
-
-    @staticmethod
-    def _normalize_string(string):
-        def capitalize_special(s):
-            """Handle capitalization for special characters within a string."""
-            if "/" in s:
-                segments = []
-                for segment in s.split("/"):
-                    if segment.upper() != "USA":
-                        segment = segment.capitalize()
-                    else:
-                        segment = segment.upper()
-                    segments.append(segment)
-                s = "/".join(segments)
-            if "-" in s:
-                segments = []
-                for segment in s.split("-"):
-                    if segment.upper() != "USA":
-                        segment = segment.title()
-                    else:
-                        segment = segment.upper()
-                    segments.append(segment)
-                s = "-".join(segments)
-            return s
-
-        # Split string into words
-        words = string.split()
-
-        # Create a new list with words formatted according to rules
-        formatted_words = []
-        for word in words:
-            # Special handling for "USA"
-            if word.upper() == "USA":
-                formatted_words.append("USA")
-            # Special handling for "and"
-            elif word.lower() == "and":
-                formatted_words.append("and")
-            # Capitalization with special character handling for other words
-            else:
-                formatted_words.append(capitalize_special(word.capitalize()))
-
-        # Join and return the formatted words as a single string
-        return " ".join(formatted_words)
-
-    def _read_eco_region_file(self):
-        """Read Ecoregion file from package data or EPA FTP site.
-
-        NOTE: Update 02/2021: EPA FTP site is glitchy, using local file in case
-        download fails.
-
-        Returns
-        -------
-        gpd.
-        """
-        # Check if the file exists, try to use a new EPA file
-        if not os.path.exists(self.eco_region_shape_path):
-            try:
-                eco = gpd.read_file(self._eco_region_ftp_url)
-                eco = eco.to_crs("epsg:5070")
-                eco.to_file(self.eco_region_shape_path)
-            except Exception as e:
-                msg = f"Download from EPA FTP site, using local file {e}"
-                logger.info(msg)
-                shutil.copytree(
-                    self.project_eco_region_dir,
-                    self.eco_region_shape_dir
-                )
-
-        # Read in the file downloaded or copied to the output directory
-        df = gpd.read_file(self.eco_region_shape_path)
-
-        return df

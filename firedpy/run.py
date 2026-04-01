@@ -228,7 +228,6 @@ def fired(
             msg = f"Adding ecoregions: {eco_desc}, Level {eco_region_level}."
             logger.info(msg)
             eco_region_data = EcoRegion(project_directory=project_directory)
-            eco_region_data.get_eco_region()
             gdf = eco_region_data.add_eco_region_attributes(
                 gdf=gdf,
                 eco_region_type=eco_region_type,
