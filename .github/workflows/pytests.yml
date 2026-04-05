@@ -37,9 +37,11 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
+        sudo apt-get update
+        sudo apt-get install -y gdal-bin libgdal-dev
         python -m pip install --upgrade pip
         python -m pip install .
         python -m pip install pytest
-    - name: Run pytest and Generate coverage report
+    - name: Run pytest
       run: |
         python -m pytest -v tests/*py
