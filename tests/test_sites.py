@@ -14,11 +14,11 @@ from firedpy.run import fired
 def test_iceland():
     """Test a sample of fires in Iceland for expected behavior."""
     # Run Fired for Iceland
-    pdir = Path("./test_iceland").absolute()
+    pdir = Path("./testruns_iceland").absolute()
     out = fired(
         project_directory=pdir,
         country="Iceland",
-        project_name="test_iceland",
+        project_name="testruns_iceland",
         start_year=2021,
         end_year=2022,
         spatial_param=8,
