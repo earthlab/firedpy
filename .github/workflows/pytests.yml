@@ -3,12 +3,12 @@ name: Tests
 on:
   push:
     paths-ignore:
-      - tests/old/**
+      - 'tests/old/**'
     branches:
       - main
   pull_request:
     paths-ignore:
-      - tests/old/**
+      - 'tests/old/**'
     branches:
       - main
 
@@ -41,4 +41,4 @@ jobs:
         python -m pip install pytest
     - name: Run pytest and Generate coverage report
       run: |
-        python -m pytest -v
+        python -m pytest -v tests/*py

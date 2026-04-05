@@ -1,0 +1,170 @@
+--------
+ABSTRACT
+--------
+
+This is a fire event delineation (FIRED) product for MODIS grid tiles 'h16v02', 'h17v02' from January 2022 to December 2022. 
+It was derived from the MODIS MCD64A1 burned area product (see https://lpdaac.usgs.gov/products/mcd64a1v061/ for more details). 
+The MCD64A1 product is a monthly raster grid of estimated burned dates starting in November of 2000. 
+Firedpy (https://github.com/earthlab/firedpy) is an algorithm that aquires the MCD64A1 files for an area of interest, and then converts burn detections into fire events by stacking the entire time series into a spatial-temporal data cube, then uses an algorithm to assign event identification numbers to pixels that fit into a 3-dimensional spatial temporal window defined by parameters set by the user. 
+This particular dataset was created using a spatial parameter of 8 pixels and 3 days.
+
+All products include an event-level polygon product. The event-level product has only single polygons for each entire event.
+If daily polygons are included, the event identification numbers are the same for both daily-level and event-level files, but the daily product has separate polygons for each date per event. 
+See the associated papers for more details on the methods and more:
+
+Balch, J.K.; St. Denis, L.A.; Mahood, A.L.; Mietkiewicz, N.P.; Williams, T.M.; McGlinchy, J.; Cook, M.C. 2020. 'FIRED (Fire Events Delineation): An Open, Flexible Algorithm and Database of US Fire Events Derived from the MODIS Burned Area Product'. (2001–2019). Remote Sensing, 12, 3498. https://doi.org/10.3390/rs12213498 
+
+Mahood, A.L., Lindrooth, E.J., Cook, M.C., Balch, J.K., 2022. 'Country-level fire perimeter datasets (2001–2021)'. Sci Data 9, 458. https://doi.org/10.1038/s41597-022-01572-3
+
+-------------------
+GENERAL INFORMATION
+-------------------
+
+1. Title of Dataset:  fired_test_iceland 
+2. Authors: Jennifer K. Balch, Lise A. St. Denis, Adam L. Mahood, Nathan P.  Mietkiewicz, Travis Williams, Joe McGlinchy, Maxwell C. Cook, Estelle J. Lindrooth, Erick A. Verleye.
+3. Contact information: jennifer.balch@colorado.edu; adam.mahood@colorado.edu
+4. Date of data collection:July 2022 - August 2022
+
+--------------------------
+SHARING/ACCESS INFORMATION
+--------------------------
+
+1. Licenses/restrictions placed on the data: MIT
+2. Links to publications that cite or use the data: TBD
+3. Links to other publicly accessible locations of the data: None
+4. Recommended citation for the data: 
+
+Balch, J.K.; St. Denis, L.A.; Mahood, A.L.; Mietkiewicz, N.P.; Williams, T.M.; McGlinchy, J.; Cook, M.C. FIRED (Fire Events Delineation): An Open, Flexible Algorithm and Database of US Fire Events Derived from the MODIS Burned Area Product (2001–2019). Remote Sens. 2020, 12, 3498. https://doi.org/10.3390/rs12213498
+         
+-------------------
+DATA & FILE OVERVIEW
+-------------------
+
+1. File List:
+    1.1 Tables
+        - /home/travis/github/firedpy/tests/test_iceland/outputs/tables/fired_test_iceland_2021_to_2022_daily.csv
+        - /home/travis/github/firedpy/tests/test_iceland/outputs/tables/fired_test_iceland_2021_to_2022_events.csv
+    1.2 Geopackages
+        - /home/travis/github/firedpy/tests/test_iceland/outputs/shapefiles/fired_test_iceland_2021_to_2022_daily.gpkg
+        - /home/travis/github/firedpy/tests/test_iceland/outputs/shapefiles/fired_test_iceland_2021_to_2022_events.gpkg
+
+--------------------------
+METHODOLOGICAL INFORMATION
+--------------------------
+
+ 1. Spatial window: 8
+ 2. Temporal window: 3
+ 3. MODIS Tiles IDs: 'h16v02', 'h17v02'
+
+See Balch et al 2020 for complete methods. DOI: https://doi.org/10.3390/rs12213498
+
+--------------------------------------------------------------------
+DATA INFORMATION:
+--------------------------------------------------------------------
+
+1. Number of variables: 24
+
+2. Projection information (PROJ4 string): +proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a=6371007.181 +b=6371007.181 +units=m +no_defs
+
+2.1. The projection is the native projection from the MODIS MCD64A1 burned area product from which this dataset is derived. The MCD64A1 product is a raster grid with a resolution of 463 meters. More info at https://lpdaac.usgs.gov/products/mcd64a1v006/ 
+
+3. Variable List: 
+
+        A. Name: id
+        	i. Description: Unique identifier of the fire event.
+
+        B. Name: ig_date
+            i. Description: The earliest date contained in the event 
+
+        C. Name: ig_day
+            i. Description: The day of the year of the earliest date contained in the event 
+
+        D. Name: ig_month
+            i. Description: The month of the earliest date contained in the event 
+
+        E. Name: ig_year
+            i. Description: The year of the earliest date contained in the event. 
+
+        F. Name: last_date
+            i. Description: The latest date contained in the event 
+
+        G. Name: event_day
+            i. Description: Days since ignition date + 1 (ignition date is day 1)  
+
+        H. Name: pixels
+            i. Description: Total number of pixels burned that day.  
+
+        I. Name: tot_px
+            i. Description:  Total pixels burned for the entire event.  
+
+        J. Name: tot_ar_km2
+            i. Description: Area burned in square kilometers for the entire event.  
+
+        K. Name: fsr_px_dy
+            i. Description: Total pixels burned for the entire event divided by the duration of the fire event.  
+
+        L. Name: fsr_km2_dy
+            i. Description: Total kilometers burned for the entire event divided by the duration of the fire event.  
+
+        M. Name: mx_grw_px
+            i. Description: maximum growth in pixels  
+
+        N. Name: mn_grw_px
+            i. Description: minimum growth in pixels  
+
+        O. Name: mu_grw_px
+            i. Description: mean growth in pixels  
+
+        P. Name: mx_grw_km2  
+            i. Description: maximum growth in square kilometers  
+
+        Q. Name: mn_grw_km2  
+            i. Description: minimum growth in square kilometers  
+
+        R. Name: mu_grw_km2 
+            i. Description: mean growth in square kilometers  
+
+        S. Name: mx_grw_dte  
+            i. Description: date of maximum  
+
+        T. Name: lc_code  
+            i. Description: Numeric code for the land_cover type extracted from the MODIS land_cover product for the year preceding the fire.  
+
+        U. Name: lc_mode  
+            i. Description: Numeric code for the land_cover type extracted from the MODIS land_cover product for the year preceding the fire.  
+
+        V. Name: lc_name  
+            i. Description: Character string of the land_cover type from the year before the fire.  
+
+        W. Name: lc_desc  
+            i. Description: Character string description of the land_cover type from the year before the fire.  
+
+        X. Name: lc_type  
+            i. Description: Which land_cover classification type was used from the MCD12Q1 product? Default is IGBP global vegetation classification scheme  
+
+        Y. Name: eco_mode 
+            i. Description: Modal ecoregion code 
+
+        Z. Name: eco_type  
+            i. Description: Which type and level of ecoregion classification was used (North america EPA (levels 1-3) vs World Wildlife Federation)  
+
+        AA. Name: eco_name 
+            i. Description: Character string of the ecoregion type where the event occurred.  
+
+        BB. Name: ig_utm_x 
+            i. Description: estimated ignition x coordinate  
+
+        CC. Name: ig_utm_y 
+            i. Description: estimated ignition y coordinate  
+
+        DD. Name: tot_perim  
+            i. Description: Total perimeter of the fire event. 
+
+
+-------------------
+RUNTIME INFORMATION
+-------------------
+
+Time to complete: 0.37 minutes
+Peak memory usage: 1.5
+Cores used: 1
