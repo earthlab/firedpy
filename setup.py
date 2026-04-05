@@ -27,6 +27,8 @@ def get_requirements():
     reqs = [req.replace("\n", "") for req in reqs]
     gdal_version = get_gdal_version()
     gdal_line = f"gdal=={gdal_version}.*"
+    if "," in gdal_line:
+        gdal_line = gdal_line.replace(",", "")
     reqs.append(gdal_line)
     return reqs
 
