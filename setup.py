@@ -24,8 +24,9 @@ def get_requirements():
     """Get requirements and update gdal version number."""
     with open("requirements.txt", encoding="utf-8") as file:
         reqs = file.readlines()
+    reqs = [req.replace("\n", "") for req in reqs]
     gdal_version = get_gdal_version()
-    gdal_line = f"gdal=={gdal_version}.*\n"
+    gdal_line = f"gdal=={gdal_version}.*"
     reqs.append(gdal_line)
     return reqs
 
