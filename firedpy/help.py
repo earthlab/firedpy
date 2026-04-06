@@ -107,7 +107,7 @@ CLI_HELP = {
         https://urs.earthdata.nasa.gov/home. If you have an account, firedpy
         will use any of the authentication options outlined here:
 
-        https://earthaccess.readthedocs.io/en/latest/user_guide/authenticate/
+        https://earthaccess.readthedocs.io/en/stable/user/howto/authenticate/
         """
     ),
     "n_cores": (
