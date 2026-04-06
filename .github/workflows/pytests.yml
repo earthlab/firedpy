@@ -47,6 +47,8 @@ jobs:
         python -m pip install pytest
     - name: Run pytest
       env:
+        C_INCLUDE_PATH: /usr/include/gdal
+        CPLUS_INCLUDE_PATH: /usr/include/gdal
         EARTHDATA_TOKEN: ${{ secrets.EARTHDATA_TOKEN }}
       run: |
         python -m pytest -v tests/*py
