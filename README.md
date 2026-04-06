@@ -5,7 +5,7 @@
 [![GitHub issues](https://img.shields.io/github/issues/earthlab/firedpy)](https://github.com/earthlab/firedpy/issues)
 ![GitHub commit activity](https://img.shields.io/github/commit-activity/w/earthlab/firedpy) 
 ![pytests](https://github.com/earthlab/firedpy/workflows/Pytests/badge.svg)
-
+[![Coverage](https://codecov.io/github/earthlab/firedpy/coverage.svg?branch=main)](https://codecov.io/gh/earthlab/firedpy)
 
 # FIREDpy - FIRe Event Delineation for Python
 
@@ -555,7 +555,7 @@ After creating a new fire product, it might be useful to get it out of the docke
 
 ## How to update the docker container
 
-- step 0.1. install docker (go to the docker website for OS-specific instructions.)
+- step 0.1. install docker (go to the docker site for OS-specific instructions.)
 - step 0.2. get a dockerhub account
 - step 1. login to docker hub via the command-line
    - `docker login` or `sudo docker login`
