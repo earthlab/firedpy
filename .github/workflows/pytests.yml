@@ -40,7 +40,7 @@ jobs:
         C_INCLUDE_PATH: /usr/include/gdal
         CPLUS_INCLUDE_PATH: /usr/include/gdal
       run: |
-        sudo apt-get update
+        sudo apt-get update && sudo apt upgrade
         sudo apt-get install -y gdal-bin libgdal-dev python3-gdal
         python -m pip install --upgrade pip
         python -m pip install .
