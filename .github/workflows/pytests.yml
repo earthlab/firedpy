@@ -41,10 +41,9 @@ jobs:
         CPLUS_INCLUDE_PATH: /usr/include/gdal
       run: |
         sudo apt-get update
-        sudo apt-get install -y gdal-bin libgdal-dev
+        sudo apt-get install -y gdal-bin libgdal-dev python3-gdal
         python -m pip install --upgrade pip
         python -m pip install .
-        pip install --no-cache-dir --force-reinstall GDAL==$(gdal-config --version)
         python -m pip install pytest
     - name: Run pytest
       env:
