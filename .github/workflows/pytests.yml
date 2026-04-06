@@ -42,9 +42,9 @@ jobs:
         sudo apt-get install -y gdal-bin libgdal-dev python3-gdal
         python -m pip install --upgrade pip
         python -m pip install .
-        python -m pip install pytest pytest-cov
+        python -m pip install pytest
     - name: Run pytest
       env:
         EARTHDATA_TOKEN: ${{ secrets.EARTHDATA_TOKEN }}
       run: |
-        python -m pytest --cov=./src --cov-report=xml -v tests/*py
+        python -m pytest -v tests/*py

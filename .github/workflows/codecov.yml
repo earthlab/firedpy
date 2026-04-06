@@ -1,0 +1,45 @@
+name: Codecov
+
+on:
+  push:
+    paths-ignore:
+      - 'tests/old/**'
+    branches:
+      - main
+  pull_request:
+    paths-ignore:
+      - 'tests/old/**'
+    branches:
+      - main
+
+jobs:
+  run:
+    name: Codecov
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.14
+    - name: Install dependencies
+      run: |
+        sudo add-apt-repository ppa:ubuntugis/ubuntugis-unstable
+        sudo apt-get update
+        sudo apt-get install -y gdal-bin libgdal-dev python3-gdal
+        python -m pip install --upgrade pip
+        python -m pip install .
+        python -m pip install pytest pytest-cov
+    - name: Generate coverage report
+      run: |
+        python -m  pytest --disable-warnings --cov=./ --cov-branch --cov-report=xml:coverage.xml
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage.xml
+        flags: unittests
+        env_vars: OS,PYTHON
+        name: codecov-umbrella
+        fail_ci_if_error: false
+        verbose: true

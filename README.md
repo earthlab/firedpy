@@ -1,13 +1,9 @@
 
-[![DOI](https://zenodo.org/badge/214283770.svg)](https://zenodo.org/badge/latestdoi/214283770)
-[![Docker Automated build](https://img.shields.io/docker/automated/earthlab/firedpy?style=plastic)](https://hub.docker.com/repository/docker/earthlab/firedpy/builds)
-![GitHub contributors](https://img.shields.io/github/contributors/earthlab/firedpy)
-[![GitHub issues](https://img.shields.io/github/issues/earthlab/firedpy)](https://github.com/earthlab/firedpy/issues)
-![GitHub commit activity](https://img.shields.io/github/commit-activity/w/earthlab/firedpy) 
+[![DOI](https://zenodo.org/badge/214283770.svg)](https://zenodo.org/badge/latestdoi/214283770) [![Docker Automated build](https://img.shields.io/docker/automated/earthlab/firedpy?style=plastic)](https://hub.docker.com/repository/docker/earthlab/firedpy/builds) ![GitHub contributors](https://img.shields.io/github/contributors/earthlab/firedpy) [![GitHub issues](https://img.shields.io/github/issues/earthlab/firedpy)](https://github.com/earthlab/firedpy/issues) ![GitHub commit activity](https://img.shields.io/github/commit-activity/w/earthlab/firedpy) 
 
 # FIREDpy - FIRe Event Delineation for Python
 
-A Python Command Line Interface for classifying fire events from the Collection 6 MODIS Burned Area Product.
+A Python Command-Line Interface for classifying fire events from the Collection 6 MODIS Burned Area Product.
 
 This package uses a space-time window to classify individual burn detections from late 2001 to near-present into discrete events and return both a data table and shapefiles of these events. The user is able to specify the spatial and temporal parameters of the window, as well as the spatial and temporal extent, using either a shapefile or a list of MODIS Sinusoidal Projection tile IDs. Countries, continents and US states are included. Any area from the world may be selected. However, in the current version, memory constraints may limit the extent available for a single model run. Equatorial regions have much more fire activity, and may require much more RAM to process than a normal laptop will have.
 
@@ -307,9 +303,9 @@ There are two main ways to install firedpy. Method 1 is to install locally from 
 
 #### 1.1 Package Installer for Python (pip):
 
-- **Step #1**: Install the Geospatial Data Abstraction Library (GDAL) on your machine, if it is not installed already. The installation method depends on your operating system (OS) and package manager (for Linux and MacOS). Below are a subset of installation options (see the GDAL Documentation page for official downloads: https://gdal.org/en/stable/download.html).
+- **Step #1**: Install the Geospatial Data Abstraction Library (GDAL) on your machine, if it is not installed already. The installation method depends on your operating system (OS) and package manager (for Linux and macOS). Below are a subset of installation options (see the GDAL Documentation page for official downloads: https://gdal.org/en/stable/download.html).
   
-    **MacOS (brew)**
+    **macOS (brew)**
     ```bash
     brew install gdal
     ```
@@ -337,7 +333,7 @@ There are two main ways to install firedpy. Method 1 is to install locally from 
 
 - **Step 2**: Create a Python environment and activate it. There are many options for doing this, one way is to use Python's virtual environment package as follows:
 
-    **MacOS or Linux**:
+    **macOS or Linux**:
     ```bash
     mkdir ~/envs
     python3 -m venv ~/envs/firedpy
@@ -361,7 +357,7 @@ There are two main ways to install firedpy. Method 1 is to install locally from 
 
 #### 1.2 Conda: 
 
-  Anaconda and its package manager `conda` is a system-independent method and should work for MacOS, Linux, or Windows.
+  Anaconda and its package manager `conda` is a system-independent method and should work for macOS, Linux, or Windows.
 
   - **Step #1**: Install Anaconda
   The installation method you use will depend on your operating system. Visit Conda's installation site, choose either `Miniconda`, `Anaconda Distribution`, or `Miniforge` (all options should work well) and following the installation instructions there: https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html. The easiest way to find an installer is through this miniconda repository: https://repo.anaconda.com/miniconda/. 
@@ -441,7 +437,7 @@ After creating a new fire product, it might be useful to get it out of the docke
 
 `https://nsidc.org/data/user-resources/help-center/creating-netrc-file-earthdata-login`
 
-  - Run the command line interface `firedpy` or `firedpy --help` in your terminal for its help file:
+  - Run the command-line interface `firedpy` or `firedpy --help` in your terminal for its help file:
 
   ```bash
   firedpy --help
@@ -453,7 +449,7 @@ After creating a new fire product, it might be useful to get it out of the docke
 
   Usage: firedpy [OPTIONS]
 
-    firedpy command line interface.
+    firedpy command-line interface.
 
   Options:
     --version                       Show the version and exit.
@@ -555,11 +551,11 @@ After creating a new fire product, it might be useful to get it out of the docke
 
 - step 0.1. install docker (go to the docker website for OS-specific instructions.)
 - step 0.2. get a dockerhub account
-- step 1. login to docker hub via the command line
+- step 1. login to docker hub via the command-line
    - `docker login` or `sudo docker login`
 - step 2. get the existing docker image set up
    - docker run -t -d earthlab/firedpy
-- step 3. update from github
+- step 3. update from GitHub
    - git pull 
 - step 4. build the docker container
    - `docker build -t earthlab/firedpy:latest .`
