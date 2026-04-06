@@ -36,11 +36,12 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
+      env:
+        C_INCLUDE_PATH: /usr/include/gdal
+        CPLUS_INCLUDE_PATH: /usr/include/gdal
       run: |
         sudo apt-get update
         sudo apt-get install -y gdal-bin libgdal-dev
-        ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
-        ENV C_INCLUDE_PATH=/usr/include/gdal
         python -m pip install --upgrade pip
         python -m pip install .
         python -m pip install pytest
