@@ -11,7 +11,8 @@ from pathlib import Path
 from firedpy.run import fired
 
 
-def test_iceland():
+@pytest.mark.parametrize("cores", [0, 1])
+def test_iceland(cores):
     """Test a sample of fires in Iceland for expected behavior."""
     # Run Fired for Iceland
     pdir = Path("./testruns_iceland").absolute()
@@ -29,7 +30,7 @@ def test_iceland():
         eco_region_level=3,
         land_cover_type=None,
         full_csv=True,
-        n_cores=1,
+        n_cores=cores,
         cleanup=True
     )
 
