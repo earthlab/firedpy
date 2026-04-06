@@ -31,6 +31,8 @@ jobs:
         python -m pip install .
         python -m pip install pytest pytest-cov
     - name: Generate coverage report
+      env:
+        EARTHDATA_TOKEN: ${{ secrets.EARTHDATA_TOKEN }}
       run: |
         python -m  pytest --disable-warnings --cov=./ --cov-branch --cov-report=xml:coverage.xml tests/*py
     - name: Upload coverage to Codecov
