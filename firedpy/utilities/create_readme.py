@@ -140,6 +140,7 @@ def make_read_me(gdf, project_directory, tiles, spatial_param,
         "{spatial_param}": spatial_param,
         "{temporal_param}": temporal_param,
         "{tile_string}": tile_string,
+        #"{shapefile}": shape_file # find where to define this in this script
     }
 
     # Read in the template

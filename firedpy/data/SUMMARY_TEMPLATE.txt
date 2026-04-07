@@ -50,6 +50,7 @@ METHODOLOGICAL INFORMATION
  1. Spatial window: {spatial_param}
  2. Temporal window: {temporal_param}
  3. MODIS Tiles IDs: {tile_string}
+ 4. Area of interest: {shapefile}
 
 See Balch et al 2020 for complete methods. DOI: https://doi.org/10.3390/rs12213498
 
