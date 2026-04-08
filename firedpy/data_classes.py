@@ -1071,7 +1071,23 @@ class LandCover(Base):
                 sgdf.loc[:, "lc_code"] = sgdf.apply(point_query, axis=1)
                 sgdf = sgdf[sgdf["lc_code"] != 255]  # Out-of-tile points
                 idgrp = sgdf.groupby("id")
+
+                # Most common land cover code across all pixels of the event
                 sgdf.loc[:, "lc_mode"] = idgrp["lc_code"].transform(self._mode)
+
+                # All unique codes as a sorted comma-separated string
+                def _to_lc_codes_str(x):
+                    unique = sorted(int(c) for c in x.dropna().unique())
+                    return str(unique[0]) if len(unique) == 1 else ",".join(str(c) for c in unique)
+
+                # Event-level: all codes the entire event crosses
+                sgdf.loc[:, "lc_codes"] = idgrp["lc_code"].transform(_to_lc_codes_str)
+
+                # Daily-level: all codes each daily perimeter crosses
+                sgdf.loc[:, "lc_day_codes"] = sgdf.groupby(["id", "date"])["lc_code"].transform(
+                    _to_lc_codes_str
+                )
+
                 sgdfs.append(sgdf)
 
         gdf = pd.concat(sgdfs)

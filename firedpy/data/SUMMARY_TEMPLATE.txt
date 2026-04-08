@@ -123,20 +123,20 @@ DATA INFORMATION:
         S. Name: mx_grw_dte  
             i. Description: date of maximum  
 
-        T. Name: lc_code  
-            i. Description: Numeric code for the land_cover type extracted from the MODIS land_cover product for the year preceding the fire.  
+        T. Name: lc_mode  
+            i. Description: Numeric code for the most common (modal) land cover type across all pixels of the fire event, from the MODIS MCD12Q1 product for the year preceding the fire.  
 
-        U. Name: lc_mode  
-            i. Description: Numeric code for the land_cover type extracted from the MODIS land_cover product for the year preceding the fire.  
+        U. Name: lc_codes  
+            i. Description: Sorted comma-separated string of all unique land cover codes the fire touched. In event-level data this covers the entire event; in daily data this covers only the pixels within that day's perimeter (e.g. "1" or "1,5,7").  
 
         V. Name: lc_name  
-            i. Description: Character string of the land_cover type from the year before the fire.  
+            i. Description: Character string of the modal land cover type from the year before the fire.  
 
         W. Name: lc_desc  
-            i. Description: Character string description of the land_cover type from the year before the fire.  
+            i. Description: Character string description of the modal land cover type from the year before the fire.  
 
         X. Name: lc_type  
-            i. Description: Which land_cover classification type was used from the MCD12Q1 product? Default is IGBP global vegetation classification scheme  
+            i. Description: Which land cover classification scheme was used from the MCD12Q1 product. Default is IGBP global vegetation classification scheme.  
 
         Y. Name: eco_mode 
             i. Description: Modal ecoregion code 

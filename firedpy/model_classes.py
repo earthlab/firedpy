@@ -1245,7 +1245,8 @@ class ModelBuilder(Base):
         """
         logger.info("Dissolving polygons...")
         gdfc = gdf.copy()
-        gdfc = gdfc.drop(["x", "y"], axis=1, errors="ignore")
+        gdfc = gdfc.drop(["x", "y", "lc_code", "lc_codes"], axis=1, errors="ignore")
+        gdfc = gdfc.rename(columns={"lc_day_codes": "lc_codes"})
         gdfc = self._create_did_column(gdfc, ["date", "id"])
         gdfd = gdfc.dissolve(by="did", as_index=False)
 
@@ -1267,7 +1268,11 @@ class ModelBuilder(Base):
         geopandas.geodataframe.GeoDataFrame : The processed geodataframe.
         """
         edf = gdf.copy()
-        edf = edf.drop(["pixels", "date", "event_day", "dy_ar_km2", "x", "y"], axis=1)
+        edf = edf.drop(
+            ["pixels", "date", "event_day", "dy_ar_km2", "x", "y",
+             "lc_code", "lc_day_codes"],
+            axis=1, errors="ignore"
+        )
         if "did" in gdf.columns:
             edf = edf.drop(["did"])
         if "fid" in edf.columns:
