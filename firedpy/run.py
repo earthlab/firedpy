@@ -172,7 +172,7 @@ def fired(
 
 
     # Get the burn data
-    reset_burn_area(project_directory)
+    reset_burn_area(project_directory) # reset cache
     logger.info("Collecting MODIS burn data.")
     burn_data = BurnData(project_directory=project_directory, n_cores=n_cores)
     tiles = burn_data.get_burns(
@@ -277,7 +277,7 @@ def fired(
             runtime=runtime,
             n_cores=n_cores,
             peak_memory=peak_memory,
-            start_year=start_year,
+            start_year = start_year,
             end_year = end_year 
         )
 
