@@ -13,10 +13,10 @@ SUMMARY_TEMPLATE = DATA_DIR.joinpath("SUMMARY_TEMPLATE.txt")
 
 def add_file_list(lines, output_directory):
     """Make a formatted list of files."""
-    # Get all output files
-    tables = list(output_directory.glob("**/*.csv"))
-    gpkgs = list(output_directory.glob("**/*.gpkg"))
-    shps = list(output_directory.glob("**/*.shp"))
+    # Get all output files (exclude log files and the readme itself)
+    tables = list(output_directory.glob("*.csv"))
+    gpkgs = list(output_directory.glob("*.gpkg"))
+    shps = list(output_directory.glob("*.shp"))
 
     # Find the files line and add in the appropriate entries
     new_lines = []
@@ -109,12 +109,16 @@ def make_read_me(gdf, project_directory, tiles, spatial_param,
     # List all output tables and spatial vector files
     project_directory = Path(project_directory).expanduser()
     output_directory = project_directory.joinpath("outputs")
-    csvs = list(output_directory.glob("**/*csv"))
+    csvs = list(output_directory.glob("*.csv"))
+    gpkgs = list(output_directory.glob("*.gpkg"))
 
-    # Assign specific files to variables
-
-    # The run name is in the CSVs, ant there will always be at least one
-    run_name = "_".join(csvs[0].name.split("_")[:-4])
+    # Derive run name from the first available output file (csv or gpkg)
+    if csvs:
+        run_name = "_".join(csvs[0].name.split("_")[:-4])
+    elif gpkgs:
+        run_name = "_".join(gpkgs[0].name.split("_")[:-4])
+    else:
+        run_name = Path(project_directory).name
 
     # Infer CPU count if default (0 for all) is used
     if n_cores == 0:

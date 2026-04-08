@@ -147,11 +147,11 @@ DATA INFORMATION:
         AA. Name: eco_name 
             i. Description: Character string of the ecoregion type where the event occurred.  
 
-        BB. Name: ig_utm_x 
-            i. Description: estimated ignition x coordinate  
+        BB. Name: ig_event_x 
+            i. Description: X coordinate (MODIS sinusoidal) of the first detected pixel of the fire event, consistent across all daily records of the same event.
 
-        CC. Name: ig_utm_y 
-            i. Description: estimated ignition y coordinate  
+        CC. Name: ig_event_y 
+            i. Description: Y coordinate (MODIS sinusoidal) of the first detected pixel of the fire event, consistent across all daily records of the same event.
 
         DD. Name: tot_perim  
             i. Description: Total perimeter of the fire event. 

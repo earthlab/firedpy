@@ -45,7 +45,7 @@ def main():
                     eco_region_type=None,
                     eco_region_level=None,
                     land_cover_type=1,
-                    full_csv=False,
+                    csv_type="none",
                     n_cores=0,
                     cleanup=False
                 )

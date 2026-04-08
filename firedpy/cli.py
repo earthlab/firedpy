@@ -268,10 +268,11 @@ def _prompts(ctx, _, interactive):
     help=CLI_HELP["land_cover_type"]
 )
 @click.option(
-    "-f", "--full_csv",
-    is_flag=True,
+    "-csv", "--csv_type",
+    default="none",
+    type=click.Choice(["full", "events", "none"], case_sensitive=False),
     is_eager=True,
-    help=CLI_HELP["full_csv"]
+    help=CLI_HELP["csv_type"]
 )
 @click.option(
     "-nc", "--n_cores",

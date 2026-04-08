@@ -73,16 +73,19 @@ CLI_HELP = {
     "file": (
         """
         File Name. The file name of the resulting dataframe. This will be saved
-        in the 'outputs/tables' folder of the chosen project directory.
+        in the 'outputs/' folder of the chosen project directory.
         Defaults to 'fired_events.csv' and 'fired_daily.csv' if daily data is
         requested.
         """
     ),
-    "full_csv": (
+    "csv_type": (
         """
-        Full CSV. Include a full set of attributes in the output CSV. If not
-        included only x and y coordinates, event date, and event id will be
-        exported to a csv.
+        CSV Type. Controls whether and how CSV output is written to
+        outputs/. Options:\n
+            'full'   - export all attributes\n
+            'events' - export summary columns only (x, y, id, ig_date,
+                       last_date)\n
+            'none'   - no CSV written (default)\n
         """
     ),
     "interactive": (
@@ -137,11 +140,10 @@ CLI_HELP = {
     ),
     "shape_type": (
         """
-        Shapefile Type. The file format for the output event GeodataDataFrame.
+        Shapefile Type. The file format for the output event GeoDataFrame.
         Specify "shp" for an ESRI Shapefile, "gpkg" for a Geopackage, or "both"
-        to write both formats to file. Shapefiles of both daily
-        progression and overall event perimeters will be written to the
-        'outputs/shapefiles' folder of the chosen project directory.
+        to write both formats to file. All output files are written directly
+        to the 'outputs/' folder of the chosen project directory.
         """
     ),
     "start_year": "First Year. The first year of fired events.",

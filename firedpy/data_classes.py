@@ -93,17 +93,11 @@ class Base(MODISEarthAccess):
         self.project_directory = project_directory
         self.date = datetime.today().strftime("%m-%d-%Y")
         self.raster_dir = project_directory.joinpath("rasters")
-        self.shape_dir = project_directory.joinpath("shapefiles")
         self.burn_area_dir = self.raster_dir.joinpath("burn_area")
         self.land_cover_dir = self.raster_dir.joinpath("land_cover")
-        self.eco_region_shape_dir = self.shape_dir.joinpath("eco_region")
         self.tables_dir = project_directory.joinpath("tables")
         self.nc_dir = self.burn_area_dir.joinpath("netcdfs")
         self.hdf_dir = self.burn_area_dir.joinpath("hdfs")
-        self._modis_sinusoidal_grid_shape_path = self.shape_dir.joinpath(
-            "modis_sinusoidal_grid_world.shp"
-        )
-        self.conus_shape_path = self.shape_dir.joinpath("conus.shp")
 
         # Can we shorten this or use another method?
         # This is used both to ensure the file format matches and to extract
@@ -122,7 +116,6 @@ class Base(MODISEarthAccess):
 
         # Initialize output directory folders and files
         self._initialize_save_dirs()
-        self._get_shape_files()
 
     def _authenticate(self):
         # This will use a config file or a prompt if one isn't available
@@ -167,16 +160,6 @@ class Base(MODISEarthAccess):
 
     def _generate_local_nc_path(self, tile):
         return self.nc_dir.joinpath(f"{tile}.nc")
-
-    def _get_shape_files(self):
-        """Get basic shapefiles needed for calculating statistics."""
-        files_to_copy = {
-            self._modis_sinusoidal_grid_shape_path: self.MODIS_SINUSOIDAL_PATH,
-            self.conus_shape_path: self.CONUS_SHAPEFILE_PATH
-        }
-        for dest_path, source_path in files_to_copy.items():
-            if not os.path.exists(dest_path):
-                shutil.copy(source_path, dest_path)
 
     def _initialize_save_dirs(self):
         """Make all required project directories."""
@@ -1369,20 +1352,12 @@ class EcoRegion(Base):
             Path to firedpy output directory.
         """
         super().__init__(project_directory)
-        self.eco_region_shape_path = self.eco_region_shape_dir.joinpath(
-            "NA_CEC_Eco_Level3.gpkg"
+        self.eco_region_shape_path = DATA_DIR.joinpath(
+            "na_eco", "NA_CEC_Eco_Level3.gpkg"
         )
-        self._wwf_shape_path = self.eco_region_shape_dir.joinpath(
-            "wwf_terr_ecos.gpkg"
+        self._wwf_shape_path = DATA_DIR.joinpath(
+            "world_eco_regions", "wwf_terr_ecos.gpkg"
         )
-
-    def _copy_cec_file(self):
-        src = DATA_DIR.joinpath("na_eco", "NA_CEC_Eco_Level3.gpkg")
-        return self._copy_file(src, self.eco_region_shape_path)
-
-    def _copy_wwf_file(self):
-        src = DATA_DIR.joinpath("world_eco_regions", "wwf_terr_ecos.gpkg")
-        return self._copy_file(src, self._wwf_shape_path)
 
     def __repr__(self):
         """Return representation string for an EcoRegion object."""
@@ -1458,8 +1433,7 @@ class EcoRegion(Base):
             "NA_L3CODE": f"Level III Ecoregions {institution}"
         }
 
-        shp_path = self._copy_cec_file()
-        eco = gpd.read_file(shp_path)
+        eco = gpd.read_file(self.eco_region_shape_path)
         eco.to_crs(gdf.crs, inplace=True)
 
         if not eco_region_level:
@@ -1491,8 +1465,7 @@ class EcoRegion(Base):
 
     def add_attributes_from_wwf(self, gdf):
         # Read in the world ecoregions from WWF
-        eco_path = self._copy_wwf_file()
-        eco = gpd.read_file(eco_path)
+        eco = gpd.read_file(self._wwf_shape_path)
         eco.to_crs(gdf.crs, inplace=True)
 
         # Find modal eco region for each event id

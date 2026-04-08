@@ -44,11 +44,11 @@ def generate_path(project_directory, base_filename, shape_type):
     shape_type : str
         Build shapefiles from the event data frame. Specify either "shp",
         "gpkg", or both. Shapefiles of both daily progression and overall
-        event perimeters will be written to the 'outputs/shapefiles' folder of
-        the chosen project directory. These will be saved in the specified
+        event perimeters will be written to the 'outputs/' folder of the
+        chosen project directory. These will be saved in the specified
         geopackage format (.gpkg), ERSI Shapefile format (.shp), or save them
         in both formats using the file basename of the fire event data frame
-        (e.g. 'modis_events_daily.gpkg' and 'modis_events.gpkg').
+        (e.g. 'fired_events_daily.gpkg' and 'fired_events.gpkg').
 
     Returns
     -------
@@ -70,7 +70,7 @@ def generate_path(project_directory, base_filename, shape_type):
     for ext in file_ext:
         if ext:
             fname = f"{base_filename}{ext}"
-            path = proj_dir.joinpath("outputs", "shapefiles", fname)
+            path = proj_dir.joinpath("outputs", fname)
         else:
             path = None
         paths.append(path)
@@ -720,8 +720,13 @@ class ModelBuilder(Base):
 
         logger.info("Adding fire attributes ...")
         gdf['pixels'] = gdf.groupby(['id', 'date'])['id'].transform('count')
-        gdf['ig_utm_x'] = gdf.groupby(['id', 'date'])['x'].nth(0)
-        gdf['ig_utm_y'] = gdf.groupby(['id', 'date'])['y'].nth(0)
+
+        # Ignition location: first detected pixel of each event, broadcast to
+        # all rows of that event so daily records share one consistent location
+        ig_coords = gdf.groupby('id')[['x', 'y']].first()
+        gdf['ig_event_x'] = gdf['id'].map(ig_coords['x'])
+        gdf['ig_event_y'] = gdf['id'].map(ig_coords['y'])
+
         group = gdf.groupby('id')
         gdf['date'] = gdf['date'].apply(
             lambda x: datetime.strptime(x, '%Y-%m-%d')
@@ -769,8 +774,8 @@ class ModelBuilder(Base):
                    'pixels', 'tot_pix', 'dy_ar_km2', 'tot_ar_km2',
                    'fsr_px_dy', 'fsr_km2_dy', 'mx_grw_px', 'mn_grw_px',
                    'mu_grw_px', 'mx_grw_km2', 'mn_grw_km2', 'mu_grw_km2',
-                   'mx_grw_dte', 'x', 'y', 'geometry', 'ig_utm_x',
-                   'ig_utm_y']]
+                   'mx_grw_dte', 'x', 'y', 'geometry', 'ig_event_x',
+                   'ig_event_y']]
 
         gdf = gdf.reset_index(drop=True)
 
@@ -1078,13 +1083,9 @@ class ModelBuilder(Base):
             The last year of fire events.
         shape_type : str
             Build shapefiles from the event data frame. Specify either "shp",
-            "gpkg", or both. Shapefiles of both daily progression and overall
-            event perimeters will be written to the 'outputs/shapefiles'
-            folder of the chosen project directory. These will be saved in the
-            specified geopackage format (.gpkg), ERSI Shapefile format (.shp),
-            or save them in both formats using the file basename of the fire
-            event data frame (e.g. 'modis_events_daily.gpkg' and
-            'modis_events.gpkg').
+            "gpkg", or both. Output files will be written directly to the
+            'outputs/' folder of the chosen project directory in the specified
+            geopackage format (.gpkg), ESRI Shapefile format (.shp), or both.
 
         Returns
         -------
@@ -1093,18 +1094,13 @@ class ModelBuilder(Base):
         # Set base name
         base_file_name = f"fired_{project_name}_{start_year}_to_{end_year}"
 
-        # Set output directories
+        # Set and create output directory
         model_outputs_dir = Path(project_directory).joinpath("outputs")
-        shape_dir = model_outputs_dir.joinpath("shapefiles")
-        table_dir = model_outputs_dir.joinpath("tables")
-
-        # Make output directories
-        shape_dir.mkdir(parents=True, exist_ok=True)
-        table_dir.mkdir(exist_ok=True)
+        model_outputs_dir.mkdir(parents=True, exist_ok=True)
 
         # Event-level output paths
         event_base = f"{base_file_name}_events"
-        event_csv_path = table_dir.joinpath(f"{event_base}.csv")
+        event_csv_path = model_outputs_dir.joinpath(f"{event_base}.csv")
         event_shape_path, event_gpkg_path = generate_path(
             project_directory=project_directory,
             base_filename=f"{base_file_name}_events",
@@ -1113,7 +1109,7 @@ class ModelBuilder(Base):
 
         # Daily-level output paths
         daily_base = f"{base_file_name}_daily"
-        daily_csv_path = table_dir.joinpath(f"{daily_base}.csv")
+        daily_csv_path = model_outputs_dir.joinpath(f"{daily_base}.csv")
         daily_shape_path, daily_gpkg_path = generate_path(
             project_directory=project_directory,
             base_filename=daily_base,
@@ -1249,6 +1245,7 @@ class ModelBuilder(Base):
         """
         logger.info("Dissolving polygons...")
         gdfc = gdf.copy()
+        gdfc = gdfc.drop(["x", "y"], axis=1, errors="ignore")
         gdfc = self._create_did_column(gdfc, ["date", "id"])
         gdfd = gdfc.dissolve(by="did", as_index=False)
 
@@ -1270,7 +1267,7 @@ class ModelBuilder(Base):
         geopandas.geodataframe.GeoDataFrame : The processed geodataframe.
         """
         edf = gdf.copy()
-        edf = edf.drop(["pixels", "date", "event_day", "dy_ar_km2"], axis=1)
+        edf = edf.drop(["pixels", "date", "event_day", "dy_ar_km2", "x", "y"], axis=1)
         if "did" in gdf.columns:
             edf = edf.drop(["did"])
         if "fid" in edf.columns:
@@ -1344,7 +1341,7 @@ class ModelBuilder(Base):
         end_year,
         daily,
         shape_type,
-        full_csv
+        csv_type
     ):
         """Save event data to various output formats.
 
@@ -1366,18 +1363,17 @@ class ModelBuilder(Base):
             polygons will be created, otherwise only the event level.
         shape_type : str
             Build shapefiles from the event data frame. Specify either "shp",
-            "gpkg", or both. Shapefiles of both daily progression and overall
-            event perimeters will be written to the 'outputs/shapefiles'
-            folder of the chosen project directory. These will be saved in the
-            specified geopackage format (.gpkg), ERSI Shapefile format (.shp),
-            or save them in both formats using the file basename of the fire
-            event data frame (e.g. 'modis_events_daily.gpkg' and
-            'modis_events.gpkg').
-        full_csv : bool
-            Write all attributes from input geodataframe to a CSV. Defaults to
-            False and includes only a subset of attributes: "x", "y", "id",
-            "ig_date", and "last_date".
+            "gpkg", or both. Output files are written directly to the
+            'outputs/' folder of the chosen project directory in the specified
+            geopackage format (.gpkg), ESRI Shapefile format (.shp), or both.
+        csv_type : str
+            Controls CSV output (case-insensitive). Options:
+                'full'   - export all attributes to outputs/
+                'events' - export summary columns only (x, y, id, ig_date,
+                           last_date) to outputs/
+                'none'   - no CSV written (default)
         """
+        csv_type = csv_type.lower() if csv_type else "none"
         # Get all the output file paths
         paths = self.get_output_paths(
             project_name=project_name,
@@ -1403,17 +1399,14 @@ class ModelBuilder(Base):
                 sdf = self.adjust_for_esri(ddf)
                 sdf.to_file(dst)
 
-            # CSVs
-            dst = paths["daily_csv_path"]
-            if full_csv:
-                logger.info(f"Writing full daily CSV file to {dst}")
-                df = ddf.copy()
-                del df["geometry"]
-                ddf.to_csv(dst, index=False)
-            else:
-                logger.info(f"Writing daily CSV file to {dst}")
-                df = ddf[["x", "y", "id", "ig_date", "last_date"]]
-                df.to_csv(dst, index=False)
+            if csv_type == "full":
+                dst = paths["daily_csv_path"]
+                logger.info(f"Writing full daily CSV to {dst}")
+                ddf.drop(columns="geometry").to_csv(dst, index=False)
+            elif csv_type == "events":
+                dst = paths["daily_csv_path"]
+                logger.info(f"Writing daily CSV to {dst}")
+                ddf[["ig_event_x", "ig_event_y", "id", "ig_date", "last_date"]].to_csv(dst, index=False)
 
         # Process and write event-level events to file
         edf = self.process_event_data(gdf)
@@ -1429,13 +1422,12 @@ class ModelBuilder(Base):
             sdf = self.adjust_for_esri(edf)
             sdf.to_file(dst)
 
-        # CSV
-        dst = paths["event_csv_path"]
-        if full_csv:
-            logger.info(f"Writing full daily CSV file to {dst}")
-            del edf["geometry"]
-            edf.to_csv(dst, index=False)
-        else:
-            logger.info(f"Writing daily CSV file to {dst}")
-            df = edf[["x", "y", "id", "ig_date", "last_date"]]
-            df.to_csv(dst, index=False)
+        if csv_type == "full":
+            dst = paths["event_csv_path"]
+            logger.info(f"Writing full event CSV to {dst}")
+            edf.drop(columns="geometry").to_csv(dst, index=False)
+        elif csv_type == "events":
+            dst = paths["event_csv_path"]
+            logger.info(f"Writing event CSV to {dst}")
+            edf[["ig_event_x", "ig_event_y", "id", "ig_date", "last_date"]].to_csv(dst, index=False)
+
