@@ -66,7 +66,7 @@ def replace_values(parameters, line):
 
 def make_read_me(gdf, project_directory, tiles, spatial_param,
                  temporal_param, shapefile, runtime, n_cores,
-                 peak_memory=None):
+                 start_year,end_year, peak_memory=None):
     """Write a summary file describing a firedpy run.
 
     Parameters
@@ -161,7 +161,7 @@ def make_read_me(gdf, project_directory, tiles, spatial_param,
         formatted_lines.append(formatted_line)
 
     # Write to a README in the outputs directory
-    fname = f"{run_name.lower()}_readme.txt"
+    fname = f"{run_name.lower()}_{start_year}_{end_year}_readme.txt" # make readme include dates for unique outputs
     fpath = output_directory.joinpath(fname)
     with open(fpath, "w") as summary:
         for line in formatted_lines:

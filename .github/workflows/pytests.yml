@@ -1,0 +1,50 @@
+name: Pytests
+
+on:
+  push:
+    paths-ignore:
+      - 'tests/old/**'
+    branches:
+      - main
+  pull_request:
+    paths-ignore:
+      - 'tests/old/**'
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python-version: [3.14]
+        include:
+          - os: ubuntu-latest
+            python-version: 3.13
+          - os: ubuntu-latest
+            python-version: 3.12
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.ref }}
+        fetch-depth: 1
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        sudo add-apt-repository ppa:ubuntugis/ubuntugis-unstable
+        sudo apt-get update
+        sudo apt-get install -y gdal-bin libgdal-dev python3-gdal
+        python -m pip install --upgrade pip
+        python -m pip install .
+        python -m pip install pytest
+    - name: Run pytest
+      env:
+        EARTHDATA_TOKEN: ${{ secrets.EARTHDATA_TOKEN }}
+      run: |
+        python -m pytest -v tests/*py
