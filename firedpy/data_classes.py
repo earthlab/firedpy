@@ -158,8 +158,34 @@ class Base(MODISEarthAccess):
     def _generate_local_burn_hdf_dir(self, tile):
         return self.hdf_dir.joinpath(tile)
 
-    def _generate_local_nc_path(self, tile):
+    def _generate_local_nc_path(self, tile, start_year=None, end_year=None):
+        if start_year is not None and end_year is not None:
+            return self.nc_dir.joinpath(f"{tile}_{start_year}_{end_year}.nc")
         return self.nc_dir.joinpath(f"{tile}.nc")
+
+    def _find_covering_nc(self, tile, start_year, end_year):
+        """Return a cached NC path that fully covers the requested year range.
+
+        Checks for an exact filename match first, then scans for any existing
+        NC whose range is a superset of [start_year, end_year]. This allows
+        a run for 2001-2003 to reuse a cached h18v02_2000_2025.nc without
+        rebuilding. Returns None if no suitable NC exists.
+        """
+        exact = self._generate_local_nc_path(tile, start_year, end_year)
+        if exact.exists():
+            return exact
+        pattern = re.compile(rf"^{re.escape(tile)}_(\d+)_(\d+)\.nc$")
+        for nc in self.nc_dir.glob(f"{tile}_*.nc"):
+            m = pattern.match(nc.name)
+            if m:
+                nc_start, nc_end = int(m.group(1)), int(m.group(2))
+                if nc_start <= start_year and nc_end >= end_year:
+                    logger.debug(
+                        f"Reusing broader cache {nc.name} "
+                        f"for requested range {start_year}-{end_year}"
+                    )
+                    return nc
+        return None
 
     def _initialize_save_dirs(self):
         """Make all required project directories."""
@@ -618,7 +644,7 @@ class BurnData(LPDAAC):
             )
 
         # Convert to NetCDF
-        self._write_ncs(tiles)
+        self._write_ncs(tiles, start_year=start_year, end_year=end_year)
         logger.info(f"Created NetCDF for tile(s) {tiles}")
 
         return tiles
@@ -723,13 +749,18 @@ class BurnData(LPDAAC):
 
         return True
 
-    def _write_ncs(self, tiles):
+    def _write_ncs(self, tiles, start_year=None, end_year=None):
         """Convert a list of tiles associated with MODIS HDF4 to a NetCDF file.
 
         Parameters
         ----------
         tiles : list[str]
             A list of strings representing MODIS tile IDs.
+        start_year : int, optional
+            First year of the requested date range. Used to name the NC file
+            so different date ranges produce distinct cached files.
+        end_year : int, optional
+            Last year of the requested date range.
         """
         # Build the netcdfs here
         fill_value = -9999  # Default fill value in original file is -1
@@ -737,10 +768,21 @@ class BurnData(LPDAAC):
         for tile in tqdm(tiles):
 
             # Build/find file paths needed for this operation
-            nc_file_path = self._generate_local_nc_path(tile)
             hdf_dir = self.hdf_dir.joinpath(tile)
-            if nc_file_path.exists():
+
+            # Reuse any existing NC whose range is a superset of the request
+            covering = self._find_covering_nc(tile, start_year, end_year)
+            if covering:
+                logger.info(f"Tile {tile}: reusing cached {covering.name}")
                 continue
+
+            # No covering NC found — remove any stale NCs for this tile
+            # before building the new one
+            for old_nc in self.nc_dir.glob(f"{tile}_*.nc"):
+                logger.info(f"Removing stale NetCDF cache: {old_nc.name}")
+                old_nc.unlink()
+
+            nc_file_path = self._generate_local_nc_path(tile, start_year, end_year)
             paths = []
             for path in list(hdf_dir.glob("*.hdf")):
                 if self._extract_date_parts(path):

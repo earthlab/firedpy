@@ -1057,8 +1057,17 @@ class ModelBuilder(Base):
 
     @property
     def files(self):
-        """Return list of files for given tiles and years."""
-        files = [self._generate_local_nc_path(t) for t in self.tiles]
+        """Return list of NC files for given tiles and years.
+
+        Uses _find_covering_nc so that a cached NC with a wider year range
+        (e.g. 2000-2025) is reused when a narrower range (e.g. 2001-2003)
+        is requested, avoiding unnecessary rebuilds.
+        """
+        files = [
+            self._find_covering_nc(t, self.start_year, self.end_year)
+            or self._generate_local_nc_path(t, self.start_year, self.end_year)
+            for t in self.tiles
+        ]
         files = sorted(files)
         if not files:
             raise FileNotFoundError(

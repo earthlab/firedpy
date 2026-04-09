@@ -27,12 +27,6 @@ def cleanup_intermediate_files(project_directory):
     shutil.rmtree(os.path.join(project_directory, "rasters", "burn_area"))
     shutil.rmtree(os.path.join(project_directory, "rasters", "land_cover"))
 
-def reset_burn_area(project_directory): # check for and remove cached burn data
-    burn_dir = Path(project_directory) / "rasters" / "burn_area"
-    if burn_dir.exists():
-        logger.info("BURN CACHE DETECTED, REMOVING OLD FILES")
-        shutil.rmtree(burn_dir)
-
 def fired(
     project_directory,
     project_name=None,
@@ -171,7 +165,6 @@ def fired(
 
 
     # Get the burn data
-    reset_burn_area(project_directory) # reset cache
     logger.info("Collecting MODIS burn data.")
     burn_data = BurnData(project_directory=project_directory, n_cores=n_cores)
     tiles = burn_data.get_burns(
