@@ -268,8 +268,10 @@ def fired(
             runtime=runtime,
             n_cores=n_cores,
             peak_memory=peak_memory,
-            start_year = start_year,
-            end_year = end_year 
+            start_year=start_year,
+            end_year=end_year,
+            run_name=run_name,
+            country=country,
         )
 
     # Remove intermediate files if requested

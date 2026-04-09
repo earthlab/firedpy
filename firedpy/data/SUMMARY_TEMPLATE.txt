@@ -20,10 +20,11 @@ Mahood, A.L., Lindrooth, E.J., Cook, M.C., Balch, J.K., 2022. 'Country-level fir
 GENERAL INFORMATION
 -------------------
 
-1. Title of Dataset:  {run_name} 
-2. Authors: Jennifer K. Balch, Lise A. St. Denis, Adam L. Mahood, Nathan P.  Mietkiewicz, Travis Williams, Joe McGlinchy, Maxwell C. Cook, Estelle J. Lindrooth, Erick A. Verleye.
-3. Contact information: jennifer.balch@colorado.edu; adam.mahood@colorado.edu
-4. Date of data collection:{event_date1} - {event_date2}
+1. Title of Dataset: {run_name} 
+2. Area of Interest: {shapefile}
+3. Date Range of Fire Events: {event_date1} - {event_date2}
+4. Authors: Jennifer K. Balch, Lise A. St. Denis, Adam L. Mahood, Nathan P.  Mietkiewicz, Travis Williams, Joe McGlinchy, Maxwell C. Cook, Estelle J. Lindrooth, Erick A. Verleye.
+5. Contact information: jennifer.balch@colorado.edu; adam.mahood@colorado.edu
 
 --------------------------
 SHARING/ACCESS INFORMATION
@@ -51,6 +52,7 @@ METHODOLOGICAL INFORMATION
  2. Temporal window: {temporal_param}
  3. MODIS Tiles IDs: {tile_string}
  4. Area of interest: {shapefile}
+ 5. Date Range of Fire Events: {event_date1} - {event_date2}
 
 See Balch et al 2020 for complete methods. DOI: https://doi.org/10.3390/rs12213498
 

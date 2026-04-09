@@ -11,14 +11,22 @@ logger = logging.getLogger(__name__)
 SUMMARY_TEMPLATE = DATA_DIR.joinpath("SUMMARY_TEMPLATE.txt")
 
 
-def add_file_list(lines, output_directory):
-    """Make a formatted list of files."""
-    # Get all output files (exclude log files and the readme itself)
-    tables = list(output_directory.glob("*.csv"))
-    gpkgs = list(output_directory.glob("*.gpkg"))
-    shps = list(output_directory.glob("*.shp"))
+def add_file_list(lines, output_directory, run_name, start_year, end_year):
+    """Make a formatted list of files produced by this specific run.
 
-    # Find the files line and add in the appropriate entries
+    Only includes files whose names match the run's naming pattern, so that
+    re-running firedpy in the same output directory does not pollute the file
+    list with outputs from previous runs.
+    """
+    run_prefix = f"{run_name}_{start_year}_to_{end_year}"
+
+    tables = sorted(output_directory.glob(f"{run_prefix}*.csv"))
+    gpkgs = sorted(output_directory.glob(f"{run_prefix}*.gpkg"))
+    shps = sorted(output_directory.glob(f"{run_prefix}*.shp"))
+    logs = sorted(output_directory.glob(f"{run_name}*.log"))
+    readme_name = f"{run_name.lower()}_{start_year}_{end_year}_readme.txt"
+
+    # Find the {files} placeholder and expand it
     new_lines = []
     i = 1
     for line in lines:
@@ -27,17 +35,24 @@ def add_file_list(lines, output_directory):
                 new_lines.append(f"    1.{i} Tables\n")
                 i += 1
                 for item in tables:
-                    new_lines.append(f"        - {str(item)}\n")
+                    new_lines.append(f"        - {item.name}\n")
             if gpkgs:
                 new_lines.append(f"    1.{i} Geopackages\n")
                 i += 1
                 for item in gpkgs:
-                    new_lines.append(f"        - {str(item)}\n")
+                    new_lines.append(f"        - {item.name}\n")
             if shps:
                 new_lines.append(f"    1.{i} Shapefiles\n")
                 i += 1
                 for item in shps:
-                    new_lines.append(f"        - {str(item)}\n")
+                    new_lines.append(f"        - {item.name}\n")
+            if logs:
+                new_lines.append(f"    1.{i} Log files\n")
+                i += 1
+                for item in logs:
+                    new_lines.append(f"        - {item.name}\n")
+            new_lines.append(f"    1.{i} Run summary\n")
+            new_lines.append(f"        - {readme_name}\n")
         else:
             new_lines.append(line)
 
@@ -66,7 +81,8 @@ def replace_values(parameters, line):
 
 def make_read_me(gdf, project_directory, tiles, spatial_param,
                  temporal_param, shapefile, runtime, n_cores,
-                 start_year,end_year, peak_memory=None):
+                 start_year, end_year, run_name=None, country=None,
+                 peak_memory=None):
     """Write a summary file describing a firedpy run.
 
     Parameters
@@ -78,11 +94,6 @@ def make_read_me(gdf, project_directory, tiles, spatial_param,
         build `gdf`.
     tiles : str
         The list of MODIS tile IDs used to build the fire event data.
-    event_table_fpath : str
-        The path to final event table.
-    daily : bool
-        If the firedpy run represents daily polygons or just the event-level
-        perimeter for your analysis area.
     spatial_param : int
         The number of cells (~463 m resolution) to search for neighboring burn
         detections. Defaults to 5 cells in all directions.
@@ -94,6 +105,15 @@ def make_read_me(gdf, project_directory, tiles, spatial_param,
         The total job runtime in minutes.
     n_cores : int
         The number of CPU cores used to perform the firedpy run.
+    start_year : int
+        The first year of fire events.
+    end_year : int
+        The last year of fire events.
+    run_name : str | None
+        The run name used to prefix output files (e.g. ``fired_v2.1``).
+        Derived from the output directory name if not provided.
+    country : str | None
+        Country name used as the study area, if provided. Defaults to None.
     peak_memory : float
         The maximum memory usage reached during the firedpy run. Defaults to
         None, no summary written for this parameter.
@@ -106,19 +126,22 @@ def make_read_me(gdf, project_directory, tiles, spatial_param,
     event_date1 = date1.strftime("%B %Y")
     event_date2 = date2.strftime("%B %Y")
 
-    # List all output tables and spatial vector files
+    # Build a human-readable area-of-interest label:
+    #   custom shapefile stem > country name > tile IDs
+    if shapefile:
+        aoi_label = Path(shapefile).stem
+    elif country:
+        aoi_label = country
+    else:
+        aoi_label = str(tiles)[1:-1]
+
+    # Set up output directory
     project_directory = Path(project_directory).expanduser()
     output_directory = project_directory.joinpath("outputs")
-    csvs = list(output_directory.glob("*.csv"))
-    gpkgs = list(output_directory.glob("*.gpkg"))
 
-    # Derive run name from the first available output file (csv or gpkg)
-    if csvs:
-        run_name = "_".join(csvs[0].name.split("_")[:-4])
-    elif gpkgs:
-        run_name = "_".join(gpkgs[0].name.split("_")[:-4])
-    else:
-        run_name = Path(project_directory).name
+    # Use the provided run_name, or fall back to the project directory name
+    if not run_name:
+        run_name = project_directory.name
 
     # Infer CPU count if default (0 for all) is used
     if n_cores == 0:
@@ -144,15 +167,16 @@ def make_read_me(gdf, project_directory, tiles, spatial_param,
         "{spatial_param}": spatial_param,
         "{temporal_param}": temporal_param,
         "{tile_string}": tile_string,
-        #"{shapefile}": shape_file # find where to define this in this script
+        "{shapefile}": aoi_label,
     }
 
     # Read in the template
     with open(SUMMARY_TEMPLATE, "r") as template:
         lines = template.readlines()
 
-    # Custom work for the files, which could be different each time
-    lines_w_files = add_file_list(lines, output_directory)
+    # Custom work for the files: only list outputs from this specific run
+    lines_w_files = add_file_list(lines, output_directory, run_name,
+                                  start_year, end_year)
 
     # Format template
     formatted_lines = []
