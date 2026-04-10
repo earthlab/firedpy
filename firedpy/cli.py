@@ -246,19 +246,19 @@ def _prompts(ctx, _, interactive):
 )
 @click.option(
     "-el", "--eco_region_level",
-    default=1,
+    default=0,
     is_eager=True,
     help=CLI_HELP["eco_region_level"]
 )
 @click.option(
     "-et", "--eco_region_type",
-    default="na",
+    default=None,
     is_eager=True,
     help=CLI_HELP["eco_region_type"]
 )
 @click.option(
     "-lt", "--land_cover_type",
-    default=1,
+    default=0,
     is_eager=True,
     help=CLI_HELP["land_cover_type"]
 )
