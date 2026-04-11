@@ -16,6 +16,7 @@ class EcoRegionType(enum.Enum):
     """
     NA = "na"
     WORLD = "world"
+    NONE = None
 
 
 class TileChoice(enum.Enum):

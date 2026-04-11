@@ -1,14 +1,17 @@
 ATTR_HELP = {
     "eco_region_level": {
+        0: "World Eco Region or None was Selected",
         1: "Level I - Least Detailed",
         2: "Level III - Mid-level Detail",
         3: "Level III - Most Detailed"
     },
     "eco_region_type": {
+        None: "No Eco Region Selected",
         "world": "World Terrestrial Ecoregions (World Wildlife Fund)",
         "na": "North American Ecoregions (Omernick, 1987)"
     },
     "land_cover_type": {
+        0: "No Land Cover Type Scheme Selected",
         1: "International Geosphere-Biosphere Programme (IGBP) scheme",
         2: "University of Maryland (UMD) scheme",
         3: "MODIS-derived Leaf Area Index (LAI/fPAR) scheme",
@@ -46,6 +49,7 @@ CLI_HELP = {
     "eco_region_type": (
         """
         Ecoregion Type. Specify the ecoregion type as either 'world' or 'na':\n
+        None = Will not produce an eco region column
         'world' = World Terrestrial Ecoregions (World Wildlife Fund (WWF))
         'na' = North American ecoregions (Omernick, 1987)
 

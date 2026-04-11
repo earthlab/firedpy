@@ -45,10 +45,12 @@ logger = logging.getLogger(__name__)
 
 ATTR_DESCS = {
     "ecoregions": {
+        None: "No Eco Region Selected",
         "na": "North American ecoregions (Omernick, 1987)",
         "world": "World Terrestrial Ecoregions (World Wildlife Fund)"
     },
     "landcover": {
+        "0": "No Land Cover Type Scheme Selected",
         "1": "Annual International Geosphere-Biosphere Programme (IGBP)",
         "2": "Annual University of Maryland (UMD)",
         "3": "Annual Leaf Area Index (LAI)",
@@ -460,7 +462,7 @@ class BurnData(LPDAAC):
     def download_burn_data(self, tile, granules, download_dir):
         """Download a single tile's granules to a download diretory."""
         os.makedirs(download_dir, exist_ok=True)
-        logger.info(f"Downloading to {tile} data to {download_dir}")
+        logger.info(f"Downloading {tile} data to {download_dir}")
         try:
             downloaded_files = earthaccess.download(
                 granules,
@@ -580,18 +582,18 @@ class BurnData(LPDAAC):
         end_date = f"{end_year}-12-31"
         logger.info(f"Getting burn data using EarthAccess for tiles: {tiles}")
         logger.info(f"Date range: {start_date} to {end_date}")
-
+        
         try:
             # Search for granules
-            logger.info(f"Searching for MCD64A1 granules: {start_date} - "
-                        f"{end_date}")
-            granule_dict = self._get_granules(tiles, country, shape_file,
-                                              start_date, end_date)
+            logger.info(f"Searching for MCD64A1 granules: {start_date} - {end_date}")
+            granule_dict = self._get_granules(tiles, country, shape_file, start_date, end_date)
             tiles = list(granule_dict)
-
+            
             # Collect each tile granules and download directory
             tile_granules = {}
             download_dirs = {}
+            need = {}
+            
             for tile, granules in granule_dict.items():
                 logger.info(f"Processing tile: {tile}")
 
@@ -602,38 +604,57 @@ class BurnData(LPDAAC):
                     logger.info(f"No data found for tile {tile}")
                     continue
 
-                # Collect results
+                # Collect results 
                 download_dir = self.hdf_dir.joinpath(tile)
                 download_dirs[tile] = download_dir
-                tile_granules[tile] = granules
-
-            # Download granules (3 Core limit with Earthdata)
+                if len(os.listdir(download_dir)) == 0:
+                    tile_granules[tile] = granules
+                    need[tile] = True
+                elif len(os.listdir(download_dir)) != n_granules: # Check for cached granules before appeding granules
+                    mgranules = []
+                    cache = set(os.listdir(download_dir))
+                    want = set([os.path.basename(url) for g in granules for url in g.data_links()])
+                    missing = want - cache
+                    if len(missing)>0:
+                        for g in granules:
+                            if set([os.path.basename(url) for url in g.data_links()]).issubset(missing): mgranules.append(g)
+                        tile_granules[tile] = mgranules
+                        need[tile] = True
+                    else:
+                        need[tile] = False
+                else:
+                    logger.info("All granules found in cache, proceeding...")
+                    need[tile] = False
+                    
+            # Download granules (3 Core limit with Earthdata) 
             n_cores = min(3, self.n_cores)
             if n_cores > 1:
                 with ThreadPoolExecutor(n_cores) as pool:
                     jobs = []
                     for tile in tiles:
+                        if need[tile]:
+                            download_dir = download_dirs[tile]
+                            granules = tile_granules[tile]
+                            job = pool.submit(
+                                self.download_burn_data,
+                                tile,
+                                granules,
+                                download_dir
+                            )
+                            jobs.append(job)
+                    if len(jobs)>0:   
+                        for job in as_completed(jobs):
+                            job.result()
+            else:
+                for tile in tiles:
+                    if need[tile]:
                         download_dir = download_dirs[tile]
                         granules = tile_granules[tile]
-                        job = pool.submit(
-                            self.download_burn_data,
+                        self.download_burn_data(
                             tile,
                             granules,
                             download_dir
                         )
-                        jobs.append(job)
-                    for job in as_completed(jobs):
-                        job.result()
-            else:
-                for tile in tiles:
-                    download_dir = download_dirs[tile]
-                    granules = tile_granules[tile]
-                    self.download_burn_data(
-                        tile,
-                        granules,
-                        download_dir
-                    )
-
             logger.info("EarthAccess burn data download completed!")
 
         except Exception as e:
@@ -1031,6 +1052,7 @@ class LandCover(Base):
 
         # We'll need to specify which type of land_cover
         lc_descriptions = {
+            0: "No land cover scheme",
             1: "IGBP global vegetation classification scheme",
             2: "University of Maryland (UMD) scheme",
             3: "MODIS-derived LAI/fPAR scheme",
@@ -1219,7 +1241,7 @@ class LandCover(Base):
     def _generate_local_hdf_dir(self, tile: str, year: str) -> str:
         return os.path.join(self.land_cover_dir, tile, year)
 
-    def get_land_cover(self, gdf, tiles, land_cover_type=1):
+    def get_land_cover(self, gdf, tiles, land_cover_type=0):
         """Download and process land cover data with EarthAccess.
 
         Parameters
@@ -1234,6 +1256,7 @@ class LandCover(Base):
             username:password of your NASA's Earthdata service account.
             Available land cover categories:
 
+                0: None
                 1: IGBP global vegetation classification scheme
                 2: University of Maryland (UMD) scheme
                 3: MODIS-derived LAI/fPAR scheme
@@ -1241,7 +1264,7 @@ class LandCover(Base):
                 5: Annual Plant Functional Types (PFT)
 
             If you do not have an account register at
-            https://urs.earthdata.nasa.gov/home. Defaults to 1.
+            https://urs.earthdata.nasa.gov/home. Defaults to 0.
         """
         if not self._earthaccess.authenticated:
             logger.warning("EarthAccess not authenticated for land cover.")
@@ -1432,11 +1455,12 @@ class EcoRegion(Base):
         msg = " ".join(msgs)
         return f"<{name} object at {address}> {msg}"
 
+    # add_eco_region_attributes needs to include wwf option -solved
     def add_eco_region_attributes(
             self,
             gdf,
-            eco_region_type="na",
-            eco_region_level=None
+            eco_region_type=None,
+            eco_region_level=0
     ):
         """Add eco region attributes to a fire event geodataframe.
 
@@ -1463,7 +1487,7 @@ class EcoRegion(Base):
             The desired Ecoregions level from the North American Commission for
             Environmental Cooperation (CEC). Levels 1 to 3 are available, with
             level 1 representing the broadest scale and level III representing
-            the most detailed. Defaults to 1.
+            the most detailed. Defaults to None.
 
         Returns
         -------
@@ -1475,12 +1499,13 @@ class EcoRegion(Base):
             logger.error(msg)
             return gdf
 
-        logger.info("Adding eco-region attributes ...")
         eco_region_type = EcoRegionType(eco_region_type)
         if eco_region_type == EcoRegionType.NA:
             gdf = self.add_attributes_from_na_cec(gdf, eco_region_level)
         else:
+            logger.info(f"Adding eco-region attributes using WWF...")
             gdf = self.add_attributes_from_wwf(gdf)
+            
         return gdf
 
     def add_attributes_from_na_cec(self, gdf, eco_region_level):
@@ -1525,7 +1550,6 @@ class EcoRegion(Base):
         # Read in the world ecoregions from WWF
         eco = gpd.read_file(self._wwf_shape_path)
         eco.to_crs(gdf.crs, inplace=True)
-
         # Find modal eco region for each event id
         eco = eco[["ECO_NUM", "ECO_NAME", "geometry"]]
         gdf = gpd.sjoin(gdf, eco, how="left", predicate="within")
