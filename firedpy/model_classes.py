@@ -16,7 +16,7 @@ import rasterio
 import numpy as np
 import xarray as xr
 
-from pyproj import CRS, Proj, transform
+from pyproj import CRS, Proj, Transformer, transform
 from rasterio.features import rasterize
 from rasterio.transform import from_bounds
 from scipy.spatial import cKDTree
@@ -787,12 +787,19 @@ class ModelBuilder(Base):
     def add_kg_attributes(self, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         """Assign Köppen-Geiger climate zones to events with a raster file.
 
+        Mirrors the land cover attribute pattern:
+          - kg_codes     : sorted comma-separated string of all unique KG zone
+                           codes the event overlaps (event-level).
+          - kg_day_codes : same but scoped to each day's perimeter (daily-level).
+          - kg_mode      : most common (modal) KG zone code for the event.
+          - kg_desc      : short KG label string for kg_mode (e.g. "Dfb").
+
         Args:
-            gdf: GeoDataFrame containing 'x', 'y', and 'id'.
-            tif_path: File path to a Köppen-Geiger .tif raster.
+            gdf: GeoDataFrame containing 'x', 'y', 'id', and optionally 'date'.
 
         Returns:
-            GeoDataFrame with kg_zone, kg_mode, and kg_desc columns added.
+            GeoDataFrame with kg_codes, kg_day_codes, kg_mode, and kg_desc
+            columns added.
         """
         tif_path = DATA_DIR.joinpath(
             'koppen_geiger_tif', '1991_2020', 'koppen_geiger_0p00833333.tif'
@@ -806,26 +813,56 @@ class ModelBuilder(Base):
             26: "Dfb", 27: "Dfc", 28: "Dfd", 29: "ET", 30: "EF",
         }
 
+        def _to_kg_codes_str(x):
+            unique = sorted(int(c) for c in x.dropna().unique())
+            if not unique:
+                return None
+            return str(unique[0]) if len(unique) == 1 else ",".join(
+                str(c) for c in unique
+            )
+
         sgdf = gdf.copy()
 
         with rasterio.open(tif_path) as src:
-            # Reproject a temporary copy for coordinate sampling only, so that
-            # sgdf retains its original CRS throughout
-            tmp = sgdf.to_crs(src.crs) if sgdf.crs != src.crs else sgdf
+            # Transform x, y pixel coordinates from the GDF's CRS to the
+            # raster CRS (KG raster is WGS84; fire data is MODIS sinusoidal).
+            if sgdf.crs != src.crs:
+                transformer = Transformer.from_crs(
+                    sgdf.crs, src.crs, always_xy=True
+                )
+                xs, ys = transformer.transform(
+                    sgdf["x"].values, sgdf["y"].values
+                )
+            else:
+                xs, ys = sgdf["x"].values, sgdf["y"].values
 
-            # Extract centroid coordinates from geometry (handles points,
-            # polygons, multipolygons)
-            coords = [
-                (geom.centroid.x, geom.centroid.y) for geom in tmp.geometry
-            ]
-
+            coords = list(zip(xs, ys))
             sampled_vals = list(src.sample(coords))
-            sgdf['kg_zone'] = [
+            sgdf["_kg_raw"] = [
                 v[0] if v[0] != src.nodata else np.nan for v in sampled_vals
             ]
 
-        sgdf['kg_mode'] = sgdf.groupby('id')['kg_zone'].transform(self._mode)
-        sgdf['kg_desc'] = sgdf['kg_mode'].map(KG_LEGEND)
+        # Most common KG code across all pixels of the event
+        sgdf["kg_mode"] = sgdf.groupby("id")["_kg_raw"].transform(self._mode)
+
+        # All unique KG codes as a sorted comma-separated string (event-level)
+        sgdf["kg_codes"] = sgdf.groupby("id")["_kg_raw"].transform(
+            _to_kg_codes_str
+        )
+
+        # All unique KG codes per event-day (daily-level)
+        if "date" in sgdf.columns:
+            sgdf["kg_day_codes"] = (
+                sgdf.groupby(["id", "date"])["_kg_raw"]
+                .transform(_to_kg_codes_str)
+            )
+        else:
+            sgdf["kg_day_codes"] = None
+
+        # Short string label for the modal KG zone
+        sgdf["kg_desc"] = sgdf["kg_mode"].map(KG_LEGEND)
+
+        sgdf = sgdf.drop(columns=["_kg_raw"])
 
         return sgdf
 
@@ -1254,8 +1291,14 @@ class ModelBuilder(Base):
         """
         logger.info("Dissolving polygons...")
         gdfc = gdf.copy()
-        gdfc = gdfc.drop(["x", "y", "lc_code", "lc_codes"], axis=1, errors="ignore")
-        gdfc = gdfc.rename(columns={"lc_day_codes": "lc_codes"})
+        gdfc = gdfc.drop(
+            ["x", "y", "lc_code", "lc_codes", "kg_codes"],
+            axis=1, errors="ignore"
+        )
+        gdfc = gdfc.rename(columns={
+            "lc_day_codes": "lc_codes",
+            "kg_day_codes": "kg_codes",
+        })
         gdfc = self._create_did_column(gdfc, ["date", "id"])
         gdfd = gdfc.dissolve(by="did", as_index=False)
 
@@ -1279,7 +1322,7 @@ class ModelBuilder(Base):
         edf = gdf.copy()
         edf = edf.drop(
             ["pixels", "date", "event_day", "dy_ar_km2", "x", "y",
-             "lc_code", "lc_day_codes"],
+             "lc_code", "lc_day_codes", "kg_day_codes"],
             axis=1, errors="ignore"
         )
         if "did" in gdf.columns:
