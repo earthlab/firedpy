@@ -16,6 +16,8 @@ Balch, J.K.; St. Denis, L.A.; Mahood, A.L.; Mietkiewicz, N.P.; Williams, T.M.; M
 
 Mahood, A.L., Lindrooth, E.J., Cook, M.C., Balch, J.K., 2022. 'Country-level fire perimeter datasets (2001–2021)'. Sci Data 9, 458. https://doi.org/10.1038/s41597-022-01572-3
 
+Mahood, A.L., Williams, T., Hofford, N, Balch, J.K., St Denis, L.A., et al. 'Fire datasets for every country 2001-2025, created with FIREDpy 2.0'. Forthcoming
+
 -------------------
 GENERAL INFORMATION
 -------------------
