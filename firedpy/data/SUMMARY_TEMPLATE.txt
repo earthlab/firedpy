@@ -60,7 +60,7 @@ See Balch et al 2020 for complete methods. DOI: https://doi.org/10.3390/rs122134
 DATA INFORMATION:
 --------------------------------------------------------------------
 
-1. Number of variables: 24
+1. Number of variables: 33
 
 2. Projection information (PROJ4 string): +proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a=6371007.181 +b=6371007.181 +units=m +no_defs
 
@@ -157,6 +157,15 @@ DATA INFORMATION:
 
         DD. Name: tot_perim  
             i. Description: Total perimeter of the fire event. 
+
+        EE. Name: kg_mode
+            i. Description: Numeric code for the most common (modal) Köppen-Geiger climate zone across all pixels of the fire event, from the Beck et al. (1991-2020) classification raster.
+
+        FF. Name: kg_codes
+            i. Description: Sorted comma-separated string of all unique Köppen-Geiger zone codes the fire touched. In event-level data this covers the entire event; in daily data this covers only the pixels within that day's perimeter (e.g. "26" or "26,29").
+
+        GG. Name: kg_desc
+            i. Description: Short Köppen-Geiger label string for the modal zone (kg_mode), e.g. "Dfb" or "ET".
 
 
 -------------------

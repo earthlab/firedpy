@@ -43,6 +43,10 @@ gdal.UseExceptions()
 logger = logging.getLogger(__name__)
 
 
+# MCD12Q1 land cover product is available from 2001 onwards; this is the
+# floor year when looking up the prior-year land cover for a fire event.
+MCD12Q1_FIRST_YEAR = 2001
+
 ATTR_DESCS = {
     "ecoregions": {
         "na": "North American ecoregions (Omernick, 1987)",
@@ -1038,7 +1042,7 @@ class LandCover(Base):
             5: "Plant Functional Type (PFT) scheme."
         }
 
-        # Rasterio point querier (why define here?)
+        # Rasterio point querier — lc is set in the tile loop below
         def point_query(row):
             x = row["x"]
             y = row["y"]
@@ -1048,91 +1052,83 @@ class LandCover(Base):
                 val = np.nan
             return val
 
+        # Build a sorted comma-separated string of unique integer LC codes.
+        # Returns NaN when there are no valid codes to summarize.
+        def _to_lc_codes_str(x):
+            unique = sorted(int(c) for c in x.dropna().unique())
+            if not unique:
+                return np.nan
+            return str(unique[0]) if len(unique) == 1 else ",".join(str(c) for c in unique)
+
+        # Pre-initialize all LC columns so that events in years or tiles where
+        # land cover data is unavailable are retained with NaN/None rather than
+        # being dropped.
+        # lc_code and lc_mode hold numeric values --> float64 (NaN)
+        for col in ["lc_code", "lc_mode"]:
+            gdf[col] = np.nan
+        # lc_codes and lc_day_codes hold strings like "9" or "9,17" --> object
+        for col in ["lc_codes", "lc_day_codes"]:
+            gdf[col] = None
+
         # Get the range of burn years
         burn_years = list(gdf["ig_year"].unique())
         burn_years.sort()
 
-        # This works faster when split by year and the pointer is outside
-        # This is also not the best way
-        sgdfs = []
         for tile in tiles:
             for year in tqdm(burn_years, position=0, file=sys.stdout):
-                # Get the land cover geotiff directory for this tile
+                # Use the land cover product from the year preceding the fire.
+                # This reflects pre-fire vegetation state, matching the
+                # documented behavior. Floor at MCD12Q1_FIRST_YEAR (2001).
+                lc_year = max(year - 1, MCD12Q1_FIRST_YEAR)
                 mosaic_dir = self.land_cover_dir.joinpath(
-                    tile, str(year), "mosaics"
+                    tile, str(lc_year), "mosaics"
                 )
                 if not mosaic_dir.exists():
                     logger.warning(
-                        f"No land cover data for {tile} in year {year}"
+                        f"No land cover data for {tile} in LC year {lc_year} "
+                        f"(fire year {year}); events for this year will have "
+                        "NaN land cover."
                     )
                     continue
 
-                # I don't understand why were taking this step below  # <------ Address this
-                # lc_files = []
-                # lc_years = []
-                # for fname in os.listdir(mosaic_dir):
-                #     # How necessary is the re match?
-                #     # if re.match(self._lc_mosaic_re, fname):
-                #     fpath = os.path.join(mosaic_dir, fname)
-                #     lc_files.append(fpath)
-                # lc_files = sorted(lc_files)
-
-                # # Group by year?
-                # for fpath in lc_files:
-                #     fname = os.path.basename(fpath)
-                #     # Don't we know what year it is?
-                #     # year_match = re.match(self._lc_mosaic_re, fname)
-                #     # year_dict = year_match.groupdict()
-                #     year = int(year_dict["year"])
-                #     lc_years.append(year)
-                # lc_files = {lc_years[i]: f for i, f in enumerate(lc_files)}
-
-                # Now set year one back for land_cover
-                # year = year - 1
-
-                # Use previous year's land cover
-                # if year < min(lc_years):
-                #     year = min(lc_years)
-                # elif year > max(lc_years):
-                #     year = max(lc_years)
-
-                # lc_file = lc_files[year]
-
-                # Collect all files in the mosaic directory (all? there's 1)
                 lc_file = list(mosaic_dir.glob("*tif"))
                 if not lc_file:
                     continue
-                else:
-                    lc_file = lc_file[0]
+                lc_file = lc_file[0]
 
-                # Create a sub data frame for this year
-                sgdf = gdf[gdf["ig_year"] == year].copy()
+                # Subset to events for this fire year
+                year_mask = gdf["ig_year"] == year
+                sgdf = gdf.loc[year_mask].copy()
+                if sgdf.empty:
+                    continue
 
-                # Open the land cover raster and add attributes to sub df
+                # Sample the raster; 255 means the point is outside this
+                # tile's valid area so should treat as NaN.
                 lc = rasterio.open(lc_file)
-                sgdf.loc[:, "lc_code"] = sgdf.apply(point_query, axis=1)
-                sgdf = sgdf[sgdf["lc_code"] != 255]  # Out-of-tile points
-                idgrp = sgdf.groupby("id")
+                sampled = sgdf.apply(point_query, axis=1)
+                valid_mask = sampled != 255
+                valid_idx = sgdf.index[valid_mask]
 
-                # Most common land cover code across all pixels of the event
-                sgdf.loc[:, "lc_mode"] = idgrp["lc_code"].transform(self._mode)
+                if valid_idx.empty:
+                    continue
 
-                # All unique codes as a sorted comma-separated string
-                def _to_lc_codes_str(x):
-                    unique = sorted(int(c) for c in x.dropna().unique())
-                    return str(unique[0]) if len(unique) == 1 else ",".join(str(c) for c in unique)
+                # Write valid samples back into the main frame
+                gdf.loc[valid_idx, "lc_code"] = sampled[valid_mask]
 
-                # Event-level: all codes the entire event crosses
-                sgdf.loc[:, "lc_codes"] = idgrp["lc_code"].transform(_to_lc_codes_str)
-
-                # Daily-level: all codes each daily perimeter crosses
-                sgdf.loc[:, "lc_day_codes"] = sgdf.groupby(["id", "date"])["lc_code"].transform(
+                # Compute summary columns only for the valid in-tile rows
+                vgdf = gdf.loc[valid_idx].copy()
+                idgrp = vgdf.groupby("id")
+                gdf.loc[valid_idx, "lc_mode"] = idgrp["lc_code"].transform(
+                    self._mode
+                )
+                gdf.loc[valid_idx, "lc_codes"] = idgrp["lc_code"].transform(
                     _to_lc_codes_str
                 )
+                gdf.loc[valid_idx, "lc_day_codes"] = (
+                    vgdf.groupby(["id", "date"])["lc_code"]
+                    .transform(_to_lc_codes_str)
+                )
 
-                sgdfs.append(sgdf)
-
-        gdf = pd.concat(sgdfs)
         gdf = gdf.reset_index(drop=True)
 
         # Add in the class description from land_cover tables
@@ -1263,12 +1259,23 @@ class LandCover(Base):
             return
 
         try:
-            # Get available years (this is fixed?)
-            available_years = gdf["ig_year"].unique()
+            # For each fire year, land cover comes from the preceding year.
+            # Multiple fire years can map to the same LC year (e.g. fires in
+            # 2004 and 2005 both need the 2003 and 2004 LC products), so we
+            # deduplicate. The floor is MCD12Q1_FIRST_YEAR (2001).
+            fire_years = sorted(int(y) for y in gdf["ig_year"].unique())
+            lc_years = sorted({
+                max(y - 1, MCD12Q1_FIRST_YEAR) for y in fire_years
+            })
+            logger.info(
+                f"Fire years {fire_years} -> downloading land cover for "
+                f"preceding years: {lc_years}"
+            )
+
             for tile in available_tiles:
                 logger.info(f"Processing land cover for tile: {tile}")
 
-                for year in available_years:
+                for year in lc_years:
                     logger.info(f"   Processing year: {year}")
                     year = str(year)
 
