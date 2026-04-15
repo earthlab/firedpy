@@ -1,245 +1,245 @@
-country_name,continent,spatial,temporal,,,,,
-aland,Europe,5,11,,,,,
-albania,Europe,5,11,,,,,
-algeria,Africa,5,11,,,,,
-andorra,Europe,5,11,,,,,
-austria,Europe,5,11,,,,,
-belarus,Europe,5,11,,,,,
-belgium,Europe,5,11,,,,,
-bosnia_and_herzegovina,Europe,5,11,,,,,
-bulgaria,Europe,5,11,,,,,
-canada,North America,5,11,,,,,
-croatia,Europe,5,11,,,,,
-czechia,Europe,5,11,,,,,
-denmark,Europe,5,11,,,,,
-djibouti,Africa,5,11,,,,,
-egypt,Africa,5,11,,,,,
-estonia,Europe,5,11,,,,,
-faroe_islands,Europe,5,11,,,,,
-finland,Europe,5,11,,,,,
-france,Europe,5,11,,,,,
-germany,Europe,5,11,,,,,
-greece,Europe,5,11,,,,,
-guernsey,Europe,5,11,,,,,
-hong_kong,Asia,5,11,,,,,
-hungary,Europe,5,11,,,,,
-iceland,Europe,5,11,,,,,
-ireland,Europe,5,11,,,,,
-isle_of_man,Europe,5,11,,,,,
-italy,Europe,5,11,,,,,
-jersey,Europe,5,11,,,,,
-jordan,Asia,5,11,,,,,
-kosovo,Europe,5,11,,,,,
-kuwait,Asia,5,11,,,,,
-latvia,Europe,5,11,,,,,
-lebanon,Asia,5,11,,,,,
-libya,Africa,5,11,,,,,
-liechtenstein,Europe,5,11,,,,,
-lithuania,Europe,5,11,,,,,
-luxembourg,Europe,5,11,,,,,
-macedonia,Europe,5,11,,,,,
-malta,Europe,5,11,,,,,
-mauritania,Africa,5,11,,,,,
-moldova,Europe,5,11,,,,,
-monaco,Europe,5,11,,,,,
-mongolia,Asia,5,11,,,,,
-montenegro,Europe,5,11,,,,,
-morocco,Africa,5,11,,,,,
-netherlands,Europe,5,11,,,,,
-northern_cyprus,europe,5,11,,,,,
-norway,Europe,5,11,,,,,
-oman,Asia,5,11,,,,,
-palestine,Asia,5,11,,,,,
-poland,Europe,5,11,,,,,
-portugal,Europe,5,11,,,,,
-qatar,Asia,5,11,,,,,
-republic_of_serbia,Europe,5,11,,,,,
-romania,Europe,5,11,,,,,
-russia,Europe,5,11,,,,,
-saudi_arabia,Asia,5,11,,,,,
-slovakia,Europe,5,11,,,,,
-slovenia,Europe,5,11,,,,,
-somalia,Africa,5,11,,,,,
-somaliland,Africa,5,11,,,,,
-spain,Europe,5,11,,,,,
-sweden,Europe,5,11,,,,,
-switzerland,Europe,5,11,,,,,
-syria,Asia,5,11,,,,,
-tunisia,Africa,5,11,,,,,
-ukraine,Europe,5,11,,,,,
-united_arab_emirates,Asia,5,11,,,,,
-united_kingdom,Europe,5,11,,,,,
-usa_alaska,North America,5,11,,,,,
-usa_lower48,North America,5,11,,,,,
-vatican,Europe,5,11,,,,,
-western_sahara,Africa,5,11,,,,,
-yemen,Asia,5,11,,,,,
-afghanistan,Asia,3,8,,,,,
-american_samoa,Oceania,3,8,,,,,
-anguilla,North America,3,8,,,,,
-antigua_and_barbuda,Carribean,3,8,,,,,
-armenia,Asia,3,8,,,,,
-aruba,North America,3,8,,,,,
-ashmore_and_cartier_islands,Oceania,3,8,,,,,
-australia,Australia,3,8,,,,,
-azerbaijan,Asia,3,8,,,,,
-barbados,North America,3,8,,,,,
-belize,North America,3,8,,,,,
-bermuda,North America,3,8,,,,,
-bhutan,Asia,3,8,,,,,
-british_indian_ocean_territory,Oceania,3,8,,,,,
-british_virgin_islands,Carribean,3,8,,,,,
-cayman_islands,Carribean,3,8,,,,,
-chile,South America,3,8,,,,,
-china,Asia,3,8,,,,,
-cook_islands,Oceania,3,8,,,,,
-costa_rica,North America,3,8,,,,,
-cuba,North America,3,8,,,,,
-curacao,North America,3,8,,,,,
-cyprus,Asia,3,8,,,,,
-dominica,North America,3,8,,,,,
-dominican_republic,Carribean,3,8,,,,,
-dutch_carribean_colonies,Carribean,3,8,,,,,
-east_timor,Oceania,3,8,,,,,
-el_salvador,North America,3,8,,,,,
-equatorial_guinea,Africa,3,8,,,,,
-falkland_islands,South America,3,8,,,,,
-federated_states_of_micronesia,Oceania,3,8,,,,,
-fiji,Oceania,3,8,,,,,
-french_guiana,South America,3,8,,,,,
-french_polynesia,Oceania,3,8,,,,,
-french_southern_and_antarctic_lands,Oceania,3,8,,,,,
-georgia,Asia,3,8,,,,,
-greenland,North America,3,8,,,,,
-grenada,North America,3,8,,,,,
-guadelopupe_and_martinique,Carribean,3,8,,,,,
-guam,Oceania,3,8,,,,,
-guatemala,North America,3,8,,,,,
-guyana,South America,3,8,,,,,
-haiti,North America,3,8,,,,,
-heard_island_and_mcdonald_islands,Oceania,3,8,,,,,
-honduras,North America,3,8,,,,,
-indian_ocean_territories,Oceania,3,8,,,,,
-iran,Asia,3,8,,,,,
-iraq,Asia,3,8,,,,,
-israel,Asia,3,8,,,,,
-jamaica,North America,3,8,,,,,
-japan,Asia,3,8,,,,,
-kazakhstan,Asia,3,8,,,,,
-kiribati,Oceania,3,8,,,,,
-kyrgyzstan,Asia,3,8,,,,,
-maldives,Oceania,3,8,,,,,
-marshall_islands,Oceania,3,8,,,,,
-mauritius,Oceania,3,8,,,,,
-mexico,North America,3,8,,,,,
-montserrat,North America,3,8,,,,,
-nauru,Oceania,3,8,,,,,
-nepal,Asia,3,8,,,,,
-new_caledonia,Oceania,3,8,,,,,
-new_zealand,Oceania,3,8,,,,,
-nicaragua,North America,3,8,,,,,
-niue,Oceania,3,8,,,,,
-norfolk_island,Oceania,3,8,,,,,
-north_korea,asia,3,8,,,,,
-northern_mariana_islands,Oceania,3,8,,,,,
-pakistan,Asia,3,8,,,,,
-palau,Oceania,3,8,,,,,
-panama,North America,3,8,,,,,
-peru,South America,3,8,,,,,
-pitcairn_islands,Oceania,3,8,,,,,
-puerto_rico,Carribean,3,8,,,,,
-saint_barthelemy,Carribean,3,8,,,,,
-saint_helena,Oceania,3,8,,,,,
-saint_kitts_and_nevis,Carribean,3,8,,,,,
-saint_lucia,Carribean,3,8,,,,,
-saint_martin,Carribean,3,8,,,,,
-saint_pierre_and_miquelon,North America,3,8,,,,,
-saint_vincent_and_the_grenadines,Carribean,3,8,,,,,
-samoa,Oceania,3,8,,,,,
-san_marino,Carribean,3,8,,,,,
-seychelles,Oceania,3,8,,,,,
-sint_maarten,Carribean,3,8,,,,,
-solomon_islands,Oceania,3,8,,,,,
-south_georgia_and_the_islands,Oceania,3,8,,,,,
-south_korea,Asia,3,8,,,,,
-sri_lanka,Oceania,3,8,,,,,
-suriname,South America,3,8,,,,,
-tajikistan,Asia,3,8,,,,,
-the_bahamas,Carribean,3,8,,,,,
-tonga,Oceania,3,8,,,,,
-trinidad_and_tobago,Carribean,3,8,,,,,
-turkey,Asia,3,8,,,,,
-turkmenistan,Asia,3,8,,,,,
-turks_and_caicos_islands,Carribean,3,8,,,,,
-united_states_virgin_islands,Carribean,3,8,,,,,
-usa_hawaii,Oceania,3,8,,,,,
-uzbekistan,Asia,3,8,,,,,
-vanuatu,Oceania,3,8,,,,,
-wallis_and_futuna,Oceania,3,8,,,,,
-angola,Africa,1,1,,,,,
-argentina,South America,1,2,,,,,
-bahrain,Asia,1,2,,,,,
-bangladesh,Asia,1,2,,,,,
-benin,Africa,1,1,,,,,
-bolivia,South America,1,2,,,,,
-botswana,Africa,1,1,,,,,
-brazil,South America,1,2,,,,,
-brunei,Asia,1,2,,,,,
-burkina_faso,Africa,1,1,,,,,
-burundi,Africa,1,1,,,,,
-cabo_verde,Africa,1,1,,,,,
-cambodia,Asia,1,2,,,,,
-cameroon,Africa,1,1,,,,,
-central_african_republic,Africa,1,1,,,,,
-chad,Africa,1,1,,,,,
-colombia,South America,1,2,,,,,
-comoros,Africa,1,1,,,,,
-democratic_republic_of_the_congo,Africa,1,1,,,,,
-ecuador,South America,1,2,,,,,
-eritrea,Africa,1,1,,,,,
-eswatini,Africa,1,1,,,,,
-ethiopia,Africa,1,1,,,,,
-gabon,Africa,1,1,,,,,
-gambia,Africa,1,1,,,,,
-ghana,Africa,1,1,,,,,
-guinea,Africa,1,1,,,,,
-guinea_bissau,Africa,1,1,,,,,
-india,Asia,1,2,,,,,
-indonesia,Asia,1,2,,,,,
-ivory_coast,Africa,1,1,,,,,
-kenya,Africa,1,1,,,,,
-laos,Asia,1,2,,,,,
-lesotho,Africa,1,1,,,,,
-liberia,Africa,1,1,,,,,
-macao,Asia,1,2,,,,,
-madagascar,Africa,1,1,,,,,
-malawi,Africa,1,1,,,,,
-malaysia,Asia,1,2,,,,,
-mali,Africa,1,1,,,,,
-mozambique,Africa,1,1,,,,,
-myanmar,Asia,1,2,,,,,
-namibia,Africa,1,1,,,,,
-niger,Africa,1,1,,,,,
-nigeria,Africa,1,1,,,,,
-papua_new_guinea,Oceania,1,2,,,,,
-paraguay,South America,1,2,,,,,
-philippines,Asia,1,2,,,,,
-republic_of_the_congo,Africa,1,1,,,,,
-rwanda,Africa,1,1,,,,,
-sao_tome_and_principe,Africa,1,1,,,,,
-senegal,Africa,1,1,,,,,
-sierra_leone,Africa,1,1,,,,,
-singapore,Asia,1,2,,,,,
-south_africa,Africa,1,1,,,,,
-south_sudan,Africa,1,1,,,,,
-sudan,Africa,1,1,,,,,
-taiwan,Asia,1,2,,,,,
-tanzania,Africa,1,1,,,,,
-thailand,Asia,1,2,,,,,
-togo,Africa,1,1,,,,,
-uganda,Africa,1,1,,,,,
-uruguay,South America,1,2,,,,,
-venezuela,South America,1,2,,,,,
-vietnam,Asia,1,2,,,,,
-zambia,Africa,1,1,,,,,
-zimbabwe,Africa,1,1,,,,,
+country+AF8-name,continent,spatial,temporal
+aland,Europe,5,11
+albania,Europe,3,8
+algeria,Africa,5,11
+andorra,Europe,5,11
+austria,Europe,5,11
+belarus,Europe,5,11
+belgium,Europe,5,11
+bosnia+AF8-and+AF8-herzegovina,Europe,3,8
+bulgaria,Europe,3,8
+canada,North America,5,11
+croatia,Europe,3,8
+czechia,Europe,5,11
+denmark,Europe,5,11
+djibouti,Africa,5,11
+egypt,Africa,5,11
+estonia,Europe,5,11
+faroe+AF8-islands,Europe,5,11
+finland,Europe,5,11
+france,Europe,5,11
+germany,Europe,5,11
+greece,Europe,3,8
+guernsey,Europe,3,8
+hong+AF8-kong,Asia,5,11
+hungary,Europe,3,8
+iceland,Europe,5,11
+ireland,Europe,5,11
+isle+AF8-of+AF8-man,Europe,3,8
+italy,Europe,3,8
+jersey,Europe,3,8
+jordan,Asia,5,11
+kosovo,Europe,3,8
+kuwait,Asia,5,11
+latvia,Europe,5,11
+lebanon,Asia,5,11
+libya,Africa,5,11
+liechtenstein,Europe,5,11
+lithuania,Europe,5,11
+luxembourg,Europe,5,11
+macedonia,Europe,3,8
+malta,Europe,3,8
+mauritania,Africa,5,11
+moldova,Europe,3,8
+monaco,Europe,5,11
+mongolia,Asia,5,11
+montenegro,Europe,3,8
+morocco,Africa,5,11
+netherlands,Europe,5,11
+northern+AF8-cyprus,europe,5,11
+norway,Europe,5,11
+oman,Asia,5,11
+palestine,Asia,5,11
+poland,Europe,5,11
+portugal,Europe,3,8
+qatar,Asia,5,11
+republic+AF8-of+AF8-serbia,Europe,3,8
+romania,Europe,3,8
+russia,Europe,5,11
+saudi+AF8-arabia,Asia,5,11
+slovakia,Europe,5,11
+slovenia,Europe,3,8
+somalia,Africa,5,11
+somaliland,Africa,5,11
+spain,Europe,3,8
+sweden,Europe,5,11
+switzerland,Europe,5,11
+syria,Asia,3,8
+tunisia,Africa,5,11
+ukraine,Europe,3,8
+united+AF8-arab+AF8-emirates,Asia,5,11
+united+AF8-kingdom,Europe,5,11
+usa+AF8-alaska,North America,5,11
+usa+AF8-lower48,North America,5,11
+vatican,Europe,5,11
+western+AF8-sahara,Africa,5,11
+yemen,Asia,5,11
+afghanistan,Asia,3,8
+american+AF8-samoa,Oceania,3,8
+anguilla,North America,3,8
+antigua+AF8-and+AF8-barbuda,Carribean,3,8
+armenia,Asia,3,8
+aruba,North America,3,8
+ashmore+AF8-and+AF8-cartier+AF8-islands,Oceania,3,8
+australia,Australia,3,8
+azerbaijan,Asia,3,8
+barbados,North America,3,8
+belize,North America,3,8
+bermuda,North America,3,8
+bhutan,Asia,3,8
+british+AF8-indian+AF8-ocean+AF8-territory,Oceania,3,8
+british+AF8-virgin+AF8-islands,Carribean,3,8
+cayman+AF8-islands,Carribean,3,8
+chile,South America,3,8
+china,Asia,3,8
+cook+AF8-islands,Oceania,3,8
+costa+AF8-rica,North America,3,8
+cuba,North America,3,8
+curacao,North America,3,8
+cyprus,Asia,3,8
+dominica,North America,3,8
+dominican+AF8-republic,Carribean,3,8
+dutch+AF8-carribean+AF8-colonies,Carribean,3,8
+east+AF8-timor,Oceania,3,8
+el+AF8-salvador,North America,3,8
+equatorial+AF8-guinea,Africa,3,8
+falkland+AF8-islands,South America,3,8
+federated+AF8-states+AF8-of+AF8-micronesia,Oceania,3,8
+fiji,Oceania,3,8
+french+AF8-guiana,South America,3,8
+french+AF8-polynesia,Oceania,3,8
+french+AF8-southern+AF8-and+AF8-antarctic+AF8-lands,Oceania,3,8
+georgia,Asia,3,8
+greenland,North America,3,8
+grenada,North America,3,8
+guadelopupe+AF8-and+AF8-martinique,Carribean,3,8
+guam,Oceania,3,8
+guatemala,North America,3,8
+guyana,South America,3,8
+haiti,North America,3,8
+heard+AF8-island+AF8-and+AF8-mcdonald+AF8-islands,Oceania,3,8
+honduras,North America,3,8
+indian+AF8-ocean+AF8-territories,Oceania,3,8
+iran,Asia,3,8
+iraq,Asia,3,8
+israel,Asia,3,8
+jamaica,North America,3,8
+japan,Asia,3,8
+kazakhstan,Asia,3,8
+kiribati,Oceania,3,8
+kyrgyzstan,Asia,3,8
+maldives,Oceania,3,8
+marshall+AF8-islands,Oceania,3,8
+mauritius,Oceania,3,8
+mexico,North America,3,8
+montserrat,North America,3,8
+nauru,Oceania,3,8
+nepal,Asia,3,8
+new+AF8-caledonia,Oceania,3,8
+new+AF8-zealand,Oceania,3,8
+nicaragua,North America,3,8
+niue,Oceania,3,8
+norfolk+AF8-island,Oceania,3,8
+north+AF8-korea,asia,3,8
+northern+AF8-mariana+AF8-islands,Oceania,3,8
+pakistan,Asia,3,8
+palau,Oceania,3,8
+panama,North America,3,8
+peru,South America,3,8
+pitcairn+AF8-islands,Oceania,3,8
+puerto+AF8-rico,Carribean,3,8
+saint+AF8-barthelemy,Carribean,3,8
+saint+AF8-helena,Oceania,3,8
+saint+AF8-kitts+AF8-and+AF8-nevis,Carribean,3,8
+saint+AF8-lucia,Carribean,3,8
+saint+AF8-martin,Carribean,3,8
+saint+AF8-pierre+AF8-and+AF8-miquelon,North America,3,8
+saint+AF8-vincent+AF8-and+AF8-the+AF8-grenadines,Carribean,3,8
+samoa,Oceania,3,8
+san+AF8-marino,Carribean,3,8
+seychelles,Oceania,3,8
+sint+AF8-maarten,Carribean,3,8
+solomon+AF8-islands,Oceania,3,8
+south+AF8-georgia+AF8-and+AF8-the+AF8-islands,Oceania,3,8
+south+AF8-korea,Asia,3,8
+sri+AF8-lanka,Oceania,3,8
+suriname,South America,3,8
+tajikistan,Asia,3,8
+the+AF8-bahamas,Carribean,3,8
+tonga,Oceania,3,8
+trinidad+AF8-and+AF8-tobago,Carribean,3,8
+turkey,Asia,3,8
+turkmenistan,Asia,3,8
+turks+AF8-and+AF8-caicos+AF8-islands,Carribean,3,8
+united+AF8-states+AF8-virgin+AF8-islands,Carribean,3,8
+usa+AF8-hawaii,Oceania,3,8
+uzbekistan,Asia,3,8
+vanuatu,Oceania,3,8
+wallis+AF8-and+AF8-futuna,Oceania,3,8
+angola,Africa,1,1
+argentina,South America,1,2
+bahrain,Asia,1,2
+bangladesh,Asia,1,2
+benin,Africa,1,1
+bolivia,South America,1,2
+botswana,Africa,1,1
+brazil,South America,1,2
+brunei,Asia,1,2
+burkina+AF8-faso,Africa,1,1
+burundi,Africa,1,1
+cabo+AF8-verde,Africa,1,1
+cambodia,Asia,1,2
+cameroon,Africa,1,1
+central+AF8-african+AF8-republic,Africa,1,1
+chad,Africa,1,1
+colombia,South America,1,2
+comoros,Africa,1,1
+democratic+AF8-republic+AF8-of+AF8-the+AF8-congo,Africa,1,1
+ecuador,South America,1,2
+eritrea,Africa,1,1
+eswatini,Africa,1,1
+ethiopia,Africa,1,1
+gabon,Africa,1,1
+gambia,Africa,1,1
+ghana,Africa,1,1
+guinea,Africa,1,1
+guinea+AF8-bissau,Africa,1,1
+india,Asia,1,2
+indonesia,Asia,1,2
+ivory+AF8-coast,Africa,1,1
+kenya,Africa,1,1
+laos,Asia,1,2
+lesotho,Africa,1,1
+liberia,Africa,1,1
+macao,Asia,1,2
+madagascar,Africa,1,1
+malawi,Africa,1,1
+malaysia,Asia,1,2
+mali,Africa,1,1
+mozambique,Africa,1,1
+myanmar,Asia,1,2
+namibia,Africa,1,1
+niger,Africa,1,1
+nigeria,Africa,1,1
+papua+AF8-new+AF8-guinea,Oceania,1,2
+paraguay,South America,1,2
+philippines,Asia,1,2
+republic+AF8-of+AF8-the+AF8-congo,Africa,1,1
+rwanda,Africa,1,1
+sao+AF8-tome+AF8-and+AF8-principe,Africa,1,1
+senegal,Africa,1,1
+sierra+AF8-leone,Africa,1,1
+singapore,Asia,1,2
+south+AF8-africa,Africa,1,1
+south+AF8-sudan,Africa,1,1
+sudan,Africa,1,1
+taiwan,Asia,1,2
+tanzania,Africa,1,1
+thailand,Asia,1,2
+togo,Africa,1,1
+uganda,Africa,1,1
+uruguay,South America,1,2
+venezuela,South America,1,2
+vietnam,Asia,1,2
+zambia,Africa,1,1
+zimbabwe,Africa,1,1
