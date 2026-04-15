@@ -16,7 +16,7 @@ Balch, J.K.; St. Denis, L.A.; Mahood, A.L.; Mietkiewicz, N.P.; Williams, T.M.; M
 
 Mahood, A.L., Lindrooth, E.J., Cook, M.C., Balch, J.K., 2022. 'Country-level fire perimeter datasets (2001–2021)'. Sci Data 9, 458. https://doi.org/10.1038/s41597-022-01572-3
 
-Mahood, A.L., Williams, T., Hofford, N, Balch, J.K., St Denis, L.A., et al. 'Fire datasets for every country 2001-2025, created with FIREDpy 2.0'. Forthcoming
+Mahood, A.L., Williams, T., Hofford, N, Balch, J.K., St Denis, L.A., et al. 'Fire perimeter datasets for every country 2001-2025, created with FIREDpy 2.0'. Forthcoming
 
 -------------------
 GENERAL INFORMATION
@@ -37,7 +37,7 @@ SHARING/ACCESS INFORMATION
 3. Links to other publicly accessible locations of the data: None
 4. Recommended citations for the data: 
 
-Mahood, A.L., Williams, T., Hofford, N, Balch, J.K., St Denis, L.A., et al. 'Fire datasets for every country 2001-2025, created with FIREDpy 2.0'. Forthcoming
+Mahood, A.L., Williams, T., Hofford, N, Balch, J.K., St Denis, L.A., et al. 'Fire perimeter datasets for every country 2001-2025, created with FIREDpy 2.0'. Forthcoming
 
 Balch, J.K.; St. Denis, L.A.; Mahood, A.L.; Mietkiewicz, N.P.; Williams, T.M.; McGlinchy, J.; Cook, M.C. FIRED (Fire Events Delineation): An Open, Flexible Algorithm and Database of US Fire Events Derived from the MODIS Burned Area Product (2001–2019). Remote Sens. 2020, 12, 3498. https://doi.org/10.3390/rs12213498
 
