@@ -20,9 +20,9 @@ The algorithm outputs shapefiles of delineated fire events in either .shp or .gp
 *Illustration of the event-level and daily-level output of FIREDpy for the 2013 Rim Fire in California. Figure is from Mahood et al. 2022.*
 
 
-## The MODIS Sinusioidal Project
+## The MODIS Sinusioidal Grid
 
-You may specify study areas for FIREDpy using individual MODIS tiles. This product uses a Sinusoidal, Lambert Azimuthal Equal-Area projection. There are several spatial resolutions available for this data, but FIREDpy uses the 500m resolution (actual distances depend on location). For more information about this projection, see https://modis-land.gsfc.nasa.gov/MODLAND_grid.html. If you would like to use the MODIS sinusoidal grid IDs to identify FIREDpy study areas, see the visualization of this grid below.
+In general, the area of intrest for which FIREDpy creates fire perimter products is specified with a shapefile. However, you may specify study areas for FIREDpy using individual MODIS tiles. This product uses a Sinusoidal, Lambert Azimuthal Equal-Area projection. For more information about this projection, see https://modis-land.gsfc.nasa.gov/MODLAND_grid.html. If you would like to use the MODIS sinusoidal grid IDs to identify FIREDpy study areas, see the visualization of this grid below.
 
 <img width="1900" alt="image" src="https://github.com/earthlab/firedpy/blob/tw/installation/firedpy/data/images/modis_land_id_map_robinson.png" />
 
@@ -38,7 +38,7 @@ Balch, J. K., St. Denis, L. A., Mahood, A. L., Mietkiewicz, N. P., Williams, T. 
 
 Mahood, A.L. Lindrooth, E.J., Cook, M.C. and Balch, J.K. 2022. Country-level fire perimeter datasets (2001-2021). Nature Scientific Data, 9(458). https://doi.org/10.1038/s41597-022-01572-3
 
-### Methodological information for FIREDpy 2.0, description of 2000-2024 datasets:
+### Methodological information for FIREDpy 2.0, description of 2000-2025 datasets:
 
 Coming soon...
 
@@ -50,7 +50,7 @@ FIREDpy is currently in active development, and newer versions of the algorithm 
     - No longer using setup.py. See new instructions below for running it with Docker or installing it locally.
     - Improved fire grouping
     - Improved CLI
-    - Access to MODIS burn area product Version 6.1 with support up to at least December 2024 
+    - Access to MODIS burn area product Version 6.1
 
 ### BUG ALERT: 
 
