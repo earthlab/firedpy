@@ -78,7 +78,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 
 ## Click on a link below to download a fire perimeter dataset for your favorite country
 
-|| **Firedpy version**| 1.0|2.0|2.0|
+|| **Firedpy version**| 1.0|2.0|2.1|
 |-------|---------|----------------------------------------|----------------------------------------|---------------------------|
 | **Region** | **Country** | **Version 2022v (variable space-time parameters)** | **Version 2024f (1 pixel 5 days for everything)** | **Version 2025v (variable ST parameters)** |
 | **North America** |||||
