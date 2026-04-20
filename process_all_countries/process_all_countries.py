@@ -42,7 +42,7 @@ def main():
                     temporal_param=row["temporal"],
                     daily=True,
                     shape_type="gpkg",
-                    eco_region_type=None,
+                    eco_region_type="world",
                     eco_region_level=None,
                     land_cover_type=1,
                     csv_type="none",
