@@ -1113,14 +1113,18 @@ class ModelBuilder(Base):
             )
         return files
 
-    def get_output_paths(self, project_name, project_directory,
-                         start_year, end_year, shape_type):
+    def get_output_paths(self, project_name, aoi, project_directory,
+                         start_year, end_year, shape_type,
+                         spatial_param, temporal_param):
         """Get dictionary of all output paths for a firedpy run.
 
         Parameters
         ----------
         project_name : str | NoneType
             A name used to identify the output files of this project.
+        aoi : str | None
+            Normalised area-of-interest label included in filenames
+            (e.g. country name or shapefile stem).
         project_directory : str
             Project output directory path.
         start_year : int
@@ -1132,13 +1136,22 @@ class ModelBuilder(Base):
             "gpkg", or both. Output files will be written directly to the
             'outputs/' folder of the chosen project directory in the specified
             geopackage format (.gpkg), ESRI Shapefile format (.shp), or both.
+        spatial_param : int
+            The spatial parameter used for this run, included in filenames.
+        temporal_param : int
+            The temporal parameter used for this run, included in filenames.
 
         Returns
         -------
         dict : Dictionary of paths for final firedpy outputs.
         """
         # Set base name
-        base_file_name = f"fired_{project_name}_{start_year}_to_{end_year}"
+        sp = int(spatial_param)
+        tp = int(temporal_param)
+        aoi_part = f"_{aoi}" if aoi else ""
+        base_file_name = (f"fired_{project_name}{aoi_part}"
+                          f"_{start_year}-{end_year}"
+                          f"_s{sp:02d}_t{tp:02d}")
 
         # Set and create output directory
         model_outputs_dir = Path(project_directory).joinpath("outputs")
@@ -1393,12 +1406,15 @@ class ModelBuilder(Base):
         self,
         gdf,
         project_name,
+        aoi,
         project_directory,
         start_year,
         end_year,
         daily,
         shape_type,
-        csv_type
+        csv_type,
+        spatial_param,
+        temporal_param,
     ):
         """Save event data to various output formats.
 
@@ -1408,6 +1424,9 @@ class ModelBuilder(Base):
             A fully processed firedpy event data frame.
         project_name : str | NoneType
             A name used to identify the output files of this project.
+        aoi : str | None
+            Normalised area-of-interest label included in filenames
+            (e.g. country name or shapefile stem).
         project_directory : str
             Project output directory path.
         start_year : int
@@ -1429,15 +1448,22 @@ class ModelBuilder(Base):
                 'events' - export summary columns only (x, y, id, ig_date,
                            last_date) to outputs/
                 'none'   - no CSV written (default)
+        spatial_param : int
+            The spatial parameter used for this run, included in filenames.
+        temporal_param : int
+            The temporal parameter used for this run, included in filenames.
         """
         csv_type = csv_type.lower() if csv_type else "none"
         # Get all the output file paths
         paths = self.get_output_paths(
             project_name=project_name,
+            aoi=aoi,
             project_directory=project_directory,
             start_year=start_year,
             end_year=end_year,
-            shape_type=shape_type
+            shape_type=shape_type,
+            spatial_param=spatial_param,
+            temporal_param=temporal_param,
         )
 
         # Process and write daily-level events to file if requested

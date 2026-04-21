@@ -11,20 +11,25 @@ logger = logging.getLogger(__name__)
 SUMMARY_TEMPLATE = DATA_DIR.joinpath("SUMMARY_TEMPLATE.txt")
 
 
-def add_file_list(lines, output_directory, run_name, start_year, end_year):
+def add_file_list(lines, output_directory, run_name, aoi, start_year,
+                  end_year, spatial_param, temporal_param):
     """Make a formatted list of files produced by this specific run.
 
     Only includes files whose names match the run's naming pattern, so that
     re-running firedpy in the same output directory does not pollute the file
     list with outputs from previous runs.
     """
-    run_prefix = f"{run_name}_{start_year}_to_{end_year}"
+    sp = int(spatial_param)
+    tp = int(temporal_param)
+    aoi_part = f"_{aoi}" if aoi else ""
+    run_prefix = (f"{run_name}{aoi_part}_{start_year}-{end_year}"
+                  f"_s{sp:02d}_t{tp:02d}")
 
     tables = sorted(output_directory.glob(f"{run_prefix}*.csv"))
     gpkgs = sorted(output_directory.glob(f"{run_prefix}*.gpkg"))
     shps = sorted(output_directory.glob(f"{run_prefix}*.shp"))
-    logs = sorted(output_directory.glob(f"{run_name}*.log"))
-    readme_name = f"{run_name.lower()}_{start_year}_{end_year}_readme.txt"
+    logs = sorted(output_directory.glob(f"{run_prefix}*.log"))
+    readme_name = f"{run_prefix.lower()}_readme.txt"
 
     # Find the {files} placeholder and expand it
     new_lines = []
@@ -82,7 +87,7 @@ def replace_values(parameters, line):
 def make_read_me(gdf, project_directory, tiles, spatial_param,
                  temporal_param, shapefile, runtime, n_cores,
                  start_year, end_year, run_name=None, country=None,
-                 peak_memory=None):
+                 peak_memory=None, aoi=None):
     """Write a summary file describing a firedpy run.
 
     Parameters
@@ -114,6 +119,9 @@ def make_read_me(gdf, project_directory, tiles, spatial_param,
         Derived from the output directory name if not provided.
     country : str | None
         Country name used as the study area, if provided. Defaults to None.
+    aoi: str | None
+        Normalised area-of-interest label (e.g. country name, shapefile, tile), 
+        included in the readme filename.
     peak_memory : float
         The maximum memory usage reached during the firedpy run. Defaults to
         None, no summary written for this parameter.
@@ -121,8 +129,6 @@ def make_read_me(gdf, project_directory, tiles, spatial_param,
     # Infer the first and last date from the dataframe
     date1 = gdf["date"].min()
     date2 = gdf["date"].max()
-    modis_date1 = date1.strftime("January %Y")
-    modis_date2 = date2.strftime("December %Y")
     event_date1 = date1.strftime("%B %Y")
     event_date2 = date2.strftime("%B %Y")
 
@@ -158,8 +164,6 @@ def make_read_me(gdf, project_directory, tiles, spatial_param,
     parameters = {
         "{event_date1}": event_date1,
         "{event_date2}": event_date2,
-        "{modis_date1}": modis_date1,
-        "{modis_date2}": modis_date2,
         "{n_cores}": n_cores,
         "{peak_memory}": peak_memory,
         "{run_name}": run_name,
@@ -175,8 +179,9 @@ def make_read_me(gdf, project_directory, tiles, spatial_param,
         lines = template.readlines()
 
     # Custom work for the files: only list outputs from this specific run
-    lines_w_files = add_file_list(lines, output_directory, run_name,
-                                  start_year, end_year)
+    lines_w_files = add_file_list(lines, output_directory, run_name, aoi,
+                                  start_year, end_year,
+                                  spatial_param, temporal_param)
 
     # Format template
     formatted_lines = []
@@ -185,7 +190,11 @@ def make_read_me(gdf, project_directory, tiles, spatial_param,
         formatted_lines.append(formatted_line)
 
     # Write to a README in the outputs directory
-    fname = f"{run_name.lower()}_{start_year}_{end_year}_readme.txt" # make readme include dates for unique outputs
+    sp = int(spatial_param)
+    tp = int(temporal_param)
+    aoi_part = f"_{aoi}" if aoi else ""
+    fname = (f"{run_name.lower()}{aoi_part}_{start_year}-{end_year}"
+             f"_s{sp:02d}_t{tp:02d}_readme.txt")
     fpath = output_directory.joinpath(fname)
     with open(fpath, "w") as summary:
         for line in formatted_lines:
