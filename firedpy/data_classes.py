@@ -156,39 +156,86 @@ class Base(MODISEarthAccess):
         date = base + dt.timedelta(days=int(unix_day) - 1)
         return date.strftime("%Y-%m-%d")
 
+    @staticmethod
+    def _ordinal_to_month(year, ordinal_day):
+        """Convert a year + ordinal day (1-based) to a calendar month number."""
+        return (dt.datetime(year, 1, 1) + dt.timedelta(int(ordinal_day) - 1)).month
+
     def _generate_land_cover_mosaic_dir(self, tile, year):
         return self.land_cover_dir.joinpath(tile,  str(year), "mosaics")
 
     def _generate_local_burn_hdf_dir(self, tile):
         return self.hdf_dir.joinpath(tile)
 
-    def _generate_local_nc_path(self, tile, start_year=None, end_year=None):
+    def _generate_local_nc_path(self, tile, start_year=None, end_year=None,
+                                start_month=None, end_month=None):
+        """Return the expected local path for a tile's NetCDF cache.
+
+        When month information is available (derived from HDF files on
+        disk), the filename uses both month and year so that partial-year
+        caches can be distinguished from later runs that download more data.
+        Format with months : ``{tile}_{YYYY}-{MM}_{YYYY}-{MM}.nc``
+        Format years-only  : ``{tile}_{YYYY}_{YYYY}.nc``  (old version)
+        """
         if start_year is not None and end_year is not None:
+            if start_month is not None and end_month is not None:
+                return self.nc_dir.joinpath(
+                    f"{tile}_{start_year}-{start_month:02d}"
+                    f"_{end_year}-{end_month:02d}.nc"
+                )
             return self.nc_dir.joinpath(f"{tile}_{start_year}_{end_year}.nc")
         return self.nc_dir.joinpath(f"{tile}.nc")
 
-    def _find_covering_nc(self, tile, start_year, end_year):
-        """Return a cached NC path that fully covers the requested year range.
+    def _find_covering_nc(self, tile, start_year, end_year,
+                          start_month=None, end_month=None):
+        """Return a cached NC path that fully covers the requested date range.
 
-        Checks for an exact filename match first, then scans for any existing
-        NC whose range is a superset of [start_year, end_year]. This allows
-        a run for 2001-2003 to reuse a cached h18v02_2000_2025.nc without
-        rebuilding. Returns None if no suitable NC exists.
+        Only the new month-aware filename format is supported:
+          ``{tile}_{YYYY}-{MM}_{YYYY}-{MM}.nc``
+
+        Two comparison modes depending on whether months are supplied:
+
+        **Month-level** (called from ``_write_ncs`` after deriving HDF
+        coverage): uses ``(year, month)`` tuple comparison.
+
+        **Year-level** (called from ``model_classes`` which only knows the
+        requested year range): compares years only.
         """
-        exact = self._generate_local_nc_path(tile, start_year, end_year)
+        exact = self._generate_local_nc_path(
+            tile, start_year, end_year, start_month, end_month
+        )
         if exact.exists():
             return exact
-        pattern = re.compile(rf"^{re.escape(tile)}_(\d+)_(\d+)\.nc$")
+
+        pat_month = re.compile(
+            rf"^{re.escape(tile)}_(\d{{4}})-(\d{{2}})_(\d{{4}})-(\d{{2}})\.nc$"
+        )
+
+        month_precise = start_month is not None and end_month is not None
+
         for nc in self.nc_dir.glob(f"{tile}_*.nc"):
-            m = pattern.match(nc.name)
-            if m:
-                nc_start, nc_end = int(m.group(1)), int(m.group(2))
-                if nc_start <= start_year and nc_end >= end_year:
-                    logger.debug(
-                        f"Reusing broader cache {nc.name} "
-                        f"for requested range {start_year}-{end_year}"
-                    )
-                    return nc
+            m = pat_month.match(nc.name)
+            if not m:
+                continue
+
+            nc_sy, nc_sm = int(m.group(1)), int(m.group(2))
+            nc_ey, nc_em = int(m.group(3)), int(m.group(4))
+
+            if month_precise:
+                covers = (
+                    (nc_sy, nc_sm) <= (start_year, start_month)
+                    and (nc_ey, nc_em) >= (end_year, end_month)
+                )
+            else:
+                covers = nc_sy <= start_year and nc_ey >= end_year
+
+            if covers:
+                logger.debug(
+                    f"Reusing cache {nc.name} for requested range "
+                    f"{start_year}-{start_month} to {end_year}-{end_month}"
+                )
+                return nc
+
         return None
 
     def _initialize_save_dirs(self):
@@ -761,32 +808,24 @@ class BurnData(LPDAAC):
         tiles : list[str]
             A list of strings representing MODIS tile IDs.
         start_year : int, optional
-            First year of the requested date range. Used to name the NC file
-            so different date ranges produce distinct cached files.
+            First year of the requested date range.
         end_year : int, optional
             Last year of the requested date range.
+
+        The NC filename encodes the month–year range of the HDF data
+        that was available at build time (e.g. ``h18v02_2000-01_2026-03.nc``).
+        This ensures that a later run downloading more data (e.g. through
+        September 2026) will not reuse a cache built in an
+        earlier month of the same end-year.
         """
-        # Build the netcdfs here
         fill_value = -9999  # Default fill value in original file is -1
         logger.info(f"Building netcdf files for tiles {tiles}")
         for tile in tqdm(tiles):
 
-            # Build/find file paths needed for this operation
             hdf_dir = self.hdf_dir.joinpath(tile)
 
-            # Reuse any existing NC whose range is a superset of the request
-            covering = self._find_covering_nc(tile, start_year, end_year)
-            if covering:
-                logger.info(f"Tile {tile}: reusing cached {covering.name}")
-                continue
-
-            # No covering NC found — remove any stale NCs for this tile
-            # before building the new one
-            for old_nc in self.nc_dir.glob(f"{tile}_*.nc"):
-                logger.info(f"Removing stale NetCDF cache: {old_nc.name}")
-                old_nc.unlink()
-
-            nc_file_path = self._generate_local_nc_path(tile, start_year, end_year)
+            # List and sort HDF files first so we can derive the
+            # month–year coverage before checking if a cache is valid.
             paths = []
             for path in list(hdf_dir.glob("*.hdf")):
                 if self._extract_date_parts(path):
@@ -797,6 +836,44 @@ class BurnData(LPDAAC):
                 msg = f"No HDF4 files for tile {tile} in {hdf_dir}"
                 logger.error(msg)
                 raise OSError(msg)
+
+            # Derive start/end month from the first and last HDF files.
+            first_parts = self._extract_date_parts(files[0])
+            last_parts = self._extract_date_parts(files[-1])
+            actual_start_month = self._ordinal_to_month(first_parts[0],
+                                                        first_parts[1])
+            actual_end_month = self._ordinal_to_month(last_parts[0],
+                                                      last_parts[1])
+            actual_start_year = first_parts[0]
+            actual_end_year = last_parts[0]
+
+            # Reuse any existing NC whose range is a superset of the actual
+            # data coverage (month-precise comparison).
+            covering = self._find_covering_nc(
+                tile,
+                actual_start_year, actual_end_year,
+                actual_start_month, actual_end_month,
+            )
+            if covering:
+                logger.info(f"Tile {tile}: reusing cached {covering.name}")
+                continue
+
+            # No covering NC found — remove any stale NCs for this tile
+            # before building the new one.
+            for old_nc in self.nc_dir.glob(f"{tile}_*.nc"):
+                logger.info(f"Removing stale NetCDF cache: {old_nc.name}")
+                old_nc.unlink()
+
+            nc_file_path = self._generate_local_nc_path(
+                tile,
+                actual_start_year, actual_end_year,
+                actual_start_month, actual_end_month,
+            )
+            logger.info(
+                f"Tile {tile}: building NC covering "
+                f"{actual_start_year}-{actual_start_month:02d} to "
+                f"{actual_end_year}-{actual_end_month:02d} --> {nc_file_path.name}"
+            )
 
             try:
                 # Use a sample to get geography information and geometries

@@ -2,7 +2,7 @@
 ABSTRACT
 --------
 
-This is {run_name}_{modis_date1}_{modis_date2}, a fire event delineation (FIRED) product for {shapefile} from {modis_date1} to {modis_date2}. 
+This is {run_name}_{event_date1}_{event_date2}, a fire event delineation (FIRED) product for {shapefile} from {event_date1} to {event_date2}. 
 The dataset intersects the following MODIS grid tiles: {tile_string}. 
 Firedpy (https://github.com/earthlab/firedpy) is an algorithm that aquires the MCD64A1 files for an area of interest, and then converts burn detections into fire events by stacking the entire time series into a spatial-temporal data cube, then uses an algorithm to assign event identification numbers to pixels that fit into a 3-dimensional spatial temporal window defined by parameters set by the user. 
 This particular dataset was created using a spatial parameter of {spatial_param} pixels and {temporal_param} days.
@@ -34,7 +34,7 @@ Sulla-Menashe, D., Gray, J. M., Abercrombie, S. P., & Friedl, M. A. (2019). Hier
 GENERAL INFORMATION
 -------------------
 
-1. Title of Dataset: {run_name}_{modis_date1}_{modis_date2} 
+1. Title of Dataset: {run_name} 
 2. Area of Interest: {shapefile}
 3. Date Range of Fire Events: {event_date1} - {event_date2}
 4. Authors: Jennifer K. Balch, Lise A. St. Denis, Adam L. Mahood, Nathan P.  Mietkiewicz, Travis Williams, Joe McGlinchy, Maxwell C. Cook, Estelle J. Lindrooth, Erick A. Verleye.
@@ -49,12 +49,12 @@ SHARING/ACCESS INFORMATION
 3. Links to other publicly accessible locations of the data: None
 4. Recommended citations for the data: 
 
-Mahood, A.L., Williams, T., Hofford, N, Balch, J.K., St Denis, L.A., et al. 'Fire perimeter datasets for every country from 2001-2025, created with FIREDpy 2.0'. Forthcoming
+Mahood, A.L., Williams, T., Hofford, N, Balch, J.K., St Denis, L.A., et al. 'Fire perimeter datasets for every country from 2001-2025, created with FIREDpy 2.1'. Forthcoming
 
 Balch, J.K.; St. Denis, L.A.; Mahood, A.L.; Mietkiewicz, N.P.; Williams, T.M.; McGlinchy, J.; Cook, M.C. FIRED (Fire Events Delineation): An Open, Flexible Algorithm and Database of US Fire Events Derived from the MODIS Burned Area Product (2001–2019). Remote Sens. 2020, 12, 3498. https://doi.org/10.3390/rs12213498
 
 Mahood, A.L., Lindrooth, E.J., Cook, M.C., Balch, J.K., 2022. 'Country-level fire perimeter datasets (2001–2021)'. Sci Data 9, 458. https://doi.org/10.1038/s41597-022-01572-3
-
+         
 -------------------
 DATA & FILE OVERVIEW
 -------------------

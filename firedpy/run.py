@@ -146,7 +146,27 @@ def fired(
     # Setup logging for this output directory
     project_directory = Path(project_directory).expanduser().absolute()
     run_name = f"fired_{project_name}" if project_name else None
-    init_logger(project_directory=project_directory, run_name=run_name)
+
+    # Build an AOI label for filenames: shapefile > country > tiles
+    if shape_file:
+        aoi_label = Path(shape_file).stem.lower().replace(" ", "_")
+    elif country:
+        aoi_label = country.lower().replace(" ", "_")
+    elif tiles:
+        raw = tiles if isinstance(tiles, str) else " ".join(tiles)
+        aoi_label = raw.replace("'", "").replace(" ", "_")
+    else:
+        aoi_label = None
+
+    init_logger(
+        project_directory=project_directory,
+        run_name=run_name,
+        aoi=aoi_label,
+        start_year=start_year,
+        end_year=end_year,
+        spatial_param=spatial_param,
+        temporal_param=temporal_param,
+    )
     logger.info(
         f"Running firedpy for years {start_year} to {end_year} on MODIS "
         f"tiles: {tiles}."
@@ -237,12 +257,15 @@ def fired(
         models.save_data(
             gdf=gdf,
             project_name=project_name,
+            aoi=aoi_label,
             project_directory=project_directory,
             start_year=start_year,
             end_year=end_year,
             daily=daily,
             shape_type=shape_type,
-            csv_type=csv_type
+            csv_type=csv_type,
+            spatial_param=spatial_param,
+            temporal_param=temporal_param,
         )
 
         # Done with processing, collect time and memory usage
@@ -272,6 +295,7 @@ def fired(
             end_year=end_year,
             run_name=run_name,
             country=country,
+            aoi=aoi_label,
         )
 
     # Remove intermediate files if requested
