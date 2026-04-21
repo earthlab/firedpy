@@ -1096,9 +1096,12 @@ class ModelBuilder(Base):
     def files(self):
         """Return list of NC files for given tiles and years.
 
-        Uses _find_covering_nc so that a cached NC with a wider year range
-        (e.g. 2000-2025) is reused when a narrower range (e.g. 2001-2003)
-        is requested, avoiding unnecessary rebuilds.
+        Uses _find_covering_nc (year-level comparison) to locate the best
+        cached NC for each tile.  NC filenames now encode the actual month–year
+        range of the HDF data they were built from (e.g.
+        ``h18v02_2000-01_2026-03.nc``), but the model only needs to know the
+        requested year range — _find_covering_nc handles both the legacy
+        year-only format and the new YYYY-MM format transparently.
         """
         files = [
             self._find_covering_nc(t, self.start_year, self.end_year)
