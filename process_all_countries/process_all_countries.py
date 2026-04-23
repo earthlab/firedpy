@@ -10,6 +10,29 @@ from firedpy.run import fired
 
 PARAMETER_FPATH = DATA_DIR.joinpath("parameters_for_individual_countries.csv")
 HOME = Path(__file__).parent.absolute()
+SLURM_TEMPLATE = (
+"""#!/bin/bash
+
+#SBATCH --account=PLACEHOLDER
+#SBATCH --time=1:00:00
+#SBATCH -o PLACEHOLDER.o
+#SBATCH -e PLACEHOLDER.e
+#SBATCH --job-name=<PLACEHOLDER>
+#SBATCH --nodes=1
+#SBATCH --mail-user=PLACEHOLDER
+#SBATCH --mem=79000
+
+echo Running on: $HOSTNAME, Machine Type: $MACHTYPE
+echo CPU: $(cat /proc/cpuinfo | grep "model name" -m 1 | cut -d:  -f2)
+echo RAM: $(free -h | grep  "Mem:" | cut -c15-21)
+
+source ~/.bashrc
+module load conda
+conda activate /path/to/env/
+
+python script.py
+"""
+)
 
 
 def main():
@@ -28,7 +51,7 @@ def main():
         country = row['country_name']
         sparam = row["spatial"]
         tparam = row["temporal"]
-        directory = HOME.joinpath(f"all") # have them all in a common directory so we don't download the same thing twice
+        directory = HOME.joinpath("all")  # have them all in a common directory so we don't download the same thing twice
         if country not in processed and country not in unprocessable:
             print(f"Processing {country}..")
             try:
