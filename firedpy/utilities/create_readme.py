@@ -1,11 +1,45 @@
+import calendar
 import logging
 import os
+import re
 
 from pathlib import Path
 
 from firedpy import DATA_DIR
 
 logger = logging.getLogger(__name__)
+
+
+def _parse_modis_date_range(nc_files):
+    """Return (modis_date1, modis_date2) human-readable strings from NC paths.
+
+    Each NC filename is expected to follow the month-aware naming convention:
+    ``{tile}_{YYYY}-{MM}_{YYYY}-{MM}.nc`` (e.g. ``h18v02_2000-01_2026-03.nc``).
+
+    Across all supplied NC files the function takes the earliest start and the
+    latest end so that the reported range spans the full set of tiles.
+
+    Returns a pair of formatted strings like ``"January 2000"`` and
+    ``"March 2026"``, or ``None, None`` if no filenames match the pattern.
+    """
+    pat = re.compile(r"_(\d{4})-(\d{2})_(\d{4})-(\d{2})\.nc$")
+    starts, ends = [], []
+    for nc in nc_files:
+        m = pat.search(str(nc))
+        if m:
+            sy, sm, ey, em = int(m.group(1)), int(m.group(2)), \
+                             int(m.group(3)), int(m.group(4))
+            starts.append((sy, sm))
+            ends.append((ey, em))
+
+    if not starts:
+        return None, None
+
+    min_sy, min_sm = min(starts)
+    max_ey, max_em = max(ends)
+    date1 = f"{calendar.month_name[min_sm]} {min_sy}"
+    date2 = f"{calendar.month_name[max_em]} {max_ey}"
+    return date1, date2
 
 
 SUMMARY_TEMPLATE = DATA_DIR.joinpath("SUMMARY_TEMPLATE.txt")
@@ -87,7 +121,7 @@ def replace_values(parameters, line):
 def make_read_me(gdf, project_directory, tiles, spatial_param,
                  temporal_param, shapefile, runtime, n_cores,
                  start_year, end_year, run_name=None, country=None,
-                 peak_memory=None, aoi=None):
+                 peak_memory=None, aoi=None, nc_files=None):
     """Write a summary file describing a firedpy run.
 
     Parameters
@@ -120,20 +154,31 @@ def make_read_me(gdf, project_directory, tiles, spatial_param,
     country : str | None
         Country name used as the study area, if provided. Defaults to None.
     aoi: str | None
-        Normalised area-of-interest label (e.g. country name, shapefile, tile), 
+        Normalised area-of-interest label (e.g. country name, shapefile, tile),
         included in the readme filename.
     peak_memory : float
         The maximum memory usage reached during the firedpy run. Defaults to
         None, no summary written for this parameter.
+    nc_files : list[str | pathlib.Path] | None
+        Paths to the NetCDF cache files used in this run.  When supplied, the
+        MODIS burned-area product date range is parsed from their filenames
+        (``{tile}_{YYYY}-{MM}_{YYYY}-{MM}.nc``) and written to the abstract.
+        Falls back to the fire-event date range when not provided or when the
+        filenames do not match the expected pattern.
     """
-    # Infer the first and last date from the dataframe
+    # Infer the first and last fire-event date from the dataframe
     date1 = gdf["date"].min()
     date2 = gdf["date"].max()
     event_date1 = date1.strftime("%B %Y")
     event_date2 = date2.strftime("%B %Y")
 
+    # MODIS burned-area product date range from NC filenames
+    modis_date1, modis_date2 = _parse_modis_date_range(nc_files or [])
+    if modis_date1 is None:
+        modis_date1, modis_date2 = event_date1, event_date2
+
     # Build a human-readable area-of-interest label:
-    #   custom shapefile stem > country name > tile IDs
+    # custom shapefile stem > country name > tile IDs
     if shapefile:
         aoi_label = Path(shapefile).stem
     elif country:
@@ -164,6 +209,8 @@ def make_read_me(gdf, project_directory, tiles, spatial_param,
     parameters = {
         "{event_date1}": event_date1,
         "{event_date2}": event_date2,
+        "{modis_date1}": modis_date1,
+        "{modis_date2}": modis_date2,
         "{n_cores}": n_cores,
         "{peak_memory}": peak_memory,
         "{run_name}": run_name,

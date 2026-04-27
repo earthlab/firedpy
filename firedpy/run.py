@@ -296,6 +296,7 @@ def fired(
             run_name=run_name,
             country=country,
             aoi=aoi_label,
+            nc_files=models.files,
         )
 
     # Remove intermediate files if requested

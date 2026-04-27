@@ -1,9 +1,1 @@
-aland
-albania
-algeria
-andorra
-austria
-belarus
-belgium
-bosnia_and_herzegovina
-bulgaria
+spain
