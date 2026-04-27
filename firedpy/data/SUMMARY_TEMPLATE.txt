@@ -2,7 +2,7 @@
 ABSTRACT
 --------
 
-This is a fire event delineation (FIRED) product for MODIS grid tiles {tile_string} from {event_date1} to {event_date2}. 
+This is a fire event delineation (FIRED) product for MODIS grid tiles {tile_string} covering the MODIS MCD64A1 burned area product from {modis_date1} to {modis_date2}. 
 It was derived from the MODIS MCD64A1 burned area product (see https://lpdaac.usgs.gov/products/mcd64a1v061/ for more details). 
 The MCD64A1 product is a monthly raster grid of estimated burned dates starting in November of 2000. 
 Firedpy (https://github.com/earthlab/firedpy) is an algorithm that aquires the MCD64A1 files for an area of interest, and then converts burn detections into fire events by stacking the entire time series into a spatial-temporal data cube, then uses an algorithm to assign event identification numbers to pixels that fit into a 3-dimensional spatial temporal window defined by parameters set by the user. 
