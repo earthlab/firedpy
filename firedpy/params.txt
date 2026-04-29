@@ -1,5 +1,5 @@
 out_dir,Where would you like the output for this run saved?,str,output,none
-full_csv,Enter (true y yes) if you want a full csv. Enter (false n no) if you want a raw csv,bool,True,none
+csv_type,CSV output type. Enter 'full' for all attributes, 'events' for summary columns only (x y id ig_date last_date), or 'none' to skip CSV output,str,none,none
 tile_choice,"Would you like the fired product on a) continent b) country c) US state or d) specific MODIS tiles?",str,c,none
 tile_name,f,str,vermont,none
 eco_region_type,Please enter the eco_region type,str,world,none

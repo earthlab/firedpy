@@ -149,6 +149,11 @@ def _prompts(ctx, _, interactive):
         for key, default in ctx.params.items():
             source = click.get_current_context().get_parameter_source(key)
             if source not in USER_SOURCES:
+                # Skip eco_region_level when world ecoregions are selected
+                if (key == "eco_region_level"
+                        and ctx.params.get("eco_region_type") == "world"):
+                    continue
+
                 # Clean up the for-CLI help descriptions
                 prompt = CLI_HELP[key].replace("\n", "")
                 prompt = re.sub(" + ", " ", prompt).strip()
@@ -242,16 +247,16 @@ def _prompts(ctx, _, interactive):
     help=CLI_HELP["shape_type"]
 )
 @click.option(
-    "-el", "--eco_region_level",
-    default=1,
-    is_eager=True,
-    help=CLI_HELP["eco_region_level"]
-)
-@click.option(
     "-et", "--eco_region_type",
     default="na",
     is_eager=True,
     help=CLI_HELP["eco_region_type"]
+)
+@click.option(
+    "-el", "--eco_region_level",
+    default=1,
+    is_eager=True,
+    help=CLI_HELP["eco_region_level"]
 )
 @click.option(
     "-lt", "--land_cover_type",
@@ -260,10 +265,11 @@ def _prompts(ctx, _, interactive):
     help=CLI_HELP["land_cover_type"]
 )
 @click.option(
-    "-f", "--full_csv",
-    is_flag=True,
+    "-csv", "--csv_type",
+    default="none",
+    type=click.Choice(["full", "events", "none"], case_sensitive=False),
     is_eager=True,
-    help=CLI_HELP["full_csv"]
+    help=CLI_HELP["csv_type"]
 )
 @click.option(
     "-nc", "--n_cores",

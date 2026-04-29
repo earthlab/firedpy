@@ -20,19 +20,45 @@ LOG_LEVELS = {
 }
 
 
-def init_logger(project_directory, log_level="INFO"):
+def init_logger(project_directory, run_name=None, aoi=None,
+                start_year=None, end_year=None,
+                spatial_param=None, temporal_param=None,
+                log_level="INFO"):
     """Initiate logging to a file for a given firedpy project directory.
 
     Parameters
     ----------
     project_directory : str | pathlib.PosixPath
         The output directory for the firedpy run.
+    run_name : str | None
+        A name identifying this run, used in the log filename. If None,
+        falls back to the project directory name.
+    aoi : str | None
+        Area-of-interest label (e.g. country name or shapefile
+        stem), included in the log filename.
+    start_year : int | None
+        The first year of the run, included in the log filename.
+    end_year : int | None
+        The last year of the run, included in the log filename.
+    spatial_param : int | None
+        Spatial parameter for the run, included in the log filename.
+    temporal_param : int | None
+        Temporal parameter for the run, included in the log filename.
     log_level : str
         Level of logging detail to write to the log file.
     """
-    # Create a log file name
-    fname = f"firedpy_{os.getppid()}.log"
-    fpath = Path(project_directory).joinpath(f"logs/{fname}").absolute()
+    # Build a descriptive log file name tied to this run
+    if not run_name:
+        run_name = Path(project_directory).name
+    pid = os.getpid()
+    if aoi and start_year and end_year and spatial_param and temporal_param:
+        sp = int(spatial_param)
+        tp = int(temporal_param)
+        fname = (f"{run_name}_{aoi}_{start_year}-{end_year}"
+                 f"_s{sp:02d}_t{tp:02d}_{pid}.log")
+    else:
+        fname = f"{run_name}_{pid}.log"
+    fpath = Path(project_directory).joinpath("outputs", fname).absolute()
     fpath = fpath.expanduser()
     fpath.parent.mkdir(exist_ok=True, parents=True)
 

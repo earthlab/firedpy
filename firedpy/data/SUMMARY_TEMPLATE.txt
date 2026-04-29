@@ -2,28 +2,45 @@
 ABSTRACT
 --------
 
-This is a fire event delineation (FIRED) product for MODIS grid tiles {run_name} from {modis_date1} to {modis_date2}. 
+This is a fire event delineation (FIRED) product for MODIS grid tiles {tile_string} covering the MODIS MCD64A1 burned area product from {modis_date1} to {modis_date2}. 
 It was derived from the MODIS MCD64A1 burned area product (see https://lpdaac.usgs.gov/products/mcd64a1v061/ for more details). 
 The MCD64A1 product is a monthly raster grid of estimated burned dates starting in November of 2000. 
+
 Firedpy (https://github.com/earthlab/firedpy) is an algorithm that aquires the MCD64A1 files for an area of interest, and then converts burn detections into fire events by stacking the entire time series into a spatial-temporal data cube, then uses an algorithm to assign event identification numbers to pixels that fit into a 3-dimensional spatial temporal window defined by parameters set by the user. 
 This particular dataset was created using a spatial parameter of {spatial_param} pixels and {temporal_param} days.
+Fire events are derived from the MODIS MCD64A1 burned area product (see https://lpdaac.usgs.gov/products/mcd64a1v061/ for more details). 
+The MCD64A1 product is a monthly raster grid of estimated burned dates starting in November of 2000.
+Land cover for each event is from the MCD12Q1 land cover product (Sulla-Menashe et al 2019).
+Koppen-Geiger climate classification for each event is from Beck et al (2018).
+Ecoregions are from the World Wildlife Fund for Nature (WWF) ecoregions (Olson et al 2021), or from the Comission for Environmental Cooperation's North American ecoregions (CEC 1997).
 
 All products include an event-level polygon product. The event-level product has only single polygons for each entire event.
 If daily polygons are included, the event identification numbers are the same for both daily-level and event-level files, but the daily product has separate polygons for each date per event. 
-See the associated papers for more details on the methods and more:
+See the associated papers for more information, including details on the methods:
 
 Balch, J.K.; St. Denis, L.A.; Mahood, A.L.; Mietkiewicz, N.P.; Williams, T.M.; McGlinchy, J.; Cook, M.C. 2020. 'FIRED (Fire Events Delineation): An Open, Flexible Algorithm and Database of US Fire Events Derived from the MODIS Burned Area Product'. (2001–2019). Remote Sensing, 12, 3498. https://doi.org/10.3390/rs12213498 
 
+Beck, H.E. et al. (2018) ‘Present and future Köppen-Geiger climate classification maps at 1-km resolution’, Scientific Data, 5(1), p. 180214. Available at: https://doi.org/10.1038/sdata.2018.214.
+
+Comission for Environmental Cooperation (CEC). 1997. ECOLOGICAL REGIONS OF NORTH AMERICA: Toward a Common Perspective. Available at: https://www.cec.org/files/documents/publications/1701-ecological-regions-north-america-toward-common-perspective-en.pdf
+
 Mahood, A.L., Lindrooth, E.J., Cook, M.C., Balch, J.K., 2022. 'Country-level fire perimeter datasets (2001–2021)'. Sci Data 9, 458. https://doi.org/10.1038/s41597-022-01572-3
+
+Mahood, A.L., Williams, T., Hofford, N, Balch, J.K., St Denis, L.A., et al. 'Fire perimeter datasets for every country from 2001-2025, created with FIREDpy 2.0'. Forthcoming
+
+Olson, D.M., Dinerstein, E., Wikramanayake, E.D., Burgess, N.D., Powell, G.V.N., Underwood, E.C., D’Amico, J.A., Itoua, I., Strand, H.E. & Morrison, J.C. (2001) Terrestrial ecoregions of the world: a new map of life on earth. BioScience 51: 933–938. 
+
+Sulla-Menashe, D., Gray, J. M., Abercrombie, S. P., & Friedl, M. A. (2019). Hierarchical mapping of annual global land cover 2001 to present: The MODIS Collection 6 Land Cover product. Remote sensing of environment, 222, 183-194.
 
 -------------------
 GENERAL INFORMATION
 -------------------
 
-1. Title of Dataset:  {run_name} 
-2. Authors: Jennifer K. Balch, Lise A. St. Denis, Adam L. Mahood, Nathan P.  Mietkiewicz, Travis Williams, Joe McGlinchy, Maxwell C. Cook, Estelle J. Lindrooth, Erick A. Verleye.
-3. Contact information: jennifer.balch@colorado.edu; adam.mahood@colorado.edu
-4. Date of data collection:{event_date1} - {event_date2}
+1. Title of Dataset: {run_name} 
+2. Area of Interest: {shapefile}
+3. Date Range of Fire Events: {event_date1} - {event_date2}
+4. Authors: Jennifer K. Balch, Lise A. St. Denis, Adam L. Mahood, Nathan P.  Mietkiewicz, Travis Williams, Joe McGlinchy, Maxwell C. Cook, Estelle J. Lindrooth, Erick A. Verleye.
+5. Contact information: jennifer.balch@colorado.edu; adam.mahood@colorado.edu
 
 --------------------------
 SHARING/ACCESS INFORMATION
@@ -32,9 +49,13 @@ SHARING/ACCESS INFORMATION
 1. Licenses/restrictions placed on the data: MIT
 2. Links to publications that cite or use the data: TBD
 3. Links to other publicly accessible locations of the data: None
-4. Recommended citation for the data: 
+4. Recommended citations for the data: 
+
+Mahood, A.L., Williams, T., Hofford, N, Balch, J.K., St Denis, L.A., et al. 'Fire perimeter datasets for every country from 2001-2025, created with FIREDpy 2.1'. Forthcoming
 
 Balch, J.K.; St. Denis, L.A.; Mahood, A.L.; Mietkiewicz, N.P.; Williams, T.M.; McGlinchy, J.; Cook, M.C. FIRED (Fire Events Delineation): An Open, Flexible Algorithm and Database of US Fire Events Derived from the MODIS Burned Area Product (2001–2019). Remote Sens. 2020, 12, 3498. https://doi.org/10.3390/rs12213498
+
+Mahood, A.L., Lindrooth, E.J., Cook, M.C., Balch, J.K., 2022. 'Country-level fire perimeter datasets (2001–2021)'. Sci Data 9, 458. https://doi.org/10.1038/s41597-022-01572-3
          
 -------------------
 DATA & FILE OVERVIEW
@@ -50,6 +71,8 @@ METHODOLOGICAL INFORMATION
  1. Spatial window: {spatial_param}
  2. Temporal window: {temporal_param}
  3. MODIS Tiles IDs: {tile_string}
+ 4. Area of interest: {shapefile}
+ 5. Date Range of Fire Events: {event_date1} - {event_date2}
 
 See Balch et al 2020 for complete methods. DOI: https://doi.org/10.3390/rs12213498
 
@@ -57,7 +80,7 @@ See Balch et al 2020 for complete methods. DOI: https://doi.org/10.3390/rs122134
 DATA INFORMATION:
 --------------------------------------------------------------------
 
-1. Number of variables: 24
+1. Number of variables: 33
 
 2. Projection information (PROJ4 string): +proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a=6371007.181 +b=6371007.181 +units=m +no_defs
 
@@ -122,20 +145,20 @@ DATA INFORMATION:
         S. Name: mx_grw_dte  
             i. Description: date of maximum  
 
-        T. Name: lc_code  
-            i. Description: Numeric code for the land_cover type extracted from the MODIS land_cover product for the year preceding the fire.  
+        T. Name: lc_mode  
+            i. Description: Numeric code for the most common (modal) land cover type across all pixels of the fire event, from the MODIS MCD12Q1 product for the year preceding the fire.  
 
-        U. Name: lc_mode  
-            i. Description: Numeric code for the land_cover type extracted from the MODIS land_cover product for the year preceding the fire.  
+        U. Name: lc_codes  
+            i. Description: Sorted comma-separated string of all unique land cover codes the fire touched. In event-level data this covers the entire event; in daily data this covers only the pixels within that day's perimeter (e.g. "1" or "1,5,7").  
 
         V. Name: lc_name  
-            i. Description: Character string of the land_cover type from the year before the fire.  
+            i. Description: Character string of the modal land cover type from the year before the fire.  
 
         W. Name: lc_desc  
-            i. Description: Character string description of the land_cover type from the year before the fire.  
+            i. Description: Character string description of the modal land cover type from the year before the fire.  
 
         X. Name: lc_type  
-            i. Description: Which land_cover classification type was used from the MCD12Q1 product? Default is IGBP global vegetation classification scheme  
+            i. Description: Which land cover classification scheme was used from the MCD12Q1 product. Default is IGBP global vegetation classification scheme.  
 
         Y. Name: eco_mode 
             i. Description: Modal ecoregion code 
@@ -146,14 +169,23 @@ DATA INFORMATION:
         AA. Name: eco_name 
             i. Description: Character string of the ecoregion type where the event occurred.  
 
-        BB. Name: ig_utm_x 
-            i. Description: estimated ignition x coordinate  
+        BB. Name: ig_event_x 
+            i. Description: X coordinate (MODIS sinusoidal) of the first detected pixel of the fire event, consistent across all daily records of the same event.
 
-        CC. Name: ig_utm_y 
-            i. Description: estimated ignition y coordinate  
+        CC. Name: ig_event_y 
+            i. Description: Y coordinate (MODIS sinusoidal) of the first detected pixel of the fire event, consistent across all daily records of the same event.
 
         DD. Name: tot_perim  
             i. Description: Total perimeter of the fire event. 
+
+        EE. Name: kg_mode
+            i. Description: Numeric code for the most common (modal) Köppen-Geiger climate zone across all pixels of the fire event, from the Beck et al. (1991-2020) classification raster.
+
+        FF. Name: kg_codes
+            i. Description: Sorted comma-separated string of all unique Köppen-Geiger zone codes the fire touched. In event-level data this covers the entire event; in daily data this covers only the pixels within that day's perimeter (e.g. "26" or "26,29").
+
+        GG. Name: kg_desc
+            i. Description: Short Köppen-Geiger label string for the modal zone (kg_mode), e.g. "Dfb" or "ET".
 
 
 -------------------

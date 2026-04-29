@@ -16,7 +16,7 @@ import rasterio
 import numpy as np
 import xarray as xr
 
-from pyproj import CRS, Proj, transform
+from pyproj import CRS, Proj, Transformer, transform
 from rasterio.features import rasterize
 from rasterio.transform import from_bounds
 from scipy.spatial import cKDTree
@@ -44,11 +44,11 @@ def generate_path(project_directory, base_filename, shape_type):
     shape_type : str
         Build shapefiles from the event data frame. Specify either "shp",
         "gpkg", or both. Shapefiles of both daily progression and overall
-        event perimeters will be written to the 'outputs/shapefiles' folder of
-        the chosen project directory. These will be saved in the specified
+        event perimeters will be written to the 'outputs/' folder of the
+        chosen project directory. These will be saved in the specified
         geopackage format (.gpkg), ERSI Shapefile format (.shp), or save them
         in both formats using the file basename of the fire event data frame
-        (e.g. 'modis_events_daily.gpkg' and 'modis_events.gpkg').
+        (e.g. 'fired_events_daily.gpkg' and 'fired_events.gpkg').
 
     Returns
     -------
@@ -70,7 +70,7 @@ def generate_path(project_directory, base_filename, shape_type):
     for ext in file_ext:
         if ext:
             fname = f"{base_filename}{ext}"
-            path = proj_dir.joinpath("outputs", "shapefiles", fname)
+            path = proj_dir.joinpath("outputs", fname)
         else:
             path = None
         paths.append(path)
@@ -331,7 +331,7 @@ class EventGrid(Base):
             self.input_array = input_array
 
         else:
-            msg = "Must input either nc_fpath or input_array parameter"
+            msg = "Must input either nc_file_path or input_array parameter"
             raise ValueError(msg)
 
         del self.n_cores
@@ -371,7 +371,7 @@ class EventGrid(Base):
         numpy.ndarray : A numpy array.
         """
         # Read in the netcdf data array
-        with xr.open_dataset(nc_fpath, chunks="auto") as burns:
+        with xr.open_dataset(nc_fpath) as burns:
             burns = burns.sel(time=burns.time.dt.year.isin(self.years))
             self._coordinates = {}
             if self.shape_file:
@@ -379,9 +379,51 @@ class EventGrid(Base):
             for dim in ["y", "x", "time"]:
                 coords = np.array(burns.coords[dim].values)
                 self._coordinates[dim] = coords
+        return burns.value.values
 
-        # Trying this sparse array method to avoid memory spikes
-        array = burns.value.values
+    def mask_array(self, array, shape_file):
+        """Mask an xarray dataset with a shapefile.
+
+        Parameters
+        ----------
+        array : xarray.core.dataset.Dataset
+            An xarray dataset.
+        shape_file : str | pathlib.PosixPath
+            Path to a shapefile to use to mask the array with nans.
+
+        Returns
+        -------
+        xarray.core.dataset.Dataset : A masked xarray dataset.
+        """
+        # Check that the coordinate reference systems match
+        mask = gpd.read_file(shape_file)
+        target_crs = CRS(array.crs.spatial_ref).to_wkt()
+        if mask.crs != target_crs:
+            mask = mask.to_crs(target_crs)
+
+        # Buffer mask to ensure fires immediately outside border are captured
+        mask["geometry"] = mask["geometry"].buffer(100_000)
+
+        # Get the geometries used to burn values to the array
+        shapes = ((geom, 1) for geom in mask["geometry"])
+
+        # Get the target array geometry
+        ny, nx = array.sizes["y"], array.sizes["x"]
+        xmin, xmax = array.x.values[0], array.x.values[-1]
+        ymax, ymin = array.y.values[0], array.y.values[-1]
+        transform = from_bounds(xmin, ymin, xmax, ymax, nx, ny)
+
+        # Rasterize mask
+        mask_array = rasterize(
+            shapes=shapes,
+            out_shape=(ny, nx),
+            transform=transform,
+            fill=0,
+            all_touched=False
+        )
+
+        # mask original array
+        array["value"] *= mask_array
 
         return array
 
@@ -449,34 +491,25 @@ class EventGrid(Base):
         list[firedpy.model_classes.EventPerimeter] : A list of fire event
             perimeter objects.
         """
-        # Find coordinate pairs of burn detections
         available_pairs = self._get_available_cells()
-
-        # Get dimensions for this tile's data array
         nz, ny, nx = self.input_array.shape
         dims = [ny, nx]
-
-        time_index_buffer = max(1, self.temporal_param // 30)
-
-        # Build containers for loop below
         perimeters = RandomAccessSet()
         identified_points = {}
+        time_index_buffer = max(1, self.temporal_param // 30)
 
         for pair in available_pairs:
             y, x = pair
 
-            # Define the spatial window
-            window = self._get_spatial_window(y, x, dims)
-            top, bottom, left, right, center, origin, is_edge = window
+            top, bottom, left, right, center, origin, is_edge = \
+                self._get_spatial_window(y, x, dims)
+
             center_y, center_x = center
             window = self.input_array[:, top:bottom + 1, left:right + 1]
-
-            # Find events at the center of this window
             center_burn = window[:, center_y, center_x]
             valid_center_burn_indices = np.where(center_burn > 0)[0]
             valid_center_burn_values = center_burn[valid_center_burn_indices]
 
-            # For each of these, seek burn detections within the event params
             for i, burn_value in enumerate(valid_center_burn_values):
                 overlapping_event_ids = RandomAccessSet()
                 events_to_remove = set()
@@ -574,52 +607,6 @@ class EventGrid(Base):
                     perimeters.remove(event)
 
         return perimeters.list
-
-    def mask_array(self, array, shape_file):
-        """Mask an xarray dataset with a shapefile.
-
-        Parameters
-        ----------
-        array : xarray.core.dataset.Dataset
-            An xarray dataset.
-        shape_file : str | pathlib.PosixPath
-            Path to a shapefile to use to mask the array with nans.
-
-        Returns
-        -------
-        xarray.core.dataset.Dataset : A masked xarray dataset.
-        """
-        # Check that the coordinate reference systems match
-        mask = gpd.read_file(shape_file)
-        target_crs = CRS(array.crs.spatial_ref).to_wkt()
-        if mask.crs != target_crs:
-            mask = mask.to_crs(target_crs)
-
-        # Buffer mask to ensure fires immediately outside border are captured
-        mask["geometry"] = mask["geometry"].buffer(100_000)
-
-        # Get the geometries used to burn values to the array
-        shapes = ((geom, 1) for geom in mask["geometry"])
-
-        # Get the target array geometry
-        ny, nx = array.sizes["y"], array.sizes["x"]
-        xmin, xmax = array.x.values[0], array.x.values[-1]
-        ymax, ymin = array.y.values[0], array.y.values[-1]
-        transform = from_bounds(xmin, ymin, xmax, ymax, nx, ny)
-
-        # Rasterize mask
-        mask_array = rasterize(
-            shapes=shapes,
-            out_shape=(ny, nx),
-            transform=transform,
-            fill=0,
-            all_touched=False
-        )
-
-        # mask original array
-        array["value"] *= mask_array
-
-        return array
 
 
 class ModelBuilder(Base):
@@ -733,8 +720,13 @@ class ModelBuilder(Base):
 
         logger.info("Adding fire attributes ...")
         gdf['pixels'] = gdf.groupby(['id', 'date'])['id'].transform('count')
-        gdf['ig_utm_x'] = gdf.groupby(['id', 'date'])['x'].nth(0)
-        gdf['ig_utm_y'] = gdf.groupby(['id', 'date'])['y'].nth(0)
+
+        # Ignition location: first detected pixel of each event, broadcast to
+        # all rows of that event so daily records share one consistent location
+        ig_coords = gdf.groupby('id')[['x', 'y']].first()
+        gdf['ig_event_x'] = gdf['id'].map(ig_coords['x'])
+        gdf['ig_event_y'] = gdf['id'].map(ig_coords['y'])
+
         group = gdf.groupby('id')
         gdf['date'] = gdf['date'].apply(
             lambda x: datetime.strptime(x, '%Y-%m-%d')
@@ -782,8 +774,8 @@ class ModelBuilder(Base):
                    'pixels', 'tot_pix', 'dy_ar_km2', 'tot_ar_km2',
                    'fsr_px_dy', 'fsr_km2_dy', 'mx_grw_px', 'mn_grw_px',
                    'mu_grw_px', 'mx_grw_km2', 'mn_grw_km2', 'mu_grw_km2',
-                   'mx_grw_dte', 'x', 'y', 'geometry', 'ig_utm_x',
-                   'ig_utm_y']]
+                   'mx_grw_dte', 'x', 'y', 'geometry', 'ig_event_x',
+                   'ig_event_y']]
 
         gdf = gdf.reset_index(drop=True)
 
@@ -795,12 +787,19 @@ class ModelBuilder(Base):
     def add_kg_attributes(self, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         """Assign Köppen-Geiger climate zones to events with a raster file.
 
+        Mirrors the land cover attribute pattern:
+          - kg_codes     : sorted comma-separated string of all unique KG zone
+                           codes the event overlaps (event-level).
+          - kg_day_codes : same but scoped to each day's perimeter (daily-level).
+          - kg_mode      : most common (modal) KG zone code for the event.
+          - kg_desc      : short KG label string for kg_mode (e.g. "Dfb").
+
         Args:
-            gdf: GeoDataFrame containing 'x', 'y', and 'id'.
-            tif_path: File path to a Köppen-Geiger .tif raster.
+            gdf: GeoDataFrame containing 'x', 'y', 'id', and optionally 'date'.
 
         Returns:
-            GeoDataFrame with kg_zone, kg_mode, and kg_desc columns added.
+            GeoDataFrame with kg_codes, kg_day_codes, kg_mode, and kg_desc
+            columns added.
         """
         tif_path = DATA_DIR.joinpath(
             'koppen_geiger_tif', '1991_2020', 'koppen_geiger_0p00833333.tif'
@@ -814,26 +813,56 @@ class ModelBuilder(Base):
             26: "Dfb", 27: "Dfc", 28: "Dfd", 29: "ET", 30: "EF",
         }
 
+        def _to_kg_codes_str(x):
+            unique = sorted(int(c) for c in x.dropna().unique())
+            if not unique:
+                return None
+            return str(unique[0]) if len(unique) == 1 else ",".join(
+                str(c) for c in unique
+            )
+
         sgdf = gdf.copy()
 
         with rasterio.open(tif_path) as src:
-            # Reproject a temporary copy for coordinate sampling only, so that
-            # sgdf retains its original CRS throughout
-            tmp = sgdf.to_crs(src.crs) if sgdf.crs != src.crs else sgdf
+            # Transform x, y pixel coordinates from the GDF's CRS to the
+            # raster CRS (KG raster is WGS84; fire data is MODIS sinusoidal).
+            if sgdf.crs != src.crs:
+                transformer = Transformer.from_crs(
+                    sgdf.crs, src.crs, always_xy=True
+                )
+                xs, ys = transformer.transform(
+                    sgdf["x"].values, sgdf["y"].values
+                )
+            else:
+                xs, ys = sgdf["x"].values, sgdf["y"].values
 
-            # Extract centroid coordinates from geometry (handles points,
-            # polygons, multipolygons)
-            coords = [
-                (geom.centroid.x, geom.centroid.y) for geom in tmp.geometry
-            ]
-
+            coords = list(zip(xs, ys))
             sampled_vals = list(src.sample(coords))
-            sgdf['kg_zone'] = [
+            sgdf["_kg_raw"] = [
                 v[0] if v[0] != src.nodata else np.nan for v in sampled_vals
             ]
 
-        sgdf['kg_mode'] = sgdf.groupby('id')['kg_zone'].transform(self._mode)
-        sgdf['kg_desc'] = sgdf['kg_mode'].map(KG_LEGEND)
+        # Most common KG code across all pixels of the event
+        sgdf["kg_mode"] = sgdf.groupby("id")["_kg_raw"].transform(self._mode)
+
+        # All unique KG codes as a sorted comma-separated string (event-level)
+        sgdf["kg_codes"] = sgdf.groupby("id")["_kg_raw"].transform(
+            _to_kg_codes_str
+        )
+
+        # All unique KG codes per event-day (daily-level)
+        if "date" in sgdf.columns:
+            sgdf["kg_day_codes"] = (
+                sgdf.groupby(["id", "date"])["_kg_raw"]
+                .transform(_to_kg_codes_str)
+            )
+        else:
+            sgdf["kg_day_codes"] = None
+
+        # Short string label for the modal KG zone
+        sgdf["kg_desc"] = sgdf["kg_mode"].map(KG_LEGEND)
+
+        sgdf = sgdf.drop(columns=["_kg_raw"])
 
         return sgdf
 
@@ -1065,8 +1094,20 @@ class ModelBuilder(Base):
 
     @property
     def files(self):
-        """Return list of files for given tiles and years."""
-        files = [self._generate_local_nc_path(t) for t in self.tiles]
+        """Return list of NC files for given tiles and years.
+
+        Uses _find_covering_nc (year-level comparison) to locate the best
+        cached NC for each tile.  NC filenames now encode the actual month–year
+        range of the HDF data they were built from (e.g.
+        ``h18v02_2000-01_2026-03.nc``), but the model only needs to know the
+        requested year range — _find_covering_nc handles both the legacy
+        year-only format and the new YYYY-MM format transparently.
+        """
+        files = [
+            self._find_covering_nc(t, self.start_year, self.end_year)
+            or self._generate_local_nc_path(t, self.start_year, self.end_year)
+            for t in self.tiles
+        ]
         files = sorted(files)
         if not files:
             raise FileNotFoundError(
@@ -1075,14 +1116,18 @@ class ModelBuilder(Base):
             )
         return files
 
-    def get_output_paths(self, project_name, project_directory,
-                         start_year, end_year, shape_type):
+    def get_output_paths(self, project_name, aoi, project_directory,
+                         start_year, end_year, shape_type,
+                         spatial_param, temporal_param):
         """Get dictionary of all output paths for a firedpy run.
 
         Parameters
         ----------
         project_name : str | NoneType
             A name used to identify the output files of this project.
+        aoi : str | None
+            Normalised area-of-interest label included in filenames
+            (e.g. country name or shapefile stem).
         project_directory : str
             Project output directory path.
         start_year : int
@@ -1091,33 +1136,33 @@ class ModelBuilder(Base):
             The last year of fire events.
         shape_type : str
             Build shapefiles from the event data frame. Specify either "shp",
-            "gpkg", or both. Shapefiles of both daily progression and overall
-            event perimeters will be written to the 'outputs/shapefiles'
-            folder of the chosen project directory. These will be saved in the
-            specified geopackage format (.gpkg), ERSI Shapefile format (.shp),
-            or save them in both formats using the file basename of the fire
-            event data frame (e.g. 'modis_events_daily.gpkg' and
-            'modis_events.gpkg').
+            "gpkg", or both. Output files will be written directly to the
+            'outputs/' folder of the chosen project directory in the specified
+            geopackage format (.gpkg), ESRI Shapefile format (.shp), or both.
+        spatial_param : int
+            The spatial parameter used for this run, included in filenames.
+        temporal_param : int
+            The temporal parameter used for this run, included in filenames.
 
         Returns
         -------
         dict : Dictionary of paths for final firedpy outputs.
         """
         # Set base name
-        base_file_name = f"fired_{project_name}_{start_year}_to_{end_year}"
+        sp = int(spatial_param)
+        tp = int(temporal_param)
+        aoi_part = f"_{aoi}" if aoi else ""
+        base_file_name = (f"fired_{project_name}{aoi_part}"
+                          f"_{start_year}-{end_year}"
+                          f"_s{sp:02d}_t{tp:02d}")
 
-        # Set output directories
+        # Set and create output directory
         model_outputs_dir = Path(project_directory).joinpath("outputs")
-        shape_dir = model_outputs_dir.joinpath("shapefiles")
-        table_dir = model_outputs_dir.joinpath("tables")
-
-        # Make output directories
-        shape_dir.mkdir(parents=True, exist_ok=True)
-        table_dir.mkdir(exist_ok=True)
+        model_outputs_dir.mkdir(parents=True, exist_ok=True)
 
         # Event-level output paths
         event_base = f"{base_file_name}_events"
-        event_csv_path = table_dir.joinpath(f"{event_base}.csv")
+        event_csv_path = model_outputs_dir.joinpath(f"{event_base}.csv")
         event_shape_path, event_gpkg_path = generate_path(
             project_directory=project_directory,
             base_filename=f"{base_file_name}_events",
@@ -1126,7 +1171,7 @@ class ModelBuilder(Base):
 
         # Daily-level output paths
         daily_base = f"{base_file_name}_daily"
-        daily_csv_path = table_dir.joinpath(f"{daily_base}.csv")
+        daily_csv_path = model_outputs_dir.joinpath(f"{daily_base}.csv")
         daily_shape_path, daily_gpkg_path = generate_path(
             project_directory=project_directory,
             base_filename=daily_base,
@@ -1262,6 +1307,14 @@ class ModelBuilder(Base):
         """
         logger.info("Dissolving polygons...")
         gdfc = gdf.copy()
+        gdfc = gdfc.drop(
+            ["x", "y", "lc_code", "lc_codes", "kg_codes"],
+            axis=1, errors="ignore"
+        )
+        gdfc = gdfc.rename(columns={
+            "lc_day_codes": "lc_codes",
+            "kg_day_codes": "kg_codes",
+        })
         gdfc = self._create_did_column(gdfc, ["date", "id"])
         gdfd = gdfc.dissolve(by="did", as_index=False)
 
@@ -1283,7 +1336,11 @@ class ModelBuilder(Base):
         geopandas.geodataframe.GeoDataFrame : The processed geodataframe.
         """
         edf = gdf.copy()
-        edf = edf.drop(["pixels", "date", "event_day", "dy_ar_km2"], axis=1)
+        edf = edf.drop(
+            ["pixels", "date", "event_day", "dy_ar_km2", "x", "y",
+             "lc_code", "lc_day_codes", "kg_day_codes"],
+            axis=1, errors="ignore"
+        )
         if "did" in gdf.columns:
             edf = edf.drop(["did"])
         if "fid" in edf.columns:
@@ -1352,12 +1409,15 @@ class ModelBuilder(Base):
         self,
         gdf,
         project_name,
+        aoi,
         project_directory,
         start_year,
         end_year,
         daily,
         shape_type,
-        full_csv
+        csv_type,
+        spatial_param,
+        temporal_param,
     ):
         """Save event data to various output formats.
 
@@ -1367,6 +1427,9 @@ class ModelBuilder(Base):
             A fully processed firedpy event data frame.
         project_name : str | NoneType
             A name used to identify the output files of this project.
+        aoi : str | None
+            Normalised area-of-interest label included in filenames
+            (e.g. country name or shapefile stem).
         project_directory : str
             Project output directory path.
         start_year : int
@@ -1379,25 +1442,31 @@ class ModelBuilder(Base):
             polygons will be created, otherwise only the event level.
         shape_type : str
             Build shapefiles from the event data frame. Specify either "shp",
-            "gpkg", or both. Shapefiles of both daily progression and overall
-            event perimeters will be written to the 'outputs/shapefiles'
-            folder of the chosen project directory. These will be saved in the
-            specified geopackage format (.gpkg), ERSI Shapefile format (.shp),
-            or save them in both formats using the file basename of the fire
-            event data frame (e.g. 'modis_events_daily.gpkg' and
-            'modis_events.gpkg').
-        full_csv : bool
-            Write all attributes from input geodataframe to a CSV. Defaults to
-            False and includes only a subset of attributes: "x", "y", "id",
-            "ig_date", and "last_date".
+            "gpkg", or both. Output files are written directly to the
+            'outputs/' folder of the chosen project directory in the specified
+            geopackage format (.gpkg), ESRI Shapefile format (.shp), or both.
+        csv_type : str
+            Controls CSV output (case-insensitive). Options:
+                'full'   - export all attributes to outputs/
+                'events' - export summary columns only (x, y, id, ig_date,
+                           last_date) to outputs/
+                'none'   - no CSV written (default)
+        spatial_param : int
+            The spatial parameter used for this run, included in filenames.
+        temporal_param : int
+            The temporal parameter used for this run, included in filenames.
         """
+        csv_type = csv_type.lower() if csv_type else "none"
         # Get all the output file paths
         paths = self.get_output_paths(
             project_name=project_name,
+            aoi=aoi,
             project_directory=project_directory,
             start_year=start_year,
             end_year=end_year,
-            shape_type=shape_type
+            shape_type=shape_type,
+            spatial_param=spatial_param,
+            temporal_param=temporal_param,
         )
 
         # Process and write daily-level events to file if requested
@@ -1416,17 +1485,16 @@ class ModelBuilder(Base):
                 sdf = self.adjust_for_esri(ddf)
                 sdf.to_file(dst)
 
-            # CSVs
-            dst = paths["daily_csv_path"]
-            if full_csv:
-                logger.info(f"Writing full daily CSV file to {dst}")
-                df = ddf.copy()
-                del df["geometry"]
-                ddf.to_csv(dst, index=False)
-            else:
-                logger.info(f"Writing daily CSV file to {dst}")
-                df = ddf[["x", "y", "id", "ig_date", "last_date"]]
-                df.to_csv(dst, index=False)
+            if csv_type == "full":
+                dst = paths["daily_csv_path"]
+                logger.info(f"Writing full daily CSV to {dst}")
+                ddf.drop(columns="geometry").to_csv(dst, index=False)
+            elif csv_type == "events":
+                dst = paths["daily_csv_path"]
+                logger.info(f"Writing daily CSV to {dst}")
+                cols = ["ig_event_x", "ig_event_y", "id", "ig_date",
+                        "last_date"]
+                ddf[cols].to_csv(dst, index=False)
 
         # Process and write event-level events to file
         edf = self.process_event_data(gdf)
@@ -1442,37 +1510,13 @@ class ModelBuilder(Base):
             sdf = self.adjust_for_esri(edf)
             sdf.to_file(dst)
 
-        # CSV
-        dst = paths["event_csv_path"]
-        if full_csv:
-            logger.info(f"Writing full daily CSV file to {dst}")
-            del edf["geometry"]
-            edf.to_csv(dst, index=False)
-        else:
-            logger.info(f"Writing daily CSV file to {dst}")
-            df = edf[["x", "y", "id", "ig_date", "last_date"]]
-            df.to_csv(dst, index=False)
+        if csv_type == "full":
+            dst = paths["event_csv_path"]
+            logger.info(f"Writing full event CSV to {dst}")
+            edf.drop(columns="geometry").to_csv(dst, index=False)
+        elif csv_type == "events":
+            dst = paths["event_csv_path"]
+            logger.info(f"Writing event CSV to {dst}")
+            cols = ["ig_event_x", "ig_event_y", "id", "ig_date", "last_date"]
+            edf[cols].to_csv(dst, index=False)
 
-
-if __name__ == "__main__":
-    h5_fpath = Path("/home/travis/scratch/firedpy/conus_2020/rasters/burn_area/hdfs/h11v02/MCD64A1.A2020061.h23v02.061.2021309111315.hdf")
-    nc_fpath = Path("/home/travis/scratch/firedpy/conus_2020/rasters/burn_area/netcdfs/h11v02.nc")
-    project_directory = "/home/travis/scratch/firedpy/conus"
-    spatial_param = 5
-    temporal_param = 11
-    start_year = 2000
-    end_year = 2026
-    country = "united_states_of_america"
-    shape_file = None
-    all_t = False
-
-    self = EventGrid(
-        nc_fpath=nc_fpath,
-        project_directory=project_directory,
-        spatial_param=spatial_param,
-        temporal_param=temporal_param,
-        start_year=start_year,
-        end_year=end_year,
-        country=country,
-        shape_file=shape_file
-    )
