@@ -30,7 +30,7 @@ In general, the area of intrest for which FIREDpy creates fire perimter products
 
 <img width="1900" alt="image" src="https://github.com/earthlab/firedpy/blob/main/firedpy/data/images/mahood_et_al_foto.png" />
 
-*Illustration of the MODIS sinusoidal projection and the tile system in which the data are stored*
+*Illustration of the MODIS sinusoidal projection and the tile system in which the data are stored. Figure is from Mahood et al. 2022*
 
 ## FIREDpy citations
 
