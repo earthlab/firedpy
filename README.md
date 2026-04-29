@@ -30,7 +30,7 @@ In general, the area of intrest for which FIREDpy creates fire perimter products
 
 <img width="1900" alt="image" src="https://github.com/earthlab/firedpy/blob/main/firedpy/data/images/mahood_et_al_foto.png" />
 
-*Illustration of the MODIS sinusoidal projection and the tile system in which the data are stored. Figure is from Mahood et al. 2022*
+*Illustration of the MODIS sinusoidal projection and the tile system in which the data are stored. The MODIS satellites cover the entire earth's surface multiple times a day, but the tiles shown here are those in which the MCD64A1 product is generated, which FIREDpy then processes into fire event perimeters. Figure is from Mahood et al. 2022.*
 
 ## FIREDpy citations
 
