@@ -80,7 +80,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 
 || **Firedpy version**| 1.0|2.0|2.1|
 |-------|---------|----------------------------------------|----------------------------------------|---------------------------|
-| **Region** | **Country** | **Version 2022v (variable space-time parameters)** | **Version 2024f (1 pixel 5 days for everything)** | **Version 2025v (variable ST parameters)** |
+| **Region** | **Country** | **Version 2022var (variable space-time parameters)** | **Version 2024f (1 pixel 5 days for everything)** | **Version 2025var (variable ST parameters)** |
 | **North America** |||||
 || Belize || **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/q524jq679)** ||
 || Canada| [2001-2021](https://scholar.colorado.edu/concern/datasets/gf06g388c) | **[2001-2024](https://scholar.colorado.edu/concern/datasets/0p096866d)** ||
@@ -134,9 +134,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 |  Northern South America |Suriname, French Guiana, Guyana| [2001-2021](https://scholar.colorado.edu/concern/datasets/qv33rx839)||| 
 |Entire Western hemisphere, intended for use in conjunction with GOES16 active fire detections. || [Jan 2017 to March 2020](https://scholar.colorado.edu/concern/datasets/d217qq78g)|||
 | **Europe** |||||
-|| Aland|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5138jg697)**||
 || Albania|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/wp988m53f)**||
-|| Andorra|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/xp68kh87x)**||
 || Belarus|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/r781wh632)**||
 || Belgium||**[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/hh63sx489)**||
 || Bosnia and Herzegovina|| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/dz010s09q)**||
@@ -148,18 +146,14 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 || Germany|| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/6w924d770)**||
 || Greece| [2001-2021](https://scholar.colorado.edu/concern/datasets/bc386k355)| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/z316q349s)**||
 || Greenland|| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/bv73c218z)**||
-|| Guernsey|| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/bz60cx90j)**||
 || Hungary||**[Nov 2000 - December 2024](https://scholar.colorado.edu/concern/datasets/bc386m008)**||
 || Ireland||**[Nov 2000 - December 2024](https://scholar.colorado.edu/concern/datasets/4m90dx459)**||
 || Italy|[2001-2021](https://scholar.colorado.edu/concern/datasets/v979v416g)| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/tb09j7441)**||
 || Kosovo|| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/f1881n864)**||
 || Latvia||**[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/fn1070711)**||
-|| Liechtenstein|| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/f7623f56w)**||
 || Lithuania|| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/qb98mg925)**||
 || Macedonia|| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/g158bj86s)**||
-|| Malta|| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/sx61dp12d)**||
 || Moldova|| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/d217qr276)**||
-|| Monaco|| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/2514nn122)**||
 || Montenegro|| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/1g05fd436)**||
 || Netherlands|| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/0k225c86c)**||
 || Northern Cyprus|| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/4m90dx238)**||
