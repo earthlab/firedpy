@@ -26,11 +26,11 @@ The algorithm outputs shapefiles of delineated fire events in either .shp or .gp
 
 ## The MODIS Sinusioidal Grid
 
-In general, the area of intrest for which FIREDpy creates fire perimter products is specified with a shapefile. However, one may also specify study areas for FIREDpy using individual MODIS tiles. This product uses a Sinusoidal, Lambert Azimuthal Equal-Area projection. For more information about this projection, see https://modis-land.gsfc.nasa.gov/MODLAND_grid.html. If you would like to use the MODIS sinusoidal grid IDs to identify FIREDpy study areas, see the visualization of this grid below.
+In general, the area of intrest for which FIREDpy creates fire perimter products is specified with a shapefile. However, one may also specify study areas for FIREDpy using individual MODIS tiles. This product uses a Sinusoidal, Lambert Azimuthal Equal-Area projection. For more information about this projection, see https://modis-land.gsfc.nasa.gov/MODLAND_grid.html.
 
 <img width="1900" alt="image" src="https://github.com/earthlab/firedpy/blob/main/firedpy/data/images/mahood_et_al_foto.png" />
 
-
+*Illustration of the MODIS sinusoidal projection and the tile system in which the data are stored*
 
 ## FIREDpy citations
 
