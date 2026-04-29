@@ -278,3 +278,23 @@ def fired(
         cleanup_intermediate_files(project_directory)
 
     return gdf
+
+
+if __name__ == "__main__":
+    project_directory="/home/travis/scratch/firedpy/conus"
+    project_name="conus"
+    country="united_states_of_america"
+    tiles=None
+    shape_file=None
+    start_year=2014
+    end_year=2014
+    spatial_param=5
+    temporal_param=11
+    daily=True
+    shape_type="gpkg"
+    eco_region_type=None
+    eco_region_level=3
+    land_cover_type=None
+    full_csv=True
+    n_cores=0
+    cleanup=False

@@ -117,10 +117,7 @@ def helpful_print(key, value):
     """
     # Give the user units for spatial and temporal values specifcally
     if key == "spatial_param":
-        value = (
-            f"{value}  # pixels (nominally ~{value * 463:,.0f} m but varies "
-            "by location)"  # Let's calculate this value!
-        )
+        value = (f"{value}  # pixels ({value * 463.3217:,.0f}m")
         click.echo(f"    {key} = {value}")
     elif key == "temporal_param":
         value = f"{value}  # days"

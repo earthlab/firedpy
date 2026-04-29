@@ -331,7 +331,7 @@ class EventGrid(Base):
             self.input_array = input_array
 
         else:
-            msg = "Must input either nc_file_path or input_array parameter"
+            msg = "Must input either nc_fpath or input_array parameter"
             raise ValueError(msg)
 
         del self.n_cores
@@ -371,7 +371,7 @@ class EventGrid(Base):
         numpy.ndarray : A numpy array.
         """
         # Read in the netcdf data array
-        with xr.open_dataset(nc_fpath) as burns:
+        with xr.open_dataset(nc_fpath, chunks="auto") as burns:
             burns = burns.sel(time=burns.time.dt.year.isin(self.years))
             self._coordinates = {}
             if self.shape_file:
@@ -379,51 +379,9 @@ class EventGrid(Base):
             for dim in ["y", "x", "time"]:
                 coords = np.array(burns.coords[dim].values)
                 self._coordinates[dim] = coords
-        return burns.value.values
 
-    def mask_array(self, array, shape_file):
-        """Mask an xarray dataset with a shapefile.
-
-        Parameters
-        ----------
-        array : xarray.core.dataset.Dataset
-            An xarray dataset.
-        shape_file : str | pathlib.PosixPath
-            Path to a shapefile to use to mask the array with nans.
-
-        Returns
-        -------
-        xarray.core.dataset.Dataset : A masked xarray dataset.
-        """
-        # Check that the coordinate reference systems match
-        mask = gpd.read_file(shape_file)
-        target_crs = CRS(array.crs.spatial_ref).to_wkt()
-        if mask.crs != target_crs:
-            mask = mask.to_crs(target_crs)
-
-        # Buffer mask to ensure fires immediately outside border are captured
-        mask["geometry"] = mask["geometry"].buffer(100_000)
-
-        # Get the geometries used to burn values to the array
-        shapes = ((geom, 1) for geom in mask["geometry"])
-
-        # Get the target array geometry
-        ny, nx = array.sizes["y"], array.sizes["x"]
-        xmin, xmax = array.x.values[0], array.x.values[-1]
-        ymax, ymin = array.y.values[0], array.y.values[-1]
-        transform = from_bounds(xmin, ymin, xmax, ymax, nx, ny)
-
-        # Rasterize mask
-        mask_array = rasterize(
-            shapes=shapes,
-            out_shape=(ny, nx),
-            transform=transform,
-            fill=0,
-            all_touched=False
-        )
-
-        # mask original array
-        array["value"] *= mask_array
+        # Trying this sparse array method to avoid memory spikes
+        array = burns.value.values
 
         return array
 
@@ -491,25 +449,34 @@ class EventGrid(Base):
         list[firedpy.model_classes.EventPerimeter] : A list of fire event
             perimeter objects.
         """
+        # Find coordinate pairs of burn detections
         available_pairs = self._get_available_cells()
+
+        # Get dimensions for this tile's data array
         nz, ny, nx = self.input_array.shape
         dims = [ny, nx]
+
+        time_index_buffer = max(1, self.temporal_param // 30)
+
+        # Build containers for loop below
         perimeters = RandomAccessSet()
         identified_points = {}
-        time_index_buffer = max(1, self.temporal_param // 30)
 
         for pair in available_pairs:
             y, x = pair
 
-            top, bottom, left, right, center, origin, is_edge = \
-                self._get_spatial_window(y, x, dims)
-
+            # Define the spatial window
+            window = self._get_spatial_window(y, x, dims)
+            top, bottom, left, right, center, origin, is_edge = window
             center_y, center_x = center
             window = self.input_array[:, top:bottom + 1, left:right + 1]
+
+            # Find events at the center of this window
             center_burn = window[:, center_y, center_x]
             valid_center_burn_indices = np.where(center_burn > 0)[0]
             valid_center_burn_values = center_burn[valid_center_burn_indices]
 
+            # For each of these, seek burn detections within the event params
             for i, burn_value in enumerate(valid_center_burn_values):
                 overlapping_event_ids = RandomAccessSet()
                 events_to_remove = set()
@@ -607,6 +574,52 @@ class EventGrid(Base):
                     perimeters.remove(event)
 
         return perimeters.list
+
+    def mask_array(self, array, shape_file):
+        """Mask an xarray dataset with a shapefile.
+
+        Parameters
+        ----------
+        array : xarray.core.dataset.Dataset
+            An xarray dataset.
+        shape_file : str | pathlib.PosixPath
+            Path to a shapefile to use to mask the array with nans.
+
+        Returns
+        -------
+        xarray.core.dataset.Dataset : A masked xarray dataset.
+        """
+        # Check that the coordinate reference systems match
+        mask = gpd.read_file(shape_file)
+        target_crs = CRS(array.crs.spatial_ref).to_wkt()
+        if mask.crs != target_crs:
+            mask = mask.to_crs(target_crs)
+
+        # Buffer mask to ensure fires immediately outside border are captured
+        mask["geometry"] = mask["geometry"].buffer(100_000)
+
+        # Get the geometries used to burn values to the array
+        shapes = ((geom, 1) for geom in mask["geometry"])
+
+        # Get the target array geometry
+        ny, nx = array.sizes["y"], array.sizes["x"]
+        xmin, xmax = array.x.values[0], array.x.values[-1]
+        ymax, ymin = array.y.values[0], array.y.values[-1]
+        transform = from_bounds(xmin, ymin, xmax, ymax, nx, ny)
+
+        # Rasterize mask
+        mask_array = rasterize(
+            shapes=shapes,
+            out_shape=(ny, nx),
+            transform=transform,
+            fill=0,
+            all_touched=False
+        )
+
+        # mask original array
+        array["value"] *= mask_array
+
+        return array
 
 
 class ModelBuilder(Base):
@@ -1439,3 +1452,27 @@ class ModelBuilder(Base):
             logger.info(f"Writing daily CSV file to {dst}")
             df = edf[["x", "y", "id", "ig_date", "last_date"]]
             df.to_csv(dst, index=False)
+
+
+if __name__ == "__main__":
+    h5_fpath = Path("/home/travis/scratch/firedpy/conus_2020/rasters/burn_area/hdfs/h11v02/MCD64A1.A2020061.h23v02.061.2021309111315.hdf")
+    nc_fpath = Path("/home/travis/scratch/firedpy/conus_2020/rasters/burn_area/netcdfs/h11v02.nc")
+    project_directory = "/home/travis/scratch/firedpy/conus"
+    spatial_param = 5
+    temporal_param = 11
+    start_year = 2000
+    end_year = 2026
+    country = "united_states_of_america"
+    shape_file = None
+    all_t = False
+
+    self = EventGrid(
+        nc_fpath=nc_fpath,
+        project_directory=project_directory,
+        spatial_param=spatial_param,
+        temporal_param=temporal_param,
+        start_year=start_year,
+        end_year=end_year,
+        country=country,
+        shape_file=shape_file
+    )
