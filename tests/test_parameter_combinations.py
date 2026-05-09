@@ -66,3 +66,43 @@ def test_shapefile():
         n_cores=1,
         cleanup=True
     )
+
+
+def test_ecoland():
+    """Test for ecoregion and landcover outputs."""
+    # Run Fired for USA
+    pdir = Path("./testruns_ecoland").absolute()
+    project_directory = pdir
+    country = "united_states_of_america"
+    project_name = "testruns_ecoland"
+    tiles = None
+    shape_file = None
+    start_year = 2024
+    end_year = 2024
+    spatial_param = 5
+    temporal_param = 11
+    daily = True
+    shape_type = "gpkg"
+    eco_region_type = 1
+    eco_region_level = 3
+    land_cover_type = 1
+    full_csv = True
+    n_cores = 1
+    cleanup = True
+
+    out = fired(
+        project_directory=pdir,
+        country=country,
+        project_name=project_name,
+        start_year=start_year,
+        end_year=end_year,
+        spatial_param=spatial_param,
+        temporal_param=temporal_param,
+        daily=daily,
+        shape_type=shape_type,
+        eco_region_type=eco_region_type,
+        eco_region_level=eco_region_level,
+        land_cover_type=land_cover_type,
+        n_cores=n_cores,
+        cleanup=cleanup
+    )

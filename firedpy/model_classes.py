@@ -16,6 +16,7 @@ import rasterio
 import numpy as np
 import xarray as xr
 
+from osgeo import gdal
 from pyproj import CRS, Proj, Transformer, transform
 from rasterio.features import rasterize
 from rasterio.transform import from_bounds
@@ -25,6 +26,7 @@ from tqdm import tqdm
 
 from firedpy import DATA_DIR
 from firedpy.data_classes import Base
+from firedpy.classification import Classifier
 from firedpy.utilities.spatial import MODIS_CRS, get_country_file
 
 logger = getLogger(__name__)
@@ -620,6 +622,7 @@ class ModelBuilder(Base):
             temporal_param=11,
             start_year=2020,
             end_year=2025,
+            method="original",
             n_cores=0
     ):
         """Methods for classifying fire events.
@@ -641,13 +644,16 @@ class ModelBuilder(Base):
             None.
         spatial_param : int
             The number of cells (~463 m resolution) to search for neighboring
-            burn detections.
+            burn detections. Defaults to 5.
         temporal_param : int
             The number of days to search for neighboring burn detections.
+            Defaults to 11.
         start_year : int
             The first year of fire events. Defaults to 2000.
         end_year : int
             The last year of fire events. Defaults to 2025.
+        method : str
+            Which classification method to use ('original' or 'new').
         n_cores : int
             Number of cores to use for parallel processing. A value of 0 or
             None will use all available cores. Defaults to 0.
@@ -662,6 +668,9 @@ class ModelBuilder(Base):
         self._lc_mosaic_re = r'lc_mosaic_(?P<land_cover_type>\d{1})_\
             (?P<year>\d{4})\.tif$'
 
+        # Temporary method option
+        self.method = method
+
         # Let country override shapefile?
         self.country = country
         if country:
@@ -669,16 +678,25 @@ class ModelBuilder(Base):
         else:
             self.shape_file = shape_file
 
-        # Use the first file to get some geometry data for later
-        with xr.open_dataset(self.files[0]) as data_set:
-            self.crs = data_set.crs
-            self.geom = self.crs.geo_transform
-            self._res = self.geom[1]
-            self.sp_buf = spatial_param * self._res
-            dims = ["y", "x", "time"]
-            self._coordinates = {
-                dim: np.array(data_set.coords[dim].values) for dim in dims
-            }
+        # Use the first file to get some geometry data for later  <------------ We are shifting entirely away from the 3D array method
+        files = list(Path(self.raster_dir).rglob("*hdf"))
+        sample_fpath = files[0]
+        ds = gdal.Open(sample_fpath).GetSubDatasets()[0][0]
+        r = gdal.Open(ds)
+        self.crs = r.GetProjection()
+        self.geom = r.GetGeoTransform()
+        self._res = self.geom[1]
+        self.sp_buf = spatial_param * self._res
+
+        # with xr.open_dataset(self.files[0]) as data_set:
+        #     self.crs = data_set.crs
+        #     self.geom = self.crs.geo_transform
+        #     self._res = self.geom[1]
+        #     self.sp_buf = spatial_param * self._res
+        #     dims = ["y", "x", "time"]
+        #     self._coordinates = {
+        #         dim: np.array(data_set.coords[dim].values) for dim in dims
+        #     }
 
     def __repr__(self):
         """Return representation string for BurnData object."""
@@ -692,7 +710,7 @@ class ModelBuilder(Base):
             if not key.startswith("_"):  # Avoid secrets/private attributes
                 attrs[key] = attr
             if key == "crs":
-                attrs[key] = CRS(attr.spatial_ref).to_proj4()
+                attrs[key] = CRS(attr).to_proj4()
         for key, value in attrs.items():
             if isinstance(value, (str, PosixPath)):
                 msgs.append(f"\n   {key}='{value}'")
@@ -719,72 +737,70 @@ class ModelBuilder(Base):
             return gdf
 
         logger.info("Adding fire attributes ...")
-        gdf['pixels'] = gdf.groupby(['id', 'date'])['id'].transform('count')
+        gdf["pixels"] = gdf.groupby(["id", "date"])["id"].transform("count")
 
         # Ignition location: first detected pixel of each event, broadcast to
         # all rows of that event so daily records share one consistent location
-        ig_coords = gdf.groupby('id')[['x', 'y']].first()
-        gdf['ig_event_x'] = gdf['id'].map(ig_coords['x'])
-        gdf['ig_event_y'] = gdf['id'].map(ig_coords['y'])
+        ig_coords = gdf.groupby("id")[["x", "y"]].first()
+        gdf["ig_event_x"] = gdf["id"].map(ig_coords["x"])
+        gdf["ig_event_y"] = gdf["id"].map(ig_coords["y"])
 
-        group = gdf.groupby('id')
-        gdf['date'] = gdf['date'].apply(
-            lambda x: datetime.strptime(x, '%Y-%m-%d')
+        group = gdf.groupby("id")
+        if isinstance(gdf["date"].iloc[0], str):
+            gdf["date"] = gdf["date"].apply(
+                lambda x: datetime.strptime(x, "%Y-%m-%d")
+            )
+
+        gdf["ig_date"] = group["date"].transform("min")
+        gdf["ig_day"] = gdf["ig_date"].apply(
+            lambda x: datetime.strftime(x, "%j")
         )
 
-        gdf['ig_date'] = group['date'].transform('min')
-        gdf['ig_day'] = gdf['ig_date'].apply(
-            lambda x: datetime.strftime(x, '%j')
-        )
+        gdf["ig_month"] = gdf["ig_date"].apply(lambda x: x.month)
+        gdf["ig_year"] = gdf["ig_date"].apply(lambda x: x.year)
+        gdf["last_date"] = group["date"].transform("max")
 
-        gdf['ig_month'] = gdf['ig_date'].apply(lambda x: x.month)
-        gdf['ig_year'] = gdf['ig_date'].apply(lambda x: x.year)
-        gdf['last_date'] = group['date'].transform('max')
+        gdf["tot_pix"] = group["id"].transform("count")
 
-        gdf['tot_pix'] = group['id'].transform('count')
+        gdf["daily_duration"] = gdf["date"] - gdf["ig_date"]
+        gdf["event_day"] = gdf["daily_duration"].apply(lambda x: x.days + 1)
+        gdf["final_duration"] = gdf["last_date"] - gdf["ig_date"]
+        gdf["event_dur"] = gdf["final_duration"].apply(lambda x: x.days + 1)
+        gdf.drop("final_duration", axis=1)
 
-        gdf['daily_duration'] = gdf['date'] - gdf['ig_date']
-        gdf['event_day'] = gdf['daily_duration'].apply(lambda x: x.days + 1)
-        gdf['final_duration'] = gdf['last_date'] - gdf['ig_date']
-        gdf['event_dur'] = gdf['final_duration'].apply(lambda x: x.days + 1)
-        gdf.drop('final_duration', axis=1)
+        gdf["dy_ar_km2"] = gdf["pixels"].apply(self._to_kms)
+        gdf["tot_ar_km2"] = gdf["tot_pix"].apply(self._to_kms)
 
-        gdf['dy_ar_km2'] = gdf['pixels'].apply(self._to_kms)
-        gdf['tot_ar_km2'] = gdf['tot_pix'].apply(self._to_kms)
+        gdf["fsr_px_dy"] = gdf["tot_pix"] / gdf["event_dur"]
+        gdf["fsr_km2_dy"] = gdf["fsr_px_dy"].apply(self._to_kms)
 
-        gdf['fsr_px_dy'] = gdf['tot_pix'] / gdf['event_dur']
-        gdf['fsr_km2_dy'] = gdf['fsr_px_dy'].apply(self._to_kms)
+        gdf["mx_grw_px"] = group["pixels"].transform("max")
+        gdf["mn_grw_px"] = group["pixels"].transform("min")
+        gdf["mu_grw_px"] = group["pixels"].transform("mean")
 
-        gdf['mx_grw_px'] = group['pixels'].transform('max')
-        gdf['mn_grw_px'] = group['pixels'].transform('min')
-        gdf['mu_grw_px'] = group['pixels'].transform('mean')
+        gdf["mx_grw_km2"] = gdf["mx_grw_px"].apply(self._to_kms)
+        gdf["mn_grw_km2"] = gdf["mn_grw_px"].apply(self._to_kms)
+        gdf["mu_grw_km2"] = gdf["mu_grw_px"].apply(self._to_kms)
 
-        gdf['mx_grw_km2'] = gdf['mx_grw_px'].apply(self._to_kms)
-        gdf['mn_grw_km2'] = gdf['mn_grw_px'].apply(self._to_kms)
-        gdf['mu_grw_km2'] = gdf['mu_grw_px'].apply(self._to_kms)
-
-        max_date = pd.DataFrame(group[['date', 'pixels']].apply(
+        max_date = pd.DataFrame(group[["date", "pixels"]].apply(
             self._max_growth_date).reset_index()
         )
-        max_date = max_date.rename(columns={0: 'mx_grw_dte'})
-        gdf = gdf.merge(max_date[['id', 'mx_grw_dte']], on="id")
+        max_date = max_date.rename(columns={0: "mx_grw_dte"})
+        gdf = gdf.merge(max_date[["id", "mx_grw_dte"]], on="id")
 
-        gdf = gdf[['id', 'date', 'ig_date', 'ig_day', 'ig_month',
-                   'ig_year', 'last_date', 'event_day', 'event_dur',
-                   'pixels', 'tot_pix', 'dy_ar_km2', 'tot_ar_km2',
-                   'fsr_px_dy', 'fsr_km2_dy', 'mx_grw_px', 'mn_grw_px',
-                   'mu_grw_px', 'mx_grw_km2', 'mn_grw_km2', 'mu_grw_km2',
-                   'mx_grw_dte', 'x', 'y', 'geometry', 'ig_event_x',
-                   'ig_event_y']]
+        gdf = gdf[["id", "date", "ig_date", "ig_day", "ig_month",
+                   "ig_year", "last_date", "event_day", "event_dur",
+                   "pixels", "tot_pix", "dy_ar_km2", "tot_ar_km2",
+                   "fsr_px_dy", "fsr_km2_dy", "mx_grw_px", "mn_grw_px",
+                   "mu_grw_px", "mx_grw_km2", "mn_grw_km2", "mu_grw_km2",
+                   "mx_grw_dte", "x", "y", "geometry", "ig_event_x",
+                   "ig_event_y"]]
 
         gdf = gdf.reset_index(drop=True)
 
         return gdf
 
-    # Note from Nate: this is the definition that was exporting data as WGS84
-    # Need to re-work this attribute type if we want to keep it
-    # currently commented out where called in build_events (line 855)
-    def add_kg_attributes(self, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    def add_kg_attributes(self, gdf):
         """Assign Köppen-Geiger climate zones to events with a raster file.
 
         Mirrors the land cover attribute pattern:
@@ -794,15 +810,25 @@ class ModelBuilder(Base):
           - kg_mode      : most common (modal) KG zone code for the event.
           - kg_desc      : short KG label string for kg_mode (e.g. "Dfb").
 
-        Args:
-            gdf: GeoDataFrame containing 'x', 'y', 'id', and optionally 'date'.
 
-        Returns:
+        NOTE: (from Nate) this is the definition that was exporting data as
+            WGS84. Need to re-work this attribute type if we want to keep it
+            currently commented out where called in build_events (line 855).
+
+        Parameters
+        ----------
+        gdf : geopandas.geodataframe.GeoDataFrame
+            A geodataframe of fire events containing 'x', 'y', 'id', and
+            optionally 'date'.
+
+        Returns
+        -------
+        geopandas.geodataframe.GeoDataFrame
             GeoDataFrame with kg_codes, kg_day_codes, kg_mode, and kg_desc
             columns added.
         """
         tif_path = DATA_DIR.joinpath(
-            'koppen_geiger_tif', '1991_2020', 'koppen_geiger_0p00833333.tif'
+            "koppen_geiger_tif", "1991_2020", "koppen_geiger_0p00833333.tif"
         )
 
         KG_LEGEND = {
@@ -885,19 +911,30 @@ class ModelBuilder(Base):
     def build_events(self):
         """Build the fire event geodataframe."""
         # Classify MODIS burn data into fire events
-        event_perimeters = self.classify_events()
+        if self.method == "original":
+            event_perimeters = self.classify_events()
 
-        # Build the event point geodataframe
-        gdf = self.build_points(event_perimeters)
+            # Build the event point geodataframe
+            gdf = self.build_points(event_perimeters)
+
+        else:
+            classifier = Classifier(
+                hdf_dir=self.burn_area_dir,
+                spatial_param=self.spatial_param,
+                temporal_param=self.temporal_param,
+                shp_fpath=self.shape_file,
+                sample=False
+            )
+            gdf = classifier.classify()
 
         # Add fire event attributes
-        gdf = self.add_fire_attributes(gdf)
+        gdf = self._run_process(gdf, "add_fire_attributes")
 
         # Convert points to pixels
-        gdf = self.process_geometry(gdf)
+        gdf = self._run_process(gdf, "process_geometry")
 
         # Add Köppen-Geiger climate zone attributes
-        gdf = self.add_kg_attributes(gdf)
+        gdf = self._run_process(gdf, "add_kg_attributes")
 
         return gdf
 
@@ -1021,13 +1058,13 @@ class ModelBuilder(Base):
     def _create_did_column(df, columns):
         """Hashes multiple columns in a DataFrame"""
         df["temp"] = df[columns].apply(
-            lambda row: '_'.join(row.values.astype(str)),
+            lambda row: "_".join(row.values.astype(str)),
             axis=1
         )
         df["did"] = df["temp"].apply(
             lambda x: hashlib.md5(x.encode()).hexdigest()
         )
-        df.drop('temp', axis=1, inplace=True)
+        df.drop("temp", axis=1, inplace=True)
         return df
 
     def _create_event_grid_array(self, events: List[EventPerimeter]):
@@ -1036,8 +1073,8 @@ class ModelBuilder(Base):
         # (y, x, t) tuples.
 
         # Step 1: Determine min and max coordinates to define the array size.
-        min_x = min_y = float('inf')
-        max_x = max_y = float('-inf')
+        min_x = min_y = float("inf")
+        max_x = max_y = float("-inf")
 
         for instance in events:
             for y, x, t in instance.spacetime_coordinates:
@@ -1071,8 +1108,8 @@ class ModelBuilder(Base):
         xs = [math.ceil(minx + self._res * i) for i in range(width_index + 1)]
         ys = [math.ceil(miny - self._res * i) for i in range(height_index + 1)]
         coordinates = {
-            'x': np.array(xs),
-            'y': np.array(ys)
+            "x": np.array(xs),
+            "y": np.array(ys)
         }
 
         for instance_num, instance in enumerate(events):
@@ -1403,6 +1440,40 @@ class ModelBuilder(Base):
         geometry = gdf.buffer(buffer_m)
         gdf["geometry"] = geometry
         gdf["geometry"] = gdf.envelope
+        return gdf
+
+    def _run_process(self, gdf, process):
+        """Run certain ModelBuilder methods in parallel if appropriate.
+
+        Parameters
+        ----------
+        gdf : geopandas.geodataframe.GeoDataFrame
+            A firedpy geodataframe of burn events.
+        process : func
+            Any ModelBuilder processing function that accepts a single
+            geodataframe.
+
+        Returns
+        -------
+        geopandas.geodataframe.GeoDataFrame 
+            The geodataframe with processed geometries.
+        """
+        logger.info(f"Running {process} on fire event dataframe...")
+        process = self.__getattribute__(process)
+        if gdf.shape[0] < 100_000 or self.n_cores == 1:
+            gdf = process(gdf)
+        else:
+            data = []
+            csize = 1_000
+            cdfs = [gdf.iloc[i:i + csize] for i in range(0, len(gdf), csize)]
+            with ProcessPoolExecutor(self.n_cores) as pool:
+                jobs = []
+                for cdf in cdfs:
+                    jobs.append(pool.submit(process, cdf))
+                for job in tqdm(as_completed(jobs), total=len(jobs)):
+                    data.append(job.result())
+            gdf = pd.concat(data)
+            gdf = gdf.sort_values("date")
         return gdf
 
     def save_data(

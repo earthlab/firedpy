@@ -1,4 +1,10 @@
-"""firedpy run methods."""
+"""firedpy run methods.
+
+TODO: 
+    - FutureWarning: As of version 1.0, `DataGranule.size` will be accessed as
+      an attribute; e.g. use `DataCollection.size` **not** 
+      `DataCollection.size()`
+"""
 import os
 import shutil
 import time
@@ -168,8 +174,8 @@ def fired(
         temporal_param=temporal_param,
     )
     logger.info(
-        f"Running firedpy for years {start_year} to {end_year} on MODIS "
-        f"tiles: {tiles}."
+        f"Running firedpy for years {start_year} to {end_year} on MODIS: "
+        f"{aoi_label}."
     )
 
     # Make sure they have a target location
@@ -182,7 +188,6 @@ def fired(
     # Format study area parameters
     if isinstance(tiles, str):
         tiles = tiles.replace("'", "").split()
-
 
     # Get the burn data
     logger.info("Collecting MODIS burn data.")
@@ -205,6 +210,7 @@ def fired(
         shape_file=shape_file,
         start_year=start_year,
         end_year=end_year,
+        method="new",
         n_cores=n_cores
     )
 

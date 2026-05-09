@@ -695,8 +695,8 @@ class BurnData(LPDAAC):
             )
 
         # Convert to NetCDF
-        self._write_ncs(tiles, start_year=start_year, end_year=end_year)
-        logger.info(f"Created NetCDF for tile(s) {tiles}")
+        # self._write_ncs(tiles, start_year=start_year, end_year=end_year)
+        # logger.info(f"Created NetCDF for tile(s) {tiles}")
 
         return tiles
 
