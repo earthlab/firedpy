@@ -49,6 +49,7 @@ netherlands,Europe,5,11
 northern_cyprus,europe,5,11
 norway,Europe,5,11
 oman,Asia,5,11
+greenland,Europe,5,11
 palestine,Asia,5,11
 poland,Europe,5,11
 portugal,Europe,3,8
@@ -176,7 +177,6 @@ usa_hawaii,Oceania,3,8
 uzbekistan,Asia,3,8
 vanuatu,Oceania,3,8
 wallis_and_futuna,Oceania,3,8
-angola,Africa,1,1
 argentina,South America,1,2
 bahrain,Asia,1,2
 bangladesh,Asia,1,2
@@ -194,7 +194,6 @@ central_african_republic,Africa,1,1
 chad,Africa,1,1
 colombia,South America,1,2
 comoros,Africa,1,1
-democratic_republic_of_the_congo,Africa,1,1
 ecuador,South America,1,2
 eritrea,Africa,1,1
 eswatini,Africa,1,1
@@ -243,3 +242,5 @@ venezuela,South America,1,2
 vietnam,Asia,1,2
 zambia,Africa,1,1
 zimbabwe,Africa,1,1
+angola,Africa,1,1
+democratic_republic_of_the_congo,Africa,1,1
