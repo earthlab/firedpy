@@ -14,9 +14,9 @@ HOME = Path(__file__).parent.absolute()
 
 # Override these for quick test runs; set TEST_COUNTRIES to None to process
 # all countries, and PROJECT_NAME to None to fall back to using country names.
-START_YEAR = 2025
+START_YEAR = 2000
 END_YEAR = 2026
-TEST_COUNTRIES = ["spain", "portugal", "france"]  # e.g. ["spain", "portugal", "france"] or None
+TEST_COUNTRIES = None  # e.g. ["spain", "portugal", "france"] or None
 PROJECT_NAME = "v2025var"  # e.g. "v2025var"; if None, each country's name is used
 
 
@@ -117,7 +117,7 @@ def main():
                     temporal_param=row["temporal"],
                     daily=True,
                     shape_type="gpkg",
-                    eco_region_type=None,
+                    eco_region_type='world',
                     eco_region_level=None,
                     land_cover_type=1,
                     csv_type="none",
