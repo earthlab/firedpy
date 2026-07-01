@@ -714,35 +714,23 @@ class BurnData(LPDAAC):
                     "must be supplied."
                 )
 
-        # Let's see if using points is quicker
-        points = tiles_to_points(tiles)
-
         # We can use up to three cores as per Earthdata rules
         n_cores = min(3, self.n_cores)
         granules = {}
         if n_cores > 1:
             with ThreadPoolExecutor(n_cores) as pool:
                 jobs = {}
-                for tile, point in points.items():
-                    job = pool.submit(
-                        earthaccess.search_data,
-                        short_name="MCD64A1",
-                        version="061",
-                        temporal=(start_date, end_date),
-                        point=point
-                    )
+                for tile in tiles:
+                    kwargs = self._get_search_kwargs(tile, start_date, end_date)
+                    job = pool.submit(earthaccess.search_data, **kwargs)
                     jobs[tile] = job
                 for tile, job in tqdm(jobs.items(), total=len(jobs)):
                     granule = job.result()
                     granules[tile] = granule
         else:
-            for tile, point in tqdm(points.items(), total=len(points)):
-                granule = earthaccess.search_data(
-                    short_name="MCD64A1",
-                    version="061",
-                    temporal=(start_date, end_date),
-                    point=point
-                )
+            for tile in tqdm(tiles, total=len(tiles)):
+                kwargs = self._get_search_kwargs(tile, start_date, end_date)
+                granule = earthaccess.search_data(**kwargs)
                 granules[tile] = granule
 
         return granules
@@ -828,7 +816,7 @@ class BurnData(LPDAAC):
             # month–year coverage before checking if a cache is valid.
             paths = []
             for path in list(hdf_dir.glob("*.hdf")):
-                if self._extract_date_parts(path):
+                if self._extract_date_parts(path) and tile in path.name:
                     paths.append(path)
             files = sorted(paths, key=self._extract_date_parts)
 
