@@ -8,6 +8,7 @@ import shapely
 from shapely import LineString
 from shapely.geometry import Polygon, MultiPolygon, LineString, Point
 from shapely.ops import unary_union, transform, nearest_points
+from shapely.strtree import STRtree
 import geopandas as gpd
 import pyproj
 
@@ -63,18 +64,14 @@ def computefirespeed(fire_gdf, id_col="id"):
 
     has_ids = id_col in fire_gdf.columns
 
-    ### iterate over time steps
     for i in range(1, fire_gdf.shape[0]):
-        # first perimeter in each fire has no valid predecessor
+        
         if has_ids and fire_gdf.iloc[i][id_col] != fire_gdf.iloc[i - 1][id_col]:
             continue
 
         prev_geom = fire_gdf.iloc[i - 1].cum_geom
         curr_geom = fire_gdf.iloc[i].cum_geom
 
-        #print("timestep:", i)
-
-        # ensure MultiPolygon
         if isinstance(prev_geom, Polygon):
             prev_geom = MultiPolygon([prev_geom])
         if isinstance(curr_geom, Polygon):
