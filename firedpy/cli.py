@@ -12,8 +12,8 @@ from firedpy.run import fired
 
 
 CONTEXT_SETTINGS = {
-    "max_content_width": 100,
-    "terminal_width": 100,
+    "max_content_width": 110,
+    "terminal_width": 110,
     "show_default": True
 }
 USER_SOURCES = [

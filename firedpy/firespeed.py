@@ -77,34 +77,40 @@ def computefirespeed(fire_gdf, id_col="id"):
         if isinstance(curr_geom, Polygon):
             curr_geom = MultiPolygon([curr_geom])
 
-        inter_matrix = np.zeros((len(prev_geom.geoms), len(curr_geom.geoms)), dtype=bool)
+        # --- parent-child intersection matrix ---
+        inter_matrix = np.zeros((len(prev_geom.geoms), len(curr_geom.geoms)),dtype=bool)
+
         prev_buffered = [p.buffer(1e-6) for p in prev_geom.geoms]
+
         for ii in range(len(prev_geom.geoms)):
             for jj in range(len(curr_geom.geoms)):
                 inter_matrix[ii, jj] = prev_buffered[ii].intersects(curr_geom.geoms[jj])
-
+            
+        # --- parent perimeter coordinates ---
         prev_coords = [
             prev_geom.geoms[ii].simplify(0.05).exterior.coords
             for ii in range(len(prev_geom.geoms))
         ]
 
-        # --- Skip if geometry is identical between timesteps ---
-        if prev_geom.equals(curr_geom):
-            result_max_dist[i] = 0
-            result_speed[i] = 0
-            # orig_x/y and dest_x/y remain NaN
-            continue
-
         best_dist = -np.inf
         best_origin = None
         best_dest = None
+
+        diag_rows = []   # diagnostics for this timestep
         best_child = None
 
+        # --- LOOP OVER CHILD POLYGONS ---
         for j, child_poly in enumerate(curr_geom.geoms):
-            parent_ids = np.where(inter_matrix[:, j])[0].tolist()
-            spot = len(parent_ids) == 0
-            if spot:
-                dists = [prev_poly.distance(child_poly) for prev_poly in prev_geom.geoms]
+
+            parent_ids = np.where(inter_matrix[:, j])[0].tolist()            
+            #chosen_parent = None
+
+            # --- spot fire handling ---
+            if len(parent_ids) == 0:
+                dists = [
+                    prev_poly.distance(child_poly)
+                    for prev_poly in prev_geom.geoms
+                ]
                 parent_ids = [int(np.argmin(dists))]
 
             parent_geoms = [prev_geom.geoms[ii] for ii in parent_ids]
@@ -113,7 +119,13 @@ def computefirespeed(fire_gdf, id_col="id"):
             dist, origin, dest, parent_local_idx = compute_max_vector(
                 perim_inner_geoms=parent_geoms,
                 perim_outer_geoms=[child_poly],
-                inter_matrix=inter_matrix[parent_ids][:, [j]],)
+                #inter_matrix=np.ones((len(parent_geoms), 1)), # fix shape: N x 1
+                inter_matrix = inter_matrix[parent_ids][:, [j]],
+                spot_threshold=4000
+            )
+            
+            # infer which parent geometry produced the origin
+            #chosen_parent = parent_ids[parent_local_idx]
 
             if dist > best_dist:
                 best_dist = dist
@@ -121,9 +133,10 @@ def computefirespeed(fire_gdf, id_col="id"):
                 best_dest = dest
                 best_child = j
 
+        # --- finalize timestep ---
         if best_origin is None:
             continue
-
+        
         orig_x[i] = best_origin[0]
         orig_y[i] = best_origin[1]
         dest_x[i] = best_dest[0]
@@ -133,7 +146,10 @@ def computefirespeed(fire_gdf, id_col="id"):
             [best_origin[0], best_dest[0]],
             [best_origin[1], best_dest[1]]
         )
-        dist_m = geod.line_length(lons, lats)
+
+        dist_m = np.linalg.norm(np.array(best_dest) - np.array(best_origin))
+
+
         result_max_dist[i] = dist_m / 1000
         result_speed[i] = (dist_m / 1000) / 24
 
@@ -141,28 +157,35 @@ def computefirespeed(fire_gdf, id_col="id"):
 
 
 def compute_max_vector(perim_inner_geoms,
-                       perim_outer_geoms,
-                       inter_matrix,
-                       spot_threshold=20000):
-
+                               perim_outer_geoms,
+                               inter_matrix,
+                               spot_threshold=4000,
+                               debug=False):
+    
     result_dist = []
     result_coord_pair = []
     result_poly_pair = []
     result_parent_idx = []
-
+    
     points_per_meter = 1 / 200
 
+     # --------------------------------------------------
+    # Iterate over parent polygons
+    # --------------------------------------------------
     for poly_outer_idx, outer_poly in enumerate(perim_outer_geoms):
         outer_poly = outer_poly.buffer(0)
         spot_flag = not np.any(inter_matrix[:, poly_outer_idx])
 
+        # --------------------------------------------------
+        # Determine valid child polygons
+        # --------------------------------------------------
         if spot_flag:
+            # No intersecting children → compute distances to all children
             distances = [g.distance(outer_poly) for g in perim_inner_geoms]
             nearest_idx = np.argmin(distances)
             if distances[nearest_idx] > spot_threshold:
                 continue
             polyids = [nearest_idx]
-            
         else:
             polyids = [ii for ii in range(len(perim_inner_geoms))
                        if inter_matrix[ii, poly_outer_idx]]
@@ -175,168 +198,84 @@ def compute_max_vector(perim_inner_geoms,
         poly_best_poly = None
         poly_best_parent_idx = None
 
-        # --- Sample child boundary once ---
-        n_child_pts = max(1, int(outer_poly.length * points_per_meter))
-        child_pts_sample = sample_perimeter(outer_poly, n_child_pts)
-        child_coords_arr = np.array([p.coords[0] for p in child_pts_sample])  # (N_child, 2)
+        # --------------------------------------------------
+        # Iterate over parent polygons
+        # --------------------------------------------------
+        for poly_inner_idx in polyids:
+            parent_poly = perim_inner_geoms[poly_inner_idx].buffer(0)
 
-        # --- Check if any parent intersects (vs all spots) ---
-        any_intersecting = any(
-            perim_inner_geoms[ii].intersects(outer_poly) for ii in polyids
-        )
-
-        if any_intersecting:
-            # -------------------------------------------------------
-            # OVERLAPPING CASE: exact nearest-boundary maximin
-            # -------------------------------------------------------
-
-            # Build a combined set of densely-sampled parent boundary points
-            # and use STRtree for fast nearest-neighbor lookup
-            all_parent_pts = []
-            all_parent_pt_ids = []
-            all_parent_polys_for_check = []
-            
-            for ii in polyids:
-                parent_poly = perim_inner_geoms[ii].buffer(0)
-                if parent_poly.is_empty or not parent_poly.intersects(outer_poly):
-                    continue
-                n_pts = max(1, int(parent_poly.exterior.length * points_per_meter))
-                pts = sample_perimeter(parent_poly, n_pts)
-                all_parent_pts.extend(pts)
-                all_parent_pt_ids.extend([ii] * len(pts))
-                all_parent_polys_for_check.extend([parent_poly] * len(pts))
-            
-            if not all_parent_pts:
-                continue
-            
-            # Build STRtree on parent boundary points
-            tree = STRtree(all_parent_pts)
-
-            # Bulk nearest-neighbor query — replaces per-point loop
-            nearest_idxs = tree.nearest(child_pts_sample)  # array of indices, one per child pt
-
-            # Pre-compute which child points are inside any parent (need wrong-side check)
-            all_parent_union = unary_union([perim_inner_geoms[ii].buffer(0) for ii in polyids])
-            child_inside_mask = np.array([all_parent_union.contains(pt) for pt in child_pts_sample])
-            child_outside_mask = ~child_inside_mask  # reuse for fallback
-
-            exact_D_min = np.zeros(len(child_pts_sample))
-            exact_nearest_parent_pts = []
-            exact_nearest_parent_ids = []
-
-            for ci, (pt_c, nearest_idx) in enumerate(zip(child_pts_sample, nearest_idxs)):
-                near_pt = all_parent_pts[nearest_idx]
-                parent_poly_b = all_parent_polys_for_check[nearest_idx]
-                best_id = all_parent_pt_ids[nearest_idx]
-
-                # Wrong-side check only for child points inside a parent
-                if child_inside_mask[ci]:
-                    test_line = LineString([near_pt.coords[0], pt_c.coords[0]])
-                    if test_line.length > 0:
-                        interior_overlap = test_line.intersection(parent_poly_b)
-                        interior_fraction = (interior_overlap.length / test_line.length
-                                            if not interior_overlap.is_empty else 0)
-                        if interior_fraction > 0.1:
-                            boundary = parent_poly_b.exterior
-                            hits = test_line.intersection(boundary)
-                            if not hits.is_empty:
-                                near_pt = (min(hits.geoms, key=lambda p: p.distance(pt_c))
-                                          if hasattr(hits, 'geoms') else hits)
-
-                exact_D_min[ci] = pt_c.distance(near_pt)
-                exact_nearest_parent_pts.append(near_pt)
-                exact_nearest_parent_ids.append(best_id)
-
-            # maximin: child point whose nearest parent boundary point is farthest
-            best_child_idx = np.argmax(exact_D_min)
-            pt_child = np.array(child_pts_sample[best_child_idx].coords[0])
-            pt_parent = np.array(exact_nearest_parent_pts[best_child_idx].coords[0])
-            chosen_parent_id = exact_nearest_parent_ids[best_child_idx]
-            max_dist = exact_D_min[best_child_idx]
-
-            # --- Validate: 75% of vector must be inside child ---
-            test_line = LineString([tuple(pt_parent), tuple(pt_child)])
-
-            if test_line.length == 0:
+            if parent_poly.is_empty:
                 continue
 
-            child_overlap = test_line.intersection(outer_poly)
-            child_length = child_overlap.length if not child_overlap.is_empty else 0
-            child_fraction = child_length / test_line.length
-
-            if child_fraction >= 0.75:
-                poly_best_dist = max_dist
-                poly_best_pair = (pt_parent, pt_child)
-                poly_best_poly = (perim_inner_geoms[chosen_parent_id].buffer(0), outer_poly)
-                poly_best_parent_idx = chosen_parent_id
-
+            # Sample points along parent perimeter
+            n_child = max(1, int(parent_poly.length * points_per_meter))
+            if n_child == 0:
+                # fallback: use coords from the polygon
+                parent_pts = [Point(x, y) for x, y in parent_poly.exterior.coords]
             else:
-                # --- Fallback: try each child point in descending order of D_min,
-                #     find first one whose vector passes the 75% overlap check ---
+                # sample_perimeter should return shapely Points
+                parent_pts = sample_perimeter(parent_poly, n_child)
 
-                sorted_child_rows = np.argsort(exact_D_min)[::-1]  # descending by distance
-                outside_rows = [ci for ci in sorted_child_rows if child_outside_mask[ci]]
-                rows_to_try = outside_rows if outside_rows else sorted_child_rows  # fallback to all if none outside
-
-                found = False
-                for ci in rows_to_try:  
-                    candidate_pt_child = np.array(child_pts_sample[ci].coords[0])
-                    candidate_pt_parent = np.array(exact_nearest_parent_pts[ci].coords[0])
-                    candidate_line = LineString([tuple(candidate_pt_parent), tuple(candidate_pt_child)])
-                    if candidate_line.length == 0:
-                        continue
-
-                    overlap = candidate_line.intersection(outer_poly)
-                    overlap_length = overlap.length if not overlap.is_empty else 0
-                    if overlap_length / candidate_line.length >= 0.75:
-                        pt_parent = candidate_pt_parent
-                        pt_child = candidate_pt_child
-                        chosen_parent_id = exact_nearest_parent_ids[ci]
-                        max_dist = exact_D_min[ci]
-                        found = True
-                        break
-
-                if not found:
-                    # Last resort: use best maximin result regardless of overlap
-                    pt_child = np.array(child_pts_sample[best_child_idx].coords[0])
-                    pt_parent = np.array(exact_nearest_parent_pts[best_child_idx].coords[0])
-                    chosen_parent_id = exact_nearest_parent_ids[best_child_idx]
-                    max_dist = exact_D_min[best_child_idx]
-
-                poly_best_dist = max_dist
-                poly_best_pair = (pt_parent, pt_child)
-                poly_best_poly = (perim_inner_geoms[chosen_parent_id].buffer(0), outer_poly)
-                poly_best_parent_idx = chosen_parent_id
-
-        else:
-            # -------------------------------------------------------
-            # DISCONNECTED / SPOT FIRE CASE
-            # -------------------------------------------------------
-            for ii in polyids:
-                parent_poly = perim_inner_geoms[ii].buffer(0)
-                if parent_poly.is_empty:
-                    continue
-
-                pt_parent_sh, pt_child_sh = nearest_points(parent_poly, outer_poly)
-                parent_anchor = Point(pt_parent_sh.x, pt_parent_sh.y)
-                dists = [pt.distance(parent_anchor) for pt in child_pts_sample]
+            if parent_poly.intersects(outer_poly):
+                # overlapping child → compute max distance from child points to parent exterior
+                outer_boundary = outer_poly.exterior
+                dists = [pt.distance(outer_boundary) for pt in parent_pts]
                 best_idx = np.argmax(dists)
-                pt_parent = np.array([parent_anchor.x, parent_anchor.y])
-                pt_child = np.array(child_pts_sample[best_idx].coords[0])
+                pt_parent = np.array(parent_pts[best_idx].coords[0])
+                pt_child = np.array(outer_boundary.interpolate(outer_boundary.project(parent_pts[best_idx])).coords[0])
                 max_dist = dists[best_idx]
 
-                if max_dist > poly_best_dist:
-                    poly_best_dist = max_dist
-                    poly_best_pair = (pt_parent, pt_child)
-                    poly_best_poly = (parent_poly, outer_poly)
-                    poly_best_parent_idx = ii
+                test_line = LineString([tuple(pt_parent), tuple(pt_child)])
+                if test_line.length == 0:
+                    continue
 
+                sample_step = min(50, test_line.length)
+                n_samples = max(2, int(math.ceil((test_line.length - sample_step) / 50)) + 1)
+                sample_distances = np.linspace(sample_step, test_line.length, n_samples)
+                invalid_vector = any(parent_poly.covers(test_line.interpolate(sample_dist))
+                                     for sample_dist in sample_distances)
+
+                if invalid_vector:
+                    continue
+
+            else:
+                # disconnected polygon → anchor to nearest parent boundary point
+                pt_parent_sh, pt_child_sh = nearest_points(parent_poly, outer_poly)
+                parent_anchor = Point(pt_parent_sh.x, pt_parent_sh.y)
+
+                # sample along child perimeter
+                n_child = max(1, int(outer_poly.length * points_per_meter))
+                if n_child == 0:
+                    child_pts = [Point(x, y) for x, y in outer_poly.exterior.coords]
+                else:
+                    child_pts = sample_perimeter(outer_poly, n_child)
+
+                # compute distances from parent anchor to all child perimeter points
+                dists = [pt.distance(parent_anchor) for pt in child_pts]
+                best_idx = np.argmax(dists)
+                pt_parent = np.array([parent_anchor.x, parent_anchor.y])
+                pt_child = np.array(child_pts[best_idx].coords[0])
+                max_dist = dists[best_idx]
+                
+            if debug:
+                logger.info(f"Poly_outer {poly_outer_idx}, Poly_inner {poly_inner_idx}, "
+                    f"dist_val={max_dist:.2f}")
+                logger.info(f"Parent coord: {pt_parent}, Child coord: {pt_child}")
+
+            if max_dist > poly_best_dist:
+                poly_best_dist = max_dist
+                poly_best_pair = (pt_parent, pt_child)
+                poly_best_poly = (parent_poly, outer_poly)
+                poly_best_parent_idx = poly_inner_idx
+
+        # Append results if a valid vector was found
         if poly_best_pair is not None:
             result_dist.append(poly_best_dist)
             result_coord_pair.append(poly_best_pair)
             result_poly_pair.append(poly_best_poly)
             result_parent_idx.append(poly_best_parent_idx)
 
+    # Global maximum across all parents
     if result_dist:
         max_loc = np.argmax(result_dist)
         return (

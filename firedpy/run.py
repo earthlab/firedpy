@@ -35,14 +35,14 @@ def fired(
     tiles=None,
     shape_file=None,
     start_year=2000,
-    end_year=2025,
+    end_year=2026,
     spatial_param=8,
     temporal_param=3,
     run_firespeed=False,
     daily=True,
     shape_type="gpkg",
-    eco_region_level=1,
     eco_region_type=None,
+    eco_region_level=3,
     land_cover_type=None,
     full_csv=True,
     n_cores=0,
@@ -71,7 +71,7 @@ def fired(
     start_year : int
         The first year of fire events. Defaults to 2000.
     end_year : int
-        The last year of fire events. Defaults to 2025.
+        The last year of fire events. Defaults to 2026.
     spatial_param : int
         The number of cells (~463 m resolution) to search for neighboring burn
         detections.
@@ -92,7 +92,7 @@ def fired(
         the chosen project directory. These will be saved in the specified
         geopackage format (.gpkg), ERSI Shapefile format (.shp), or save them
         in both formats using the file basename of the fire event data frame
-        (e.g. 'modis_events_daily.gpkg' and 'modis_events.gpkg').
+        (e.g. 'fired_events_daily.gpkg' and 'fired_events.gpkg').
     eco_region_level : int
         The desired Ecoregions level from the North American Commission for
         Environmental Cooperation (CEC). Levels 1 to 3 are available, with
@@ -285,23 +285,3 @@ def fired(
         cleanup_intermediate_files(project_directory)
 
     return gdf
-
-
-if __name__ == "__main__":
-    tiles = None
-    daily = True
-    full_csv = True
-    project_directory = '/home/travis/scratch/firedpy/logging_test'
-    project_name = 'masking_test'
-    n_cores = 1
-    start_year = 2023
-    country = "Republic of the Congo"
-    shape_file = None
-    end_year = 2025
-    spatial_param = 8  # pixels (nominally ~3,704 m but varies by location)
-    temporal_param = 3  # days
-    shape_type = 'gpkg'  # GeoPackage
-    eco_region_level = None  # Level I - Least Detailed
-    eco_region_type = 'na'  # North American Ecoregions (Omernick, 1987)
-    land_cover_type = None  # International Geosphere-Biosphere Programme (IGBP) scheme
-    cleanup = False
