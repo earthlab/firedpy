@@ -324,6 +324,7 @@ def fired(
     end_year=2026,
     spatial_param=8,
     temporal_param=3,
+    run_firespeed=False,
     daily=True,
     shape_type="gpkg",
     eco_region_type=None,
@@ -553,6 +554,7 @@ def fired(
             csv_type=csv_type,
             spatial_param=spatial_param,
             temporal_param=temporal_param,
+            run_firespeed=run_firespeed,
         )
 
         # Done with processing, collect time and memory usage
