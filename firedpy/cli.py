@@ -238,6 +238,12 @@ def _prompts(ctx, _, interactive):
     help=CLI_HELP["temporal_param"]
 )
 @click.option(
+    "--run_firespeed/--no_run_firespeed",
+    default=False,
+    is_eager=True,
+    help=CLI_HELP["run_firespeed"]
+)
+@click.option(
     "-d", "--daily",
     is_flag=True,
     is_eager=True,

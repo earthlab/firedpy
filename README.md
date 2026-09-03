@@ -1,5 +1,9 @@
 
-[![DOI](https://zenodo.org/badge/214283770.svg)](https://zenodo.org/badge/latestdoi/214283770)
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5507688.svg)](https://doi.org/10.5281/zenodo.5507688)
+
+
+
 [![Docker Automated build](https://img.shields.io/docker/automated/earthlab/firedpy?style=plastic)](https://hub.docker.com/repository/docker/earthlab/firedpy/builds)
 ![GitHub contributors](https://img.shields.io/github/contributors/earthlab/firedpy)
 [![GitHub issues](https://img.shields.io/github/issues/earthlab/firedpy)](https://github.com/earthlab/firedpy/issues)
@@ -20,9 +24,9 @@ The algorithm outputs shapefiles of delineated fire events in either .shp or .gp
 *Illustration of the event-level and daily-level output of FIREDpy for the 2013 Rim Fire in California. Figure is from Mahood et al. 2022.*
 
 
-## The MODIS Sinusioidal Project
+## The MODIS Sinusioidal Grid
 
-You may specify study areas for FIREDpy using individual MODIS tiles. This product uses a Sinusoidal, Lambert Azimuthal Equal-Area projection. There are several spatial resolutions available for this data, but FIREDpy uses the 500m resolution (actual distances depend on location). For more information about this projection, see https://modis-land.gsfc.nasa.gov/MODLAND_grid.html. If you would like to use the MODIS sinusoidal grid IDs to identify FIREDpy study areas, see the visualization of this grid below.
+In general, the area of intrest for which FIREDpy creates fire perimter products is specified with a shapefile. However, one may also specify study areas for FIREDpy using individual MODIS tiles. This product uses a Sinusoidal, Lambert Azimuthal Equal-Area projection. For more information about this projection, see https://modis-land.gsfc.nasa.gov/MODLAND_grid.html. If you would like to use the MODIS sinusoidal grid IDs to identify FIREDpy study areas, see the visualization of this grid below.
 
 <img width="1900" alt="image" src="https://github.com/earthlab/firedpy/blob/tw/installation/firedpy/data/images/modis_land_id_map_robinson.png" />
 
@@ -38,7 +42,7 @@ Balch, J. K., St. Denis, L. A., Mahood, A. L., Mietkiewicz, N. P., Williams, T. 
 
 Mahood, A.L. Lindrooth, E.J., Cook, M.C. and Balch, J.K. 2022. Country-level fire perimeter datasets (2001-2021). Nature Scientific Data, 9(458). https://doi.org/10.1038/s41597-022-01572-3
 
-### Methodological information for FIREDpy 2.0, description of 2000-2024 datasets:
+### Methodological information for FIREDpy 2.0, description of 2000-2025 datasets:
 
 Coming soon...
 
@@ -50,7 +54,7 @@ FIREDpy is currently in active development, and newer versions of the algorithm 
     - No longer using setup.py. See new instructions below for running it with Docker or installing it locally.
     - Improved fire grouping
     - Improved CLI
-    - Access to MODIS burn area product Version 6.1 with support up to at least December 2024 
+    - Access to MODIS burn area product Version 6.1
 
 ### BUG ALERT: 
 
@@ -78,7 +82,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 
 || **Firedpy version**| 1.0|2.0|2.0|
 |-------|---------|----------------------------------------|----------------------------------------|---------------------------|
-| **Region** | **Country** | **V2022 (variable space-time parameters)** | **V2024S1T5 (1 pixel 5 days for everything)** | **V2024VST (variable ST-params)** |
+| **Region** | **Country** | **Version 2022var (variable space-time parameters)** | **Version 2024f (1 pixel 5 days for everything)** | **Version 2025var (variable ST parameters)** |
 | **North America** |||||
 || Belize || **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/q524jq679)** ||
 || Canada| [2001-2021](https://scholar.colorado.edu/concern/datasets/gf06g388c) | **[2001-2024](https://scholar.colorado.edu/concern/datasets/0p096866d)** ||
@@ -132,9 +136,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 |  Northern South America |Suriname, French Guiana, Guyana| [2001-2021](https://scholar.colorado.edu/concern/datasets/qv33rx839)||| 
 |Entire Western hemisphere, intended for use in conjunction with GOES16 active fire detections. || [Jan 2017 to March 2020](https://scholar.colorado.edu/concern/datasets/d217qq78g)|||
 | **Europe** |||||
-|| Aland|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/5138jg697)**||
 || Albania|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/wp988m53f)**||
-|| Andorra|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/xp68kh87x)**||
 || Belarus|| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/r781wh632)**||
 || Belgium||**[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/hh63sx489)**||
 || Bosnia and Herzegovina|| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/dz010s09q)**||
@@ -146,18 +148,14 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 || Germany|| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/6w924d770)**||
 || Greece| [2001-2021](https://scholar.colorado.edu/concern/datasets/bc386k355)| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/z316q349s)**||
 || Greenland|| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/bv73c218z)**||
-|| Guernsey|| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/bz60cx90j)**||
 || Hungary||**[Nov 2000 - December 2024](https://scholar.colorado.edu/concern/datasets/bc386m008)**||
 || Ireland||**[Nov 2000 - December 2024](https://scholar.colorado.edu/concern/datasets/4m90dx459)**||
 || Italy|[2001-2021](https://scholar.colorado.edu/concern/datasets/v979v416g)| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/tb09j7441)**||
 || Kosovo|| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/f1881n864)**||
 || Latvia||**[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/fn1070711)**||
-|| Liechtenstein|| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/f7623f56w)**||
 || Lithuania|| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/qb98mg925)**||
 || Macedonia|| **[Nov 2000 - July  2024](https://scholar.colorado.edu/concern/datasets/g158bj86s)**||
-|| Malta|| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/sx61dp12d)**||
 || Moldova|| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/d217qr276)**||
-|| Monaco|| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/2514nn122)**||
 || Montenegro|| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/1g05fd436)**||
 || Netherlands|| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/0k225c86c)**||
 || Northern Cyprus|| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/4m90dx238)**||
@@ -191,7 +189,7 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 || Central African Republic: |[2001-2021](https://scholar.colorado.edu/concern/datasets/pv63g1576) |**[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/zp38wf351)**||
 || Chad| [2001-2021](https://scholar.colorado.edu/concern/datasets/707958762)| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/s4655j45w)**||
 || Comoros||**[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/s7526f22t)**||
-|| Democratic Republic of the Congo| [2001-2021](https://scholar.colorado.edu/concern/datasets/5425kb88g)||**[Nov 2000 - December 2024 (s1t1)](https://scholar.colorado.edu/concern/datasets/4b29b780c)**|
+|| Democratic Republic of the Congo| [2001-2021](https://scholar.colorado.edu/concern/datasets/5425kb88g)|**[Nov 2000 - December 2024 (s1t1)](https://scholar.colorado.edu/concern/datasets/4b29b780c)**||
 || Djibouti| [2001-2021](https://scholar.colorado.edu/concern/datasets/1831cm01x)| **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/rf55z935n)**||
 || Egypt||**[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/vm40xt27j)**||
 || Equatorial Guinea| [2001-2021](https://scholar.colorado.edu/concern/datasets/vx021g32b) | **[Nov 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/j67315565)**||
