@@ -78,7 +78,9 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
 
 ## Click on a link below to download a fire perimeter dataset for your favorite country
 
-|| **Firedpy version**| 1.0|2.0|2.1|
+<div style="overflow-y: auto; max-height: 400px;">
+
+|| **Firedpy version**| 1.0|2.0|2.0|
 |-------|---------|----------------------------------------|----------------------------------------|---------------------------|
 | **Region** | **Country** | **Version 2022var (variable space-time parameters)** | **Version 2024f (1 pixel 5 days for everything)** | **Version 2025var (variable ST parameters)** |
 | **North America** |||||
@@ -298,6 +300,8 @@ All of the created products have an event-level shapefile in .gpkg and .shp form
  || Singapore|| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/12579t91m)**||
  || Solomon Islands|| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/6t053h70v)**||
  || Vanuatu|| **[November 2000 - July 2024](https://scholar.colorado.edu/concern/datasets/z316q351t)**||
+
+</div>
 
 ## Installation
 
