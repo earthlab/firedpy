@@ -325,6 +325,10 @@ def compute_max_vector(perim_inner_geoms,
                 pt_child = np.array(child_pts_sample[best_idx].coords[0])
                 max_dist = dists[best_idx]
 
+                # Re-apply spot threshold on max-distance (applied to min distance before)
+                if max_dist > spot_threshold:
+                    continue
+
                 if max_dist > poly_best_dist:
                     poly_best_dist = max_dist
                     poly_best_pair = (pt_parent, pt_child)
