@@ -1371,18 +1371,23 @@ class ModelBuilder(Base):
 
         return gdfd
 
-        logger.info("Converting polygons to multipolygons...")
-        gdfd["geometry"] = gdfd["geometry"].apply(self._as_multi_polygon)
-
-        return gdfd
-
-    def process_event_data(self, gdf, run_firespeed=True):
+    def process_event_data(self, gdf, run_firespeed=True, daily_gdf=None):
         """Process a firedpy geodataframe for non-daily ouputs.
 
         Parameters
         ----------
         gdf : geopandas.geodataframe.GeoDataFrame
             A firedpy geodataframe of burn events.
+        run_firespeed : bool
+            If enabled, aggregate maximum travel vectors and origin/
+            destination points to the event level.
+        daily_gdf : geopandas.geodataframe.GeoDataFrame | None
+            The already-processed daily geodataframe (output of
+            ``process_daily_data`` with ``run_firespeed=True``), if
+            available. When provided, its per-day fire speed results are
+            reused instead of being recomputed. If None and
+            ``run_firespeed`` is True, the daily computation is run once
+            internally.
 
         Returns
         -------
@@ -1410,37 +1415,17 @@ class ModelBuilder(Base):
         edf["geometry"] = edf["geometry"].apply(self._as_multi_polygon)
 
         if run_firespeed:
-            logger.info("Proceeding with fire speed computation for event output.")
-            logger.info("Calculating maximum linear speed vectors for event output...")
-            gdfc = gdf.copy()
-            gdfc = self._create_did_column(gdfc, ["date", "id"])
-            gdfd = gdfc.dissolve(by="did", as_index=False)
+            logger.info("Aggregating maximum linear speed vectors for event output...")
 
-            cumulative_gdfs = []
-            for _, sub_gdf in gdfd.groupby("id"):
-                sub_cum = build_cumulative_perims(
-                    sub_gdf,
-                    id_col="id",
-                    date_col="date"
+            if daily_gdf is not None and "fire_speed" in daily_gdf.columns:
+                logger.info("Reusing previously computed daily fire speed results.")
+                fire_gdf_cum = daily_gdf
+            else:
+                logger.info(
+                    "No precomputed daily fire speed results were provided; "
+                    "running the daily fire speed computation once."
                 )
-                sub_cum["geometry"] = sub_cum["geometry"].apply(
-                    self._as_multi_polygon
-                )
-                sub_cum["geometry"] = sub_cum["geometry"].apply(
-                    lambda mp: MultiPolygon(
-                        sorted(mp.geoms, key=lambda p: p.area, reverse=True)
-                    )
-                )
-                cumulative_gdfs.append(sub_cum)
-
-            fire_gdf_cum = pd.concat(cumulative_gdfs, ignore_index=True)
-            fs_orig_x, fs_orig_y, fs_dest_x, fs_dest_y, fs_max_dist, fs_speed = computefirespeed(fire_gdf_cum)
-            fire_gdf_cum["origin_x"] = fs_orig_x
-            fire_gdf_cum["origin_y"] = fs_orig_y
-            fire_gdf_cum["dest_x"] = fs_dest_x
-            fire_gdf_cum["dest_y"] = fs_dest_y
-            fire_gdf_cum["vec_dist"] = fs_max_dist
-            fire_gdf_cum["fire_speed"] = fs_speed
+                fire_gdf_cum = self.process_daily_data(gdf, run_firespeed=True)
 
             fs_event = fire_gdf_cum.groupby("id", as_index=False).agg({
                 "fire_speed": "max",
@@ -1572,6 +1557,7 @@ class ModelBuilder(Base):
         )
 
         # Process and write daily-level events to file if requested
+        ddf = None
         if daily:
             # Apply output processing for daily version
             ddf = self.process_daily_data(gdf, run_firespeed=run_firespeed)
@@ -1617,7 +1603,9 @@ class ModelBuilder(Base):
             # edf["geometry"] = edf["geometry"].apply(self._as_multi_polygon)
 
         # Process and write event-level events to file
-        edf = self.process_event_data(gdf, run_firespeed=run_firespeed)
+        edf = self.process_event_data(
+            gdf, run_firespeed=run_firespeed, daily_gdf=ddf
+        )
 
         # GeoDataFrames
         if paths["event_gpkg_path"]:
@@ -1638,4 +1626,3 @@ class ModelBuilder(Base):
             dst = paths["event_csv_path"]
             logger.info(f"Writing event CSV to {dst}")
             edf[["ig_event_x", "ig_event_y", "id", "ig_date", "last_date"]].to_csv(dst, index=False)
-
