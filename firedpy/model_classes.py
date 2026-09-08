@@ -1418,7 +1418,6 @@ class ModelBuilder(Base):
             logger.info("Aggregating maximum linear speed vectors for event output...")
 
             if daily_gdf is not None and "fire_speed" in daily_gdf.columns:
-                logger.info("Reusing previously computed daily fire speed results.")
                 fire_gdf_cum = daily_gdf
             else:
                 logger.info(
@@ -1427,14 +1426,21 @@ class ModelBuilder(Base):
                 )
                 fire_gdf_cum = self.process_daily_data(gdf, run_firespeed=True)
 
-            fs_event = fire_gdf_cum.groupby("id", as_index=False).agg({
-                "fire_speed": "max",
-                "vec_dist": "max",
-                "origin_x": "max",
-                "origin_y": "max",
-                "dest_x": "max",
-                "dest_y": "max",
-            })
+            valid_fs = fire_gdf_cum.dropna(subset=["vec_dist"])
+            #Select the best fire speed vector for each event (max distance)
+            idx = valid_fs.groupby("id")["vec_dist"].idxmax()
+            fs_event = valid_fs.loc[idx,
+                [
+                    "id",
+                    "fire_speed",
+                    "vec_dist",
+                    "origin_x",
+                    "origin_y",
+                    "dest_x",
+                    "dest_y",
+                ],
+            ].copy()
+
             edf = edf.merge(fs_event, on="id", how="left")
         else:
             logger.info("Skipping fire speed computation for event output.")
