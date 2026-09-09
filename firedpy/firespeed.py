@@ -46,7 +46,7 @@ def build_cumulative_perims(gdf, id_col="id", date_col="date"):
     return gdf
 
 
-def computefirespeed(fire_gdf, id_col="id"):
+def computefirespeed(fire_gdf,id_col="id",spot_threshold=20_000):
     if fire_gdf.crs is None or fire_gdf.crs.is_geographic:
         raise ValueError(
             f"computefirespeed requires projected CRS in meters, got {fire_gdf.crs}"
@@ -113,7 +113,16 @@ def computefirespeed(fire_gdf, id_col="id"):
             dist, origin, dest, parent_local_idx = compute_max_vector(
                 perim_inner_geoms=parent_geoms,
                 perim_outer_geoms=[child_poly],
-                inter_matrix=inter_matrix[parent_ids][:, [j]],)
+                inter_matrix=inter_matrix[parent_ids][:, [j]],
+                # For spots, don't apply the 20-km cutoff in MODIS sinusoidal coordinates.
+                spot_threshold=np.inf if spot else spot_threshold,)
+            
+            # Final SPOT threshold is GEODESIC.
+            if spot and origin is not None and dest is not None:
+                lons, lats = transformer.transform([origin[0], dest[0]],[origin[1], dest[1]],)
+                spot_dist_m = geod.line_length(lons, lats)
+                if spot_dist_m > spot_threshold:
+                    continue
 
             if dist > best_dist:
                 best_dist = dist
@@ -135,7 +144,7 @@ def computefirespeed(fire_gdf, id_col="id"):
         )
         dist_m = geod.line_length(lons, lats)
         result_max_dist[i] = dist_m / 1000
-        result_speed[i] = (dist_m / 1000) / 24
+        result_speed[i] = (dist_m / 1000) # in km/day
 
     return (orig_x, orig_y, dest_x, dest_y, result_max_dist, result_speed)
 
@@ -324,6 +333,10 @@ def compute_max_vector(perim_inner_geoms,
                 pt_parent = np.array([parent_anchor.x, parent_anchor.y])
                 pt_child = np.array(child_pts_sample[best_idx].coords[0])
                 max_dist = dists[best_idx]
+
+                # Re-apply spot threshold on max-distance (applied to min distance before)
+                if max_dist > spot_threshold:
+                    continue
 
                 if max_dist > poly_best_dist:
                     poly_best_dist = max_dist
