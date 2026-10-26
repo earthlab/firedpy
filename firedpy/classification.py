@@ -300,9 +300,9 @@ class Classifier:
 
 
 if __name__ == "__main__":
-    self = Classifier(
+    classifier = Classifier(
         hdf_dir=Path("/home/travis/scratch/firedpy/conus_2000_2026"),
         sample=True
     )
-    df = self.classify()
+    df = classifier.classify()
     print(df)
